@@ -16,7 +16,6 @@ graph TD
 
     subgraph L1["🧠 02-Agent 工具生态"]
         skills["Skills 仓库"]
-        kspay["KSPay Skills"]
         skgen["Skill 生成器"]
         drawio["流程图生成器"]
     end
@@ -35,8 +34,7 @@ graph TD
     vps -->|远程管理| macbook
     vpn -->|API 访问| gridbot
 
-    skills --> kspay
-    cc_src --> cc_ana
+cc_src --> cc_ana
     cc_src --> skills
 
     macbook -.->|部署环境| gridbot
@@ -70,8 +68,7 @@ ai/
 │   ├── vps-quick-access/            VPS 快速访问手册
 │   └── macbook-server/              MacBook → AI 服务器（交互式 HTML 指南）
 ├── 02-agent-tools/                    🧠 Agent 工具生态
-│   ├── skills-repo/                 CodeFlicker Agent Skills 仓库
-│   ├── kspay-skills/                KSPay 支付系统专用 Skills
+│   ├── skills-repo/                 Agent Skills 仓库
 │   ├── skill-generator/             技能爬虫 + AI 文档生成器
 │   └── drawio-generator/            AI 流程图生成器
 ├── 03-research/                       📚 研究 & 分析
@@ -115,13 +112,7 @@ ai/
 **能力提供**：可复用的 AI Agent Skill 定义
 
 - 📂 目录：[skills-repo/](02-agent-tools/skills-repo/)
-- 7 个 Skills：duet3-log-analyzer、tech-doc-organizer、commit-msg、test-case-generate、animal-speak、skill-manager
-
-### KSPay Skills
-**能力提供**：支付系统专用开发流程
-
-- 📂 目录：[kspay-skills/](02-agent-tools/kspay-skills/)
-- Spec-Coding 工作流：需求 → 方案 → 实现 → 测试
+- 4 个 Skills：commit-msg、animal-speak、tech-doc-organizer
 
 ### Skill 生成器
 **能力提供**：自动爬取 + AI 生成技能文档
