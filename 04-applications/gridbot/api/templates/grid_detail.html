@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid #{{ summary.id }} - GridBot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; }
+        a { color: #38bdf8; text-decoration: none; }
+        .back { margin-bottom: 20px; display: block; }
+        .grid-detail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+        .card .label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .card .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+        .section { margin-bottom: 24px; }
+        .section h2 { font-size: 18px; color: #94a3b8; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+        th, td { padding: 12px 16px; text-align: left; font-size: 14px; }
+        th { background: #334155; color: #94a3b8; font-weight: 600; font-size: 12px; }
+        tr:not(:last-child) td { border-bottom: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← 返回总览</a>
+
+    <div class="grid-detail">
+        <div class="card">
+            <div class="label">交易对</div>
+            <div class="value">{{ summary.symbol }}</div>
+        </div>
+        <div class="card">
+            <div class="label">状态 / 类型</div>
+            <div class="value">{{ summary.status }} / {{ summary.grid_type }}</div>
+        </div>
+        <div class="card">
+            <div class="label">当前价格</div>
+            <div class="value">{{ "%.4f"|format(summary.current_price) }}</div>
+        </div>
+        <div class="card">
+            <div class="label">网格区间</div>
+            <div class="value" style="font-size: 16px;">{{ "%.4f"|format(summary.lower) }} ~ {{ "%.4f"|format(summary.upper) }}</div>
+        </div>
+        <div class="card">
+            <div class="label">网格数 / 投资额</div>
+            <div class="value" style="font-size: 16px;">{{ summary.grid_count }} 格 / {{ "%.0f"|format(summary.investment) }} USDT</div>
+        </div>
+        <div class="card">
+            <div class="label">已实现盈亏</div>
+            <div class="value {% if summary.realized_pnl >= 0 %}positive{% else %}negative{% endif %}">
+                {{ "%+.4f"|format(summary.realized_pnl) }} USDT
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📝 交易记录 (最近 50 笔)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>卖出时间</th>
+                    <th>买入价</th>
+                    <th>卖出价</th>
+                    <th>数量</th>
+                    <th>利润</th>
+                    <th>利润率</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in trades %}
+                <tr>
+                    <td>{{ t.sell_filled_at.strftime('%m-%d %H:%M:%S') }}</td>
+                    <td>{{ "%.4f"|format(t.buy_price) }}</td>
+                    <td>{{ "%.4f"|format(t.sell_price) }}</td>
+                    <td>{{ "%.4f"|format(t.quantity) }}</td>
+                    <td class="{% if t.profit >= 0 %}positive{% else %}negative{% endif %}">
+                        {{ "%+.4f"|format(t.profit) }}
+                    </td>
+                    <td class="{% if t.profit_pct >= 0 %}positive{% else %}negative{% endif %}">
+                        {{ "%+.4f%%"|format(t.profit_pct * 100) }}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if trades|length == 0 %}
+                <tr><td colspan="6" style="text-align: center; color: #64748b; padding: 24px;">暂无交易记录</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mira + a-stock-data 部署运行指南</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d2991d;
+    --red: #f85149;
+    --purple: #a371f7;
+    --cyan: #39d2c0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", "Menlo", monospace;
+    line-height: 1.65;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  h1 { font-size: 1.6rem; color: var(--accent); margin-bottom: 0.4rem; }
+  h2 { font-size: 1.2rem; color: var(--purple); margin: 2.5rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; color: var(--orange); margin: 1.2rem 0 0.5rem; }
+  h4 { font-size: 0.9rem; color: var(--cyan); margin: 0.8rem 0 0.4rem; }
+  p, li { color: var(--muted); font-size: 0.86rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.12rem 0.55rem;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .badge-green { background: #1a3a2a; color: var(--green); }
+  .badge-orange { background: #3a2e1a; color: var(--orange); }
+  .badge-red { background: #3a1a1a; color: var(--red); }
+  .badge-purple { background: #2a1a3a; color: var(--purple); }
+
+  pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    margin: 0.5rem 0;
+    position: relative;
+  }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.8rem; }
+  .inline-code {
+    background: #1c2333;
+    color: var(--accent);
+    padding: 0.08rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 0.4rem; right: 0.5rem;
+    background: var(--border);
+    color: var(--muted);
+    border: none;
+    border-radius: 4px;
+    padding: 0.15rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-family: inherit;
+    transition: background 0.2s;
+    z-index: 1;
+  }
+  .copy-btn:hover { background: var(--accent); color: #fff; }
+  .copy-btn.copied { background: var(--green); color: #fff; }
+  .code-block { position: relative; }
+
+  .tip, .warn, .danger, .info {
+    padding: 0.7rem 0.9rem;
+    border-radius: 6px;
+    margin: 0.6rem 0;
+    font-size: 0.82rem;
+  }
+  .tip { background: #1a2a3a; border-left: 3px solid var(--accent); color: #b0c8e0; }
+  .warn { background: #3a2e1a; border-left: 3px solid var(--orange); color: #d4b060; }
+  .danger { background: #3a1a1a; border-left: 3px solid var(--red); color: #d4a0a0; }
+  .info { background: #1a2a2a; border-left: 3px solid var(--cyan); color: #a0d4c0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 0.7rem 0; }
+  th, td { padding: 0.45rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); }
+  th { color: var(--text); font-weight: 600; }
+  ul, ol { padding-left: 1.4rem; margin: 0.4rem 0; }
+  li { margin: 0.2rem 0; }
+
+  .step-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin: 1rem 0;
+  }
+  .step-card h4 { margin-top: 0; }
+
+  .tool-section {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.3rem;
+    margin: 1.5rem 0;
+    background: #111820;
+  }
+  .tool-section.cc { border-left: 3px solid #d97706; }
+  .tool-section.codex { border-left: 3px solid #3b82f6; }
+  .tool-section.codewhale { border-left: 3px solid #06b6d4; }
+  .tool-section.codeflicker { border-left: 3px solid #8b5cf6; }
+  .tool-section h3 { margin-top: 0; font-size: 1.05rem; }
+
+  .compare-row { display: flex; gap: 0.8rem; margin: 1rem 0; flex-wrap: wrap; }
+  .compare-card {
+    flex: 1; min-width: 200px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem;
+    text-align: center;
+  }
+  .compare-card .emoji { font-size: 1.5rem; margin-bottom: 0.3rem; }
+  .compare-card .status { font-weight: 600; font-size: 0.85rem; }
+  .compare-card .detail { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+  .directory-tree {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.6;
+    background: var(--card);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .path-highlight { color: var(--accent); }
+
+  @media (max-width: 640px) {
+    body { padding: 1rem 0.5rem; }
+    pre { font-size: 0.7rem; padding: 0.6rem; }
+    .compare-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🧠 Mira + a-stock-data · 多工具部署运行指南</h1>
+<p class="subtitle" style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem;">
+  在 Claude Code / Codex / CodeWhale / CodeFlicker 四种 AI Agent 中启动投研系统<br>
+  <strong>最后更新：2026-06-07</strong> · 仓库位置：<code class="inline-code">04-applications/investment-research/</code>
+</p>
+
+<!-- ============================================================ -->
+<h2>📦 前置步骤（所有工具通用）</h2>
+
+<div class="step-card">
+  <h4>步骤 1：安装 Python 依赖</h4>
+  <p>a-stock-data 需要 4 个 Python 包。Mira 的 Python 工具（<code class="inline-code">tools/mira_data/</code>）是自包含的，无额外依赖。</p>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+    <pre><code>pip install mootdx requests pandas stockstats</code></pre>
+  </div>
+  <div class="tip">
+    💡 <code class="inline-code">mootdx</code> 需要在<strong>国内网络环境</strong>运行（通达信 TCP 7709 端口，境外 IP 可能连不上）。其他包无此限制。
+  </div>
+</div>
+
+<div class="step-card">
+  <h4>步骤 2：确认仓库位置</h4>
+  <p>两个仓库应在此目录下：</p>
+  <div class="directory-tree">
+    ai/04-applications/investment-research/<br>
+    ├── <span class="path-highlight">a-stock-data/</span><br>
+    │&nbsp;&nbsp;&nbsp;├── SKILL.md          ← 2119 行，内嵌 27 个数据端点的 Python 代码<br>
+    │&nbsp;&nbsp;&nbsp;├── README.md<br>
+    │&nbsp;&nbsp;&nbsp;└── CHANGELOG.md<br>
+    └── <span class="path-highlight">Mira/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── CLAUDE.md       ← Claude Code 自动加载<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── AGENTS.md       ← Codex 自动加载<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── MIRA.md         ← 唤醒词定义<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── OPERATING_CONTRACT.md  ← 懒加载地图<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── START_HERE.md   ← 用户入口<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── AGENT_QUICKSTART.md  ← Agent 执行规则<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── loops/          ← 13 个研究循环<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── skills/         ← 9 个分析技能<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── cases/          ← 产出物保存位置<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── templates/      ← 研究包模板<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── data/           ← 数据源注册表 + 合约<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── tools/mira_data/ ← Python 数据适配器<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;└── scripts/        ← 验证/更新脚本
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>📊 快速对比</h2>
+
+<div class="compare-row">
+  <div class="compare-card">
+    <div class="emoji">🧡</div>
+    <div class="status" style="color:#d97706">Claude Code</div>
+    <div class="detail">✅ 原生支持<br>CLAUDE.md 自动加载<br>脚本文->研究包 全流程</div>
+  </div>
+  <div class="compare-card">
+    <div class="emoji">💙</div>
+    <div class="status" style="color:#3b82f6">Codex</div>
+    <div class="detail">✅ 官方支持<br>AGENTS.md 自动加载<br>文档已验证</div>
+  </div>
+  <div class="compare-card">
+    <div class="emoji">🐳</div>
+    <div class="status" style="color:#06b6d4">CodeWhale</div>
+    <div class="detail">⚠️ 未测试<br>需手动指令加载协议<br>需实际验证</div>
+  </div>
+  <div class="compare-card">
+    <div class="emoji">💜</div>
+    <div class="status" style="color:#8b5cf6">CodeFlicker</div>
+    <div class="detail">⚠️ 未测试<br>SKILL.md 格式匹配<br>需实际验证</div>
+  </div>
+</div>
+
+<table>
+  <tr><th>对比维度</th><th>Claude Code</th><th>Codex</th><th>CodeWhale</th><th>CodeFlicker</th></tr>
+  <tr><td>自动加载 CLAUDE.md</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+  <tr><td>自动加载 AGENTS.md</td><td>❌</td><td>✅</td><td>❌</td><td>❌</td></tr>
+  <tr><td>SKILL.md 自动识别</td><td>✅（~/.claude/skills/）</td><td>✅（同目录）</td><td>❌</td><td>⚠️ 不确定</td></tr>
+  <tr><td>Python 代码执行</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>懒加载协议（OPERATING_CONTRACT）</td><td>✅</td><td>✅</td><td>⚠️ 取决于指令跟随能力</td><td>⚠️ 取决于指令跟随能力</td></tr>
+  <tr><td>研究路由（analysis-routing）</td><td>✅</td><td>✅</td><td>⚠️ 需测试</td><td>⚠️ 需测试</td></tr>
+  <tr><td>A 股数据（mootdx TCP）</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>产出证据日志（evidence-log.csv）</td><td>✅</td><td>✅</td><td>⚠️ 需测试</td><td>⚠️ 需测试</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>🧡 Claude Code（推荐首选）</h2>
+
+<div class="tool-section cc">
+  <h3>兼容状态：✅ 原生支持，可直接使用</h3>
+
+  <div class="step-card">
+    <h4>步骤 1：安装 Claude Code</h4>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>npm install -g @anthropic-ai/claude-code
+
+# 启动并登录
+claude login</code></pre>
+    </div>
+    <p>按提示完成 Anthropic 账号登录和付费订阅（推荐 Pro，$20/月）。</p>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 2：安装 a-stock-data Skill</h4>
+    <p>Claude Code 会自动加载 <code class="inline-code">~/.claude/skills/*/SKILL.md</code> 下的所有 skill 文件。</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code># 创建目录
+mkdir -p ~/.claude/skills/a-stock-data
+
+# 复制 SKILL.md（或软链接）
+cp /path/to/ai/04-applications/investment-research/a-stock-data/SKILL.md \
+   ~/.claude/skills/a-stock-data/SKILL.md</code></pre>
+    </div>
+    <div class="info">
+      📝 Claude Code 启动时会扫描此目录。SKILL.md 中的 yaml frontmatter（<code class="inline-code">name: a-stock-data</code>）告诉 Claude 这个 skill 的名字和用途。
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 3：启动 Mira 研究会话</h4>
+    <p>在 Mira 仓库目录下启动 Claude Code：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>cd /path/to/ai/04-applications/investment-research/Mira
+claude</code></pre>
+    </div>
+    <p>Claude Code 自动读取根目录的 <code class="inline-code">CLAUDE.md</code>（37 行），其中定义了：</p>
+    <ul>
+      <li>先读 <code class="inline-code">AGENTS.md</code></li>
+      <li>再读 <code class="inline-code">MIRA.md</code>（唤醒词定义）</li>
+      <li>再读 <code class="inline-code">OPERATING_CONTRACT.md</code>（懒加载地图）</li>
+      <li>用户说 <code class="inline-code">Mira</code> 时进入 Mira Mode</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 4：第一个研究任务</h4>
+    <p><strong>测试用例 1：美股快速浏览</strong>（不依赖 a-stock-data，验证 Mira 协议本身）</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>Mira, 看一下 AAPL
+我真正想判断的是：iOS 19 周期是否能驱动 iPhone 换机潮。
+市场范围：美股
+时间边界：未来 2 个 quarter
+输出深度：quick_map</code></pre>
+    </div>
+    <p><strong>预期行为</strong>：Claude Code 读 START_HERE.md → 路由到 analysis-routing.md → 判断 quick_map → 搜索公开数据 → 输出 source notes + refresh triggers。产出物暂存在对话中，不会写入文件（quick_map 是非正式 triage）。</p>
+
+    <p style="margin-top:0.8rem;"><strong>测试用例 2：A 股研究</strong>（依赖 a-stock-data）</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>Mira, 研究一下 600519（贵州茅台）
+市场范围：A 股
+时间边界：最新季度
+输出深度：standard
+输出要求：research package，包含 evidence log</code></pre>
+    </div>
+    <p><strong>预期行为</strong>：Claude Code 检测到 A 股 → 触发 a-stock-data skill → 用 mootdx 取 K 线/财务/F10 + 腾讯取 PE/PB/市值 + 东财取北向资金/龙虎榜 → 写入 <code class="inline-code">cases/600519-2026-06/</code>，包含 <code class="inline-code">investment-memo.md</code> + <code class="inline-code">evidence-log.csv</code>。</p>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 5：非交互式自动化（在 MacBook 服务器上）</h4>
+    <p>Claude Code 支持 <code class="inline-code">-p</code> 参数进行单次非交互式查询：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code># 在 MacBook 上的 cron job 示例
+cd /path/to/Mira && claude -p "Mira, 做一份 A 股收盘简报，市场范围：沪深两市，输出 standard market briefing package" --output-format stream-json > /tmp/mira-briefing-$(date +%F).json</code></pre>
+    </div>
+    <p>可以把这条命令加入 cron，每天 15:30（收盘后）自动执行，产出物保存到 <code class="inline-code">cases/</code> 目录。</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>💙 Codex（OpenAI 官方）</h2>
+
+<div class="tool-section codex">
+  <h3>兼容状态：✅ 官方支持，文档已验证</h3>
+
+  <div class="step-card">
+    <h4>步骤 1：安装 Codex</h4>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>npm install -g @openai/codex
+
+# 登录
+codex login</code></pre>
+    </div>
+    <p>按提示完成 OpenAI 账号登录。</p>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 2：无需额外配置</h4>
+    <p>Codex 自动读取项目根目录的 <code class="inline-code">AGENTS.md</code>。Mira 的 AGENTS.md（80 行）定义了完整的读序和执行规则。启动 Codex 时直接在 Mira 目录下：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>cd /path/to/ai/04-applications/investment-research/Mira
+codex</code></pre>
+    </div>
+    <p>Codex 自动加载 AGENTS.md → 按读序加载 MIRA.md → OPERATING_CONTRACT.md。</p>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 3：a-stock-data 的集成</h4>
+    <p>Codex 不自动加载 <code class="inline-code">~/.claude/skills/</code> 目录。需要让 Codex <strong>主动读取</strong> a-stock-data 的 SKILL.md。最简单的方式：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code># 在 Codex 会话中第一次使用时说：
+请先读取 ../a-stock-data/SKILL.md，将其作为 A 股数据技能加载。
+之后任何涉及 A 股的研究任务，优先从这个文件获取数据端点。</code></pre>
+    </div>
+    <p>或者将 a-stock-data 的 SKILL.md 复制到 Mira 目录下，改名为 <code class="inline-code">skills/a-stock-data.md</code>，然后在 AGENTS.md 中添加一行引用。但这不是官方做法，属于 hack。</p>
+    <div class="warn">
+      ⚠️ Codex 对 a-stock-data 的支持不如 Claude Code 原生。如果以 A 股研究为主要目标，建议用 Claude Code。
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 4：测试</h4>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code># 美股测试（验证 Mira 本身）
+Mira, 研究一下 NVDA，市场范围：美股，输出深度：quick_map
+
+# A 股测试（验证 a-stock-data 集成）
+先加载 ../a-stock-data/SKILL.md 作为 A 股数据源。
+Mira, 研究一下 600519，市场范围：A 股，输出深度：standard</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>🐳 CodeWhale（DeepSeek 终端 Agent）</h2>
+
+<div class="tool-section codewhale">
+  <h3>兼容状态：⚠️ 未验证，需测试。Python 执行能力有，但协议跟随能力未知。</h3>
+
+  <div class="step-card">
+    <h4>已知信息</h4>
+    <ul>
+      <li>CodeWhale 是终端编码 Agent，可以读文件、执行 Python、编辑文件</li>
+      <li><strong>不确定</strong>：能否像 Claude Code/Codex 一样严格遵循一个多层 Markdown 协议</li>
+      <li><strong>不确定</strong>：面对 Mira 的 OPERATING_CONTRACT.md 懒加载地图，能否先读 maps 再按需加载 loop/skill/template</li>
+      <li><strong>不确定</strong>：能否按 evidence-log.csv schema 写出格式正确的研究包</li>
+    </ul>
+    <div class="info">
+      📝 建议花 <strong>10 分钟</strong>在主力机上做一次快速测试（见步骤 3），不需要做任何配置。测试失败就放弃，不浪费时间。
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 1：安装 CodeWhale</h4>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>npm install -g codewhale
+
+# 设置 DeepSeek API Key
+echo 'export DEEPSEEK_API_KEY="sk-..."' >> ~/.zshrc
+source ~/.zshrc
+
+# 启动
+codewhale</code></pre>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 2：进入项目目录并手动加载协议</h4>
+    <p>CodeWhale 不会自动加载 CLAUDE.md 或 AGENTS.md。需要在会话开始时手动指令：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>cd /path/to/ai/04-applications/investment-research/Mira
+codewhale</code></pre>
+    </div>
+    <p>启动后，先输入以下引导指令：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>你现在在 Mira 研究协议的仓库中。请先按顺序读取以下文件来理解项目规则：
+1. MIRA.md（唤醒词定义和身份边界）
+2. OPERATING_CONTRACT.md（懒加载地图和核心契约）
+3. START_HERE.md（用户入口）
+
+读完后告诉我你理解了哪些规则，然后我会给你研究任务。</code></pre>
+    </div>
+    <div class="tip">
+      💡 关键观察点：CodeWhale 读完后是<strong>照做</strong>（先读完指定的文件再回复），还是<strong>自由发挥</strong>（随便回复几句"懂了"但其实没读）？这是判断能否用下去的核心指标。
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 3：快速验证测试（10 分钟）</h4>
+    <p><strong>Round 1：简单美股路由</strong></p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>Mira, 看一下 AAPL。市场范围：美股。输出深度：quick_map。</code></pre>
+    </div>
+    <p>预期：CodeWhale 应该做以下事情——<br>
+    ① 读 <code class="inline-code">loops/analysis-routing.md</code>（如果它之前没读）<br>
+    ② 判断 depth = quick_map<br>
+    ③ 搜索 AAPL 的公开信息（或调 Yahoo Finance API）<br>
+    ④ 输出结构化结果：核心判断 + source notes + refresh triggers<br></p>
+    <p><strong>Pass 条件</strong>：输出至少包含"stale_after"或"must_refresh_if"字段，且能看到对数据来源的标注。<br>
+    <strong>Fail 条件</strong>：自由发挥式回答（"AAPL 近期表现不错……"），没有遵守 Mira 的任何协议。</p>
+
+    <p style="margin-top:0.8rem;"><strong>Round 2（仅 Round 1 通过后）：A 股数据</strong></p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>请读取 ../a-stock-data/SKILL.md 作为 A 股数据源。
+Mira, 研究一下 600519（贵州茅台），市场范围：A 股，时间边界：最新季度，输出深度：standard</code></pre>
+    </div>
+    <p>预期：CodeWhale 从 SKILL.md 中找到 mootdx / 腾讯 / 东财的 Python 代码段，执行取数据，按 Mira 模板写研究包。</p>
+  </div>
+
+  <div class="step-card">
+    <h4>测试结果记录模板</h4>
+    <table>
+      <tr><th>测试项</th><th>结果</th><th>备注</th></tr>
+      <tr><td>读取多层 Markdown 协议</td><td></td><td></td></tr>
+      <tr><td>遵循 quick_map 深度</td><td></td><td></td></tr>
+      <tr><td>输出 stale_after/must_refresh_if</td><td></td><td></td></tr>
+      <tr><td>执行 a-stock-data 的 Python 代码</td><td></td><td></td></tr>
+      <tr><td>写 evidence-log.csv</td><td></td><td></td></tr>
+      <tr><td>整体可用性判断</td><td></td><td></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>💜 CodeFlicker（快手内部 Agent）</h2>
+
+<div class="tool-section codeflicker">
+  <h3>兼容状态：⚠️ 未验证。SKILL.md yaml 格式匹配，但协议跟随能力未知。</h3>
+
+  <div class="step-card">
+    <h4>已知信息</h4>
+    <ul>
+      <li>a-stock-data 的 SKILL.md 使用 yaml frontmatter（<code class="inline-code">---\nname: a-stock-data\n...</code>），这和 CodeFlicker 的 skill 格式<strong>完全一致</strong></li>
+      <li>Mira 没有 SKILL.md 格式的文件——它用的是 CLAUDE.md / AGENTS.md / OPERATING_CONTRACT.md 这套协议系统</li>
+      <li><strong>不确定</strong>：CodeFlicker 能否在打开一个目录后，自动或手动加载 CLAUDE.md / AGENTS.md 作为项目规则</li>
+      <li><strong>不确定</strong>：即使加载了，能否遵循 OPERATING_CONTRACT.md 规定的懒加载模式</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 1：安装 a-stock-data Skill</h4>
+    <p>将 a-stock-data 的 SKILL.md 复制到 CodeFlicker 的 skills 目录：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code># 方式 A：复制到 CodeFlicker 项目级 skills 目录（如果有的话）
+cp ../a-stock-data/SKILL.md /path/to/.codeflicker/skills/a-stock-data/SKILL.md
+
+# 方式 B：直接在当前会话中加载
+# 在 CodeFlicker 中说：
+# 请读取 /path/to/a-stock-data/SKILL.md，这是一个 A 股数据工具包。</code></pre>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 2：加载 Mira 协议（手动）</h4>
+    <p>CodeFlicker 没有自动读取 CLAUDE.md 的机制（当前会话就是 CodeFlicker，我能读文件但你无法让我自动进入"Mira Mode"——需要你主动指令）：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>请以 Mira 研究协议的方式工作。先读取以下文件：
+1. Mira/MIRA.md（身份定义）
+2. Mira/OPERATING_CONTRACT.md（懒加载地图）
+3. Mira/START_HERE.md（用户入口）
+
+读完后，按照这些协议规则处理后续的所有研究任务。</code></pre>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h4>步骤 3：快速验证测试</h4>
+    <p>加载协议后，测试一个简单任务：</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      <pre><code>Mira, 看一下 AAPL。市场范围：美股。输出深度：quick_map。</code></pre>
+    </div>
+    <p>鉴定标准和 CodeWhale 相同：看输出是否遵守了 Mira 的 evidence/stale_after/follow-up 三件套规则。</p>
+  </div>
+
+  <div class="warn">
+    ⚠️ CodeFlicker 的适用性取决于它读取多层 Markdown 指令后能否严格遵循。这是一个架构级问题，不是简单测试能确认的——Mira 的 OPERATING_CONTRACT.md 要求 Agent"懒加载"（先读 maps，再按需加载具体 loop/skill），这需要 Agent 理解"先看地图再前进"的元指令。
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>🔧 Mira 内置 Python 工具（可选）</h2>
+
+<div class="step-card">
+  <h4>Mira 的数据适配器和验证脚本</h4>
+  <p>Mira 的 <code class="inline-code">tools/mira_data/</code> 提供美股数据获取功能，AI Agent 不需要手动调用（Agent 会在需要时自己调用）。但作为使用者，你可以手动验证：</p>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+    <pre><code># 查看数据适配器列表
+ls Mira/tools/mira_data/adapters/
+# 输出：bls.py  ibkr_gateway.py  sec_companyfacts.py  yahoo_chart.py
+
+# 手动运行 repo 验证（检查研究包格式合规）
+cd Mira
+python3 scripts/validate_repo.py cases/aapl-2026-04/
+# 输出：case-format-ok 或 列出格式错误
+
+# 生成 case manifest
+python3 scripts/generate_case_manifests.py cases/aapl-2026-04/
+# 在 case 目录下生成 research-package-manifest.json</code></pre>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>📤 成果：研究包长什么样</h2>
+
+<div class="step-card">
+  <h4>一份 standard 深度的完整研究包</h4>
+  <div class="directory-tree">
+    Mira/cases/<span class="path-highlight">600519-2026-06/</span><br>
+    ├── <strong>README.md</strong>                        ← 本 case 的概述<br>
+    ├── <strong>research-package-manifest.json</strong>   ← 文件清单 + 元数据<br>
+    ├── <strong>investment-memo.md</strong>               ← 投资备忘录（核心结论）<br>
+    ├── <strong>case-notes.md</strong>                     ← 研究过程中的笔记<br>
+    └── <strong>evidence-log.csv</strong>                  ← 证据日志（claim_id → source → posture）<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;（可选）<br>
+    ├── <strong>expectation-map.csv</strong>               ← 预期映射<br>
+    ├── <strong>decision-log.csv</strong>                  ← 决策日志<br>
+    └── <strong>actionability-bridge.md</strong>           ← 可操作边界分析
+  </div>
+  <p>其中 <code class="inline-code">evidence-log.csv</code> 是最核心的产出物，每条记录包含：</p>
+  <table>
+    <tr><th>字段</th><th>含义</th><th>示例值</th></tr>
+    <tr><td><code>claim_id</code></td><td>声明 ID</td><td><code>claim-001</code></td></tr>
+    <tr><td><code>claim</code></td><td>声明内容</td><td>茅台 Q1 营收增长 15%</td></tr>
+    <tr><td><code>claim_type</code></td><td>声明类型</td><td><code>fact</code> / <code>inference</code> / <code>judgment</code></td></tr>
+    <tr><td><code>source_id</code></td><td>来源 ID</td><td><code>mootdx-finance-600519</code></td></tr>
+    <tr><td><code>evidence_posture</code></td><td>证据姿态</td><td><code>strong</code> / <code>weak</code> / <code>uncertain</code></td></tr>
+    <tr><td><code>judgment_confidence</code></td><td>判断置信度</td><td><code>high</code> / <code>medium</code> / <code>low</code></td></tr>
+    <tr><td><code>must_refresh_if</code></td><td>刷新条件</td><td>下季度财报发布后</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2>⚡ 最快验证路径（30 分钟）</h2>
+
+<p>如果你只想快速确认哪个工具能用，按这个顺序：</p>
+
+<ol>
+  <li><strong>Claude Code</strong>（5 分钟）——安装 → <code class="inline-code">cd Mira && claude</code> → 输入 <code class="inline-code">Mira, 看一下 AAPL</code> → 看出不出 structure 输出</li>
+  <li><strong>CodeWhale</strong>（10 分钟）——如果 Claude Code 用不了（需要境外支付）</li>
+  <li><strong>Codex</strong>（5 分钟）——备选</li>
+  <li><strong>CodeFlicker</strong>——你是它的用户，直接在这个会话里按上面的步骤 2 操作就能验证</li>
+</ol>
+
+<hr>
+
+<p style="text-align:center; color:var(--muted); font-size:0.75rem;">
+  v1.0 · 2026-06-07 · 仓库：<code class="inline-code">04-applications/investment-research/</code><br>
+  a-stock-data v3.2.2 (Apache 2.0) · Mira (MIT)
+</p>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  const code = pre ? pre.textContent : '';
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>

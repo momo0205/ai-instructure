@@ -1,0 +1,116 @@
+{
+  "title": "支付流程图",
+  "type": "flowchart",
+  "nodes": [
+    {
+      "id": "client_call",
+      "label": "客户端调用\napplyPay RPC接口",
+      "type": "start"
+    },
+    {
+      "id": "apply_helper",
+      "label": "NpayCorePay\nApplyHelper\nexecute()",
+      "type": "process"
+    },
+    {
+      "id": "check_biz_action",
+      "label": "1. CorePayCheckBizAction\n核心支付单校验",
+      "type": "action"
+    },
+    {
+      "id": "pay_order_exist",
+      "label": "支付单\n是否存在?",
+      "type": "decision"
+    },
+    {
+      "id": "return_already_payed",
+      "label": "返回:ALREADY_PAYED",
+      "type": "end"
+    },
+    {
+      "id": "return_order_exists",
+      "label": "返回:ORDER_ALREADY_EXISTS",
+      "type": "end"
+    },
+    {
+      "id": "check_amount",
+      "label": "校验支付金额\n与分配金额是否匹配",
+      "type": "process"
+    },
+    {
+      "id": "merchant_check_action",
+      "label": "2. MerchantCheckBizAction\n商户校验",
+      "type": "action"
+    },
+    {
+      "id": "call_merchant_remote",
+      "label": "调用MerchantRemote\n查询商户信息\n核查商户状态\n校验业务场景配置",
+      "type": "process"
+    },
+    {
+      "id": "member_check_action",
+      "label": "3. MemberCheckBizAction\n会员校验",
+      "type": "action"
+    },
+    {
+      "id": "call_member_remote",
+      "label": "调用MemberRemote\n查询会员信息\n核查会员状态",
+      "type": "process"
+    },
+    {
+      "id": "antispam_check_action",
+      "label": "4. PayAntispamCheckBizAction\n风控校验",
+      "type": "action"
+    },
+    {
+      "id": "call_antispam_remote",
+      "label": "调用AntispamRemote\n风险检测",
+      "type": "process"
+    },
+    {
+      "id": "risk_pass",
+      "label": "风控\n是否通过?",
+      "type": "decision"
+    },
+    {
+      "id": "return_risk_rejected",
+      "label": "返回:风控拒绝",
+      "type": "end"
+    },
+    {
+      "id": "build_action",
+      "label": "5. CorePayBuildAction\n构建支付单",
+      "type": "action"
+    },
+    {
+      "id": "build_note",
+      "label": "生成支付单ID\n构建CorePay对象\n构建CorePayRecord列表",
+      "type": "note"
+    }
+  ],
+  "edges": [
+    { "source": "client_call", "target": "apply_helper" },
+    { "source": "apply_helper", "target": "check_biz_action" },
+    { "source": "check_biz_action", "target": "pay_order_exist" },
+    { "source": "pay_order_exist", "target": "return_already_payed", "label": "已存在且成功" },
+    { "source": "pay_order_exist", "target": "return_order_exists", "label": "已存在未完成" },
+    { "source": "pay_order_exist", "target": "check_amount", "label": "不存在" },
+    { "source": "check_amount", "target": "merchant_check_action", "label": "匹配" },
+    { "source": "merchant_check_action", "target": "call_merchant_remote" },
+    { "source": "call_merchant_remote", "target": "member_check_action" },
+    { "source": "member_check_action", "target": "call_member_remote" },
+    { "source": "call_member_remote", "target": "antispam_check_action" },
+    { "source": "antispam_check_action", "target": "call_antispam_remote" },
+    { "source": "call_antispam_remote", "target": "risk_pass" },
+    { "source": "risk_pass", "target": "return_risk_rejected", "label": "拒绝" },
+    { "source": "risk_pass", "target": "build_action", "label": "通过" },
+    { "source": "build_action", "target": "build_note" }
+  ],
+  "layout": {
+    "direction": "TB",
+    "horizontalPadding": 80,
+    "verticalPadding": 70,
+    "startX": 100,
+    "startY": 80
+  }
+}

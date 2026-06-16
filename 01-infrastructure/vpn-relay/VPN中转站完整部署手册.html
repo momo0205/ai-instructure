@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人 VPN 中转站搭建：完整部署手册</title>
+<style>
+  :root {
+    --bg: #f8f9fb;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --border: #e0e0e0;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #1e293b;
+    --code-fg: #e2e8f0;
+    --inline-code-bg: #f1f5f9;
+    --inline-code-fg: #e11d48;
+    --table-stripe: #f1f5f9;
+    --table-header: #e2e8f0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* --- Header --- */
+  header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #fff;
+    padding: 60px 0 48px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  header p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+  }
+  header .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 4px 16px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    color: #cbd5e1;
+  }
+
+  /* --- Nav TOC --- */
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+  }
+  nav.toc h2 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  nav.toc ol {
+    list-style: none;
+    counter-reset: toc;
+    columns: 2;
+    column-gap: 32px;
+  }
+  nav.toc ol li {
+    counter-increment: toc;
+    margin-bottom: 6px;
+  }
+  nav.toc ol li::before {
+    content: counter(toc);
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  nav.toc ol li a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  nav.toc ol li a:hover { color: var(--accent); }
+
+  /* --- Sections --- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 1.5rem;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .card h3 {
+    font-size: 1.2rem;
+    margin: 28px 0 12px;
+    color: var(--text);
+  }
+  .card h4 {
+    font-size: 1.05rem;
+    margin: 20px 0 8px;
+  }
+
+  /* --- Tables --- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 20px;
+    font-size: 0.92rem;
+  }
+  thead th {
+    background: var(--table-header);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:nth-child(even) { background: var(--table-stripe); }
+
+  /* --- Code blocks --- */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 18px 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin: 12px 0 20px;
+    position: relative;
+  }
+  pre code {
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+    white-space: pre;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(255,255,255,0.1);
+    color: #94a3b8;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  .copy-btn.copied { background: var(--success); color: #fff; }
+
+  code.inline {
+    background: var(--inline-code-bg);
+    color: var(--inline-code-fg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+  }
+
+  /* --- Callout boxes --- */
+  .tip, .note, .warn, .danger-box {
+    border-left: 4px solid;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0 20px;
+    font-size: 0.93rem;
+  }
+  .tip {
+    background: var(--success-light);
+    border-color: var(--success);
+  }
+  .note {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+  .warn {
+    background: var(--warning-light);
+    border-color: var(--warning);
+  }
+  .danger-box {
+    background: var(--danger-light);
+    border-color: var(--danger);
+  }
+  .tip strong, .note strong, .warn strong, .danger-box strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* --- Checklist --- */
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+  .checklist li {
+    padding: 6px 0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.92rem;
+  }
+  .checklist li::before {
+    content: "☐ ";
+    color: var(--muted);
+    font-size: 1.1rem;
+    margin-right: 6px;
+  }
+
+  /* --- Flow --- */
+  .flow {
+    background: var(--accent-light);
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.88rem;
+    text-align: center;
+    margin: 16px 0;
+    white-space: pre-line;
+  }
+
+  /* --- Footer --- */
+  footer {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+
+  /* --- Responsive --- */
+  @media (max-width: 768px) {
+    .container { padding: 20px 12px; }
+    header h1 { font-size: 1.5rem; }
+    .card { padding: 20px 16px; }
+    nav.toc ol { columns: 1; }
+    table { font-size: 0.8rem; }
+    thead th, tbody td { padding: 8px 6px; }
+    pre { font-size: 0.78rem; padding: 12px 14px; }
+  }
+
+  /* Print */
+  @media print {
+    body { background: #fff; }
+    header { background: #1e293b !important; -webkit-print-color-adjust: exact; }
+    .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>个人 VPN 中转站搭建：完整部署手册</h1>
+  <p>从零开始，完成 VPS 购买到全平台使用的完整流程</p>
+  <span class="badge">最后更新：2026 年 6 月 5 日</span>
+</header>
+
+<div class="container">
+
+<!-- ============ TOC ============ -->
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s0">阅读指南</a></li>
+    <li><a href="#s1">整体流程概览</a></li>
+    <li><a href="#s2">支付方式完全指南</a></li>
+    <li><a href="#s3">路径 A：RackNerd 购买教程</a></li>
+    <li><a href="#s4">路径 B：搬瓦工购买教程</a></li>
+    <li><a href="#s5">SSH 登录与系统初始化</a></li>
+    <li><a href="#s6">安装 3X-UI 面板 + 创建节点</a></li>
+    <li><a href="#s7">开启 BBR 加速</a></li>
+    <li><a href="#s8">全平台客户端配置指南</a></li>
+    <li><a href="#s9">维护与故障排查</a></li>
+    <li><a href="#s10">速查清单</a></li>
+    <li><a href="#appendix">附录：PayPal 补充说明</a></li>
+    <li><a href="#refs">参考资料</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 0 ============ -->
+<div class="card" id="s0">
+  <h2>零、阅读指南</h2>
+  <p>本手册分为两条路径，你可以根据自己的预算和需求选择：</p>
+  <table>
+    <thead><tr><th>路径</th><th>年成本</th><th>适合人群</th><th>跳转</th></tr></thead>
+    <tbody>
+      <tr><td><strong>路径 A：预算方案</strong></td><td>≈¥65/年</td><td>预算有限、愿意接受晚高峰降速</td><td><a href="#s3">第三章</a></td></tr>
+      <tr><td><strong>路径 B：推荐方案</strong></td><td>≈¥365/年（KVM）或 ¥1,239/年（CN2 GIA-E）</td><td>追求稳定、全天候高速</td><td><a href="#s4">第四章</a></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><strong>重要说明</strong>RackNerd 和搬瓦工均支持<strong>支付宝直接付款</strong>，你<strong>不需要 PayPal 账号、不需要信用卡、不需要海外银行账户</strong>。当前搬瓦工最低为 $49.99/年 KVM 方案。以下价格均为 2026 年 6 月查证确认的在售价格。</div>
+  <p>两条路径的部署步骤（SSH 连接、面板安装、节点创建）完全相同，区别仅在于购买环节。</p>
+</div>
+
+<!-- ============ 1 ============ -->
+<div class="card" id="s1">
+  <h2>一、整体流程概览（30-60 分钟）</h2>
+  <div class="flow">购买 VPS（10 分钟）
+    → SSH 登录（2 分钟）
+      → 系统更新 + BBR 加速（5 分钟）
+        → 安装 3X-UI 面板（3 分钟）
+          → 创建 Reality 节点（5 分钟）
+            → 全平台客户端配置（10 分钟）
+              → 完成！</div>
+  <p>全程只需复制粘贴 <strong>5 条命令</strong>，不需要编写任何代码。</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<div class="card" id="s2">
+  <h2>二、支付方式完全指南：你不需要 PayPal</h2>
+  <p><strong>先说结论：下面推荐的所有 VPS 商家都支持支付宝，你不需要 PayPal、不需要信用卡、不需要海外银行账户。</strong></p>
+
+  <h3>2.1 支付方式对比</h3>
+  <table>
+    <thead><tr><th>支付方式</th><th>RackNerd</th><th>搬瓦工</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>支付宝 (Alipay)</strong></td><td>✅ 支持</td><td>✅ 支持</td><td><strong>最推荐</strong>，扫码即付，实时汇率</td></tr>
+      <tr><td><strong>银联 (UnionPay)</strong></td><td>❌ 不支持</td><td>✅ 支持</td><td>直接银行卡付款</td></tr>
+      <tr><td><strong>PayPal</strong></td><td>✅ 支持</td><td>✅ 支持</td><td>需要注册 PayPal 账号</td></tr>
+      <tr><td><strong>信用卡 (Visa/MasterCard)</strong></td><td>✅ 支持</td><td>✅ 支持</td><td>需双币信用卡</td></tr>
+      <tr><td><strong>加密货币</strong></td><td>✅ 支持</td><td>❌ 不支持</td><td>USDT/BTC 等</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 支付宝支付步骤（通用）</h3>
+  <ol>
+    <li>在结算页面选择 <code class="inline">Alipay（支付宝）</code> 作为支付方式</li>
+    <li>提交订单后，页面会自动跳转到支付宝收银台</li>
+    <li>手机打开支付宝扫码，确认金额和汇率</li>
+    <li>完成支付，页面自动跳转回商家订单确认页</li>
+  </ol>
+
+  <div class="note"><strong>RackNerd 实测</strong>NodeSeek 社区（nodeseek.com/post-571417-1）2026 年 1 月发布的保姆级教程确认，支付宝支付流程与国内淘宝购物完全一致。</div>
+  <div class="note"><strong>搬瓦工实测</strong>BandwagonHost 中文网（bandwagonhost.net/716.html）2026 年 1 月更新的教程确认，搬瓦工支持支付宝、银联、PayPal、信用卡四种支付方式。</div>
+
+  <h3>2.3 如果你需要 PayPal（可选）</h3>
+  <p>虽然不需要，但有了 PayPal 可以解锁更多商家（如 BuyVM 无限流量 VPS）。</p>
+  <p><strong>注册 PayPal 中国区账号（最简单）：</strong></p>
+  <ol>
+    <li>访问 <a href="https://www.paypal.com/c2">paypal.com/c2</a>，点击「注册」</li>
+    <li>选择「个人账户」</li>
+    <li>填写真实手机号（+86 开头）</li>
+    <li>填写真实姓名、邮箱、设置密码</li>
+    <li>绑定一张中国银联借记卡或信用卡</li>
+    <li>验证邮箱 + 验证手机号</li>
+    <li>完成！即可用于海外 VPS 支付</li>
+  </ol>
+  <div class="warn"><strong>注意</strong>中国区 PayPal 功能受限（只能付款不能收款、有年度限额 5 万美元），但购买 VPS 完全够用。不需要美区 PayPal。</div>
+
+  <h3>如果遇到「Google 验证码加载不出来」</h3>
+  <p>RackNerd 结账页面底部有 Google reCAPTCHA 人机验证，如果验证码加载不出来：</p>
+  <ul>
+    <li><strong>方法一</strong>：临时使用代理/机场，刷新页面完成验证</li>
+    <li><strong>方法二</strong>：使用搬瓦工替代（搬瓦工不需要 Google 验证码）</li>
+    <li><strong>方法三</strong>：用手机浏览器开 4G/5G 流量购买（部分运营商可以直接加载）</li>
+  </ul>
+</div>
+
+<!-- ============ 3 ============ -->
+<div class="card" id="s3">
+  <h2>三、路径 A：RackNerd 购买教程（预算方案，≈¥65/年）</h2>
+
+  <h3>3.1 为什么选 RackNerd</h3>
+  <ul>
+    <li><strong>价格最低</strong>：年付 $8.89 起（≈¥65），每天成本不到 2 毛钱</li>
+    <li><strong>原生支付宝</strong>：不需要任何海外支付手段</li>
+    <li><strong>配置够用</strong>：1C/768MB 内存/1Gbps 带宽，个人代理绰绰有余</li>
+    <li><strong>机房推荐</strong>：Los Angeles DC02（对中国大陆网络优化最好）</li>
+  </ul>
+  <div class="note"><strong>数据来源</strong>P3TERX 博客推荐 + NodeSeek 社区 2026 年保姆级教程 + laozuo.org 价格跟踪。</div>
+
+  <h3>3.2 第一步：找到优惠套餐</h3>
+  <p>RackNerd 的「传家宝」套餐往往不在官网首页展示，需要通过活动链接进入。</p>
+  <p><strong>推荐工具</strong>：LegacyVPS 传家宝监控站<br><a href="https://legacyvps.com/scanidc?providers=RackNerd">https://legacyvps.com/scanidc?providers=RackNerd</a><br>打开后筛选价格，找到 $8.89-$15/年 的套餐。</p>
+
+  <h3>3.3 第二步：选择机房和配置</h3>
+  <ol>
+    <li>点击购买链接后进入配置页面</li>
+    <li><strong>Location（机房）</strong>：选择 <strong>Los Angeles DC02</strong></li>
+    <li>其他选项保持默认</li>
+    <li>点击 <strong>Continue</strong> → <strong>Checkout</strong></li>
+  </ol>
+
+  <h3>3.4 第三步：注册账户并支付</h3>
+  <ol>
+    <li>填写注册信息：<strong>First Name / Last Name</strong> 拼音即可；<strong>Email</strong> 必须真实；<strong>Country</strong> 选择 China</li>
+    <li>支付方式：选择 <strong>Alipay（支付宝）</strong></li>
+    <li>底部勾选「I have read and agree to the Terms of Service」</li>
+    <li>完成 Google reCAPTCHA 验证</li>
+    <li>点击 <strong>Complete Order</strong></li>
+  </ol>
+
+  <h3>3.5 第四步：支付宝扫码付款</h3>
+  <ol>
+    <li>页面跳转到支付宝收银台</li>
+    <li>手机支付宝扫码</li>
+    <li>确认金额（$8.89 ≈ ¥65，汇率实时结算）</li>
+    <li>支付完成，等待邮件</li>
+  </ol>
+
+  <h3>3.6 第五步：查收服务器信息邮件</h3>
+  <p>付款后几分钟内，邮箱会收到标题包含「<strong>KVM VPS Login Information</strong>」的邮件，里面包含：</p>
+  <table>
+    <thead><tr><th>信息</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Main IP</strong></td><td>你的服务器公网 IP 地址</td></tr>
+      <tr><td><strong>Root Password</strong></td><td>root 用户的初始密码</td></tr>
+      <tr><td><strong>Control Panel URL</strong></td><td>独立管理面板地址（https://nerdvm.racknerd.com/）</td></tr>
+      <tr><td><strong>Control Panel Username/Password</strong></td><td>管理面板的独立账号密码（注意：不是 SSH 的 root 密码）</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>如果没收到邮件</strong>登录 RackNerd 官网 → 右上角头像 → <strong>Email History</strong>，所有系统邮件都有备份。</div>
+</div>
+
+<!-- ============ 4 ============ -->
+<div class="card" id="s4">
+  <h2>四、路径 B：搬瓦工购买教程（推荐方案，$49.99-$169.99/年）</h2>
+
+  <h3>4.1 为什么选搬瓦工</h3>
+  <ul>
+    <li><strong>CN2 GIA 三网优化线路</strong>：全天候高速稳定，晚高峰不受影响</li>
+    <li><strong>一键换机房</strong>：不满意可以随时切换到其他机房（如从洛杉矶换到日本软银）</li>
+    <li><strong>IP 质量高</strong>：相比廉价 VPS，搬瓦工 IP 被墙概率显著更低</li>
+    <li><strong>10 年老牌</strong>：行业内口碑最好的 VPS 商家之一</li>
+  </ul>
+
+  <h3>4.2 套餐选择指南</h3>
+  <table>
+    <thead><tr><th>套餐等级</th><th>价格（年付）</th><th>机房</th><th>推荐场景</th></tr></thead>
+    <tbody>
+      <tr><td><strong>KVM（入门）</strong></td><td><strong>$49.99/年</strong>（≈¥365）</td><td>DC3/DC8（CN2 GT）</td><td>预算有限但想要稳定</td></tr>
+      <tr><td><strong>CN2 GIA-E（推荐）</strong></td><td><strong>$169.99/年</strong>（≈¥1,239）</td><td>DC6/DC9/软银/荷兰（CN2 GIA）</td><td>追求极致速度和稳定</td></tr>
+      <tr><td>香港 CN2 GIA</td><td>$899.99/年</td><td>香港</td><td>土豪专属</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.3 购买步骤</h3>
+  <div class="tip"><strong>优惠码：BWHCGLUKKB</strong>（优惠 6.58%，长期有效）</div>
+  <ol>
+    <li>访问搬瓦工官网：<a href="https://bandwagonhost.com">bandwagonhost.com</a> 或镜像 bwh88.net / bwh89.net</li>
+    <li>选择套餐：入门 <strong>KVM</strong>（$49.99/年）或推荐 <strong>CN2 GIA-E</strong>（$169.99/年）</li>
+    <li>选择付款周期（年付最划算），点击 <strong>Add to Cart</strong></li>
+    <li>在购物车页面，输入优惠码 <strong>BWHCGLUKKB</strong>，点击 <strong>Validate Code</strong></li>
+    <li>确认折扣后点击 <strong>Checkout</strong></li>
+    <li>填写注册信息：<strong>国家必须选择 China</strong>、邮箱必须真实、支付方式选 <strong>Alipay</strong></li>
+    <li>点击 <strong>Complete Order</strong> → 跳转到支付宝扫码付款</li>
+    <li>付款完成，等待邮件</li>
+  </ol>
+
+  <h3>4.4 机房选择建议</h3>
+  <table>
+    <thead><tr><th>机房</th><th>适合运营商</th><th>延迟</th><th>特点</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DC6（洛杉矶 CN2 GIA-E）</strong></td><td>电信/联通/移动通用</td><td>150-170ms</td><td><strong>最推荐</strong>，三网优化</td></tr>
+      <tr><td><strong>DC9（洛杉矶 CN2 GIA）</strong></td><td>电信用户首选</td><td>150-170ms</td><td>CN2 GIA 经典线路</td></tr>
+      <tr><td><strong>大阪软银</strong></td><td>联通用户</td><td>40-60ms</td><td>联通直连，速度飞快</td></tr>
+      <tr><td><strong>荷兰联通</strong></td><td>联通用户</td><td>180-200ms</td><td>联通 CUII(AS9929) 精品线路</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ 5 ============ -->
+<div class="card" id="s5">
+  <h2>五、SSH 登录与系统初始化（两条路径通用）</h2>
+
+  <h3>5.1 选择 SSH 客户端</h3>
+  <table>
+    <thead><tr><th>客户端</th><th>平台</th><th>推荐度</th><th>下载地址</th></tr></thead>
+    <tbody>
+      <tr><td><strong>FinalShell</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐⭐</td><td>http://www.hostbuf.com/</td></tr>
+      <tr><td><strong>XTerminal</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐</td><td>https://www.xterminal.cn/</td></tr>
+      <tr><td><strong>Termius</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐</td><td>https://termius.com/</td></tr>
+      <tr><td><strong>系统自带终端</strong></td><td>macOS/Linux</td><td>⭐⭐⭐</td><td><code class="inline">ssh root@IP</code></td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>推荐 FinalShell</strong>中文界面、自带文件管理器、一键保存密码，对新手最友好。</div>
+
+  <h3>5.2 连接服务器</h3>
+  <ol>
+    <li>打开 FinalShell，点击左上角「新建连接」</li>
+    <li>填写：<strong>主机</strong>=邮件中的 Main IP、<strong>端口</strong>=22、<strong>用户名</strong>=root、<strong>密码</strong>=邮件中的 Root Password</li>
+    <li>点击「连接」，首次连接提示「接受密钥指纹」，点击「接受」</li>
+    <li>看到命令行提示符 <code class="inline">root@xxx:~#</code> 表示连接成功</li>
+  </ol>
+
+  <h3>5.3 更换 Root 密码（强烈建议）</h3>
+  <pre><code>passwd
+# 输入两次新密码</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>5.4 系统更新</h3>
+  <pre><code>apt update && apt upgrade -y
+# 大约 2-3 分钟完成
+# 如果提示 "Which services should be restarted?" 直接回车即可</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+</div>
+
+<!-- ============ 6 ============ -->
+<div class="card" id="s6">
+  <h2>六、安装 3X-UI 面板 + 创建节点</h2>
+
+  <h3>6.1 安装 3X-UI 面板</h3>
+  <p>在 SSH 终端中执行以下命令：</p>
+  <pre><code>bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <p>脚本运行后会询问：</p>
+  <ol>
+    <li><strong>是否安装？</strong> → 输入 <code class="inline">y</code> 回车</li>
+    <li><strong>用户名</strong> → 默认 <code class="inline">admin</code>，建议自定义</li>
+    <li><strong>密码</strong> → 默认 <code class="inline">admin</code>，<strong>必须修改为强密码</strong></li>
+    <li><strong>端口</strong> → 默认 <code class="inline">2053</code>，建议回车保持默认</li>
+  </ol>
+
+  <p>安装完成显示：</p>
+  <pre><code>╔═══════════════════════════════════════════╗
+║   3X-UI Panel Installation Complete!     ║
+║   Panel URL: http://你的IP:2053          ║
+║   Username: admin                        ║
+║   Password: your_password                ║
+╚═══════════════════════════════════════════╝</code></pre>
+
+  <div class="note"><strong>数据来源</strong>3X-UI 是 GitHub 开源项目（github.com/MHSanaei/3x-ui），数千 Star，教程来自 ygjc.cc 实测。</div>
+
+  <h3>6.2 登录面板</h3>
+  <ol>
+    <li>浏览器打开 <code class="inline">http://你的VPS_IP:2053</code></li>
+    <li>输入刚才设置的用户名和密码</li>
+    <li>首次登录会跳转到仪表盘</li>
+  </ol>
+  <div class="warn"><strong>打不开网页？</strong>确认输入的是 <code class="inline">http://</code> 不是 <code class="inline">https://</code>。RackNerd 和搬瓦工默认防火墙全开，无需额外配置。</div>
+
+  <h3>6.3 创建 VLESS + Reality 节点</h3>
+  <p>这是最关键的步骤，按以下配置填写：</p>
+  <ol>
+    <li>左侧菜单点击 <strong>「入站列表」</strong> → 点击 <strong>「添加入站」</strong></li>
+  </ol>
+  <table>
+    <thead><tr><th>配置项</th><th>值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>备注</strong></td><td>我的节点</td><td>随意命名</td></tr>
+      <tr><td><strong>协议</strong></td><td><code class="inline">vless</code></td><td>选 vless</td></tr>
+      <tr><td><strong>监听 IP</strong></td><td>留空</td><td>监听所有 IP</td></tr>
+      <tr><td><strong>端口</strong></td><td><code class="inline">443</code></td><td>Reality 协议使用 443</td></tr>
+      <tr><td><strong>传输 → 网络</strong></td><td><code class="inline">tcp</code></td><td></td></tr>
+      <tr><td><strong>安全 → 类型</strong></td><td><code class="inline">reality</code></td><td><strong>关键！</strong></td></tr>
+      <tr><td><strong>uTLS</strong></td><td><code class="inline">chrome</code></td><td>伪装成 Chrome 浏览器</td></tr>
+      <tr><td><strong>Dest</strong></td><td><code class="inline">www.microsoft.com:443</code></td><td>伪装目标</td></tr>
+      <tr><td><strong>SNI</strong></td><td><code class="inline">www.microsoft.com</code></td><td>同上</td></tr>
+      <tr><td><strong>ShortId</strong></td><td>点击 <code class="inline">+</code> 号自动生成</td><td></td></tr>
+      <tr><td><strong>Flow</strong></td><td><code class="inline">xtls-rprx-vision</code></td><td>Vision 流控</td></tr>
+    </tbody>
+  </table>
+  <p>3. 点击 <strong>「添加」</strong> 按钮</p>
+
+  <h3>6.4 导出节点配置</h3>
+  <ol>
+    <li>回到「入站列表」，找到刚创建的节点</li>
+    <li>点击 <strong>「操作」</strong> → <strong>「二维码」</strong></li>
+    <li>可以直接扫码，也可以点击复制按钮复制分享链接</li>
+  </ol>
+</div>
+
+<!-- ============ 7 ============ -->
+<div class="card" id="s7">
+  <h2>七、开启 BBR 加速（可选但推荐）</h2>
+  <p>BBR 是 Google 开发的 TCP 拥塞控制算法，可显著提升 VPS 的网络吞吐量，尤其在跨境高延迟场景下效果明显。</p>
+
+  <h3>7.1 一键开启（推荐）</h3>
+  <pre><code>echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>7.2 验证 BBR 是否已开启</h3>
+  <pre><code>sysctl net.ipv4.tcp_congestion_control
+# 输出应为：net.ipv4.tcp_congestion_control = bbr
+
+lsmod | grep bbr
+# 输出应包含：tcp_bbr</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>7.3 进阶优化（可选）</h3>
+  <p>如果需要更激进的加速，可以安装 BBRv3：</p>
+  <pre><code># BBRv3 一键脚本（社区维护）
+wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" && chmod +x tcpx.sh && ./tcpx.sh</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <div class="warn"><strong>注意</strong>BBRv3 需要较新内核，建议先在原版 BBR 上观察效果，满意即可，不必折腾 BBRv3。</div>
+</div>
+
+<!-- ============ 8 ============ -->
+<div class="card" id="s8">
+  <h2>八、全平台客户端配置指南</h2>
+
+  <h3>8.1 客户端选型速查</h3>
+  <table>
+    <thead><tr><th>你用什么设备</th><th>安装哪个 App</th><th>获取方式</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Windows 电脑</strong></td><td>v2rayN</td><td>github.com/2dust/v2rayN/releases（下载 v2rayN-windows-64.zip）</td></tr>
+      <tr><td><strong>macOS 电脑</strong></td><td>Clash Verge Rev</td><td>github.com/clash-verge-rev/clash-verge-rev/releases（下载 .dmg）</td></tr>
+      <tr><td><strong>iPhone/iPad</strong></td><td>Shadowrocket（小火箭）</td><td>美区/港区 App Store 购买（$2.99）</td></tr>
+      <tr><td><strong>Android 手机</strong></td><td>v2rayNG</td><td>Google Play 搜索下载</td></tr>
+      <tr><td><strong>Linux 桌面</strong></td><td>v2rayA 或 Clash</td><td>各自 GitHub Release</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>iOS 用户注意</strong>需要有一个美区/港区 Apple ID 才能下载 Shadowrocket。注册方法：在 Apple ID 官网选择「美国」地区，地址可用免税州地址生成器。充值可购买美区 Apple Gift Card。</div>
+
+  <h3>8.2 Windows（v2rayN）</h3>
+  <ol>
+    <li>下载 v2rayN-windows-64.zip 并解压</li>
+    <li>运行 <code class="inline">v2rayN.exe</code></li>
+    <li>托盘区右键 v2rayN 图标 → <strong>服务器</strong> → <strong>从剪贴板导入</strong></li>
+    <li>系统托盘右键 → <strong>系统代理</strong> → <strong>自动配置系统代理</strong></li>
+    <li>浏览器访问 <a href="https://www.google.com">google.com</a> 测试</li>
+  </ol>
+
+  <h3>8.3 macOS（Clash Verge Rev）</h3>
+  <ol>
+    <li>安装 Clash Verge Rev</li>
+    <li>3X-UI 面板复制 Clash Meta 格式链接</li>
+    <li>打开 Clash Verge → <strong>Profiles</strong> → 粘贴链接 → <strong>Download</strong></li>
+    <li>点击 <strong>Proxies</strong> → 选择一个节点</li>
+    <li>开启 <strong>System Proxy</strong>，测试 Google 访问</li>
+  </ol>
+
+  <h3>8.4 iOS（Shadowrocket）</h3>
+  <ol>
+    <li>App Store 下载 Shadowrocket（美区/港区账号）</li>
+    <li>3X-UI 面板点击 <strong>二维码</strong></li>
+    <li>Shadowrocket 右上角 <strong>+</strong> → <strong>扫描二维码</strong></li>
+    <li>打开开关连接</li>
+    <li>首次连接会提示「添加 VPN 配置」，点击「允许」并输入手机密码</li>
+  </ol>
+
+  <h3>8.5 Android（v2rayNG）</h3>
+  <ol>
+    <li>Google Play 下载 v2rayNG</li>
+    <li>3X-UI 面板点击 <strong>二维码</strong></li>
+    <li>v2rayNG 右上角 <strong>+</strong> → <strong>扫描二维码</strong></li>
+    <li>点击右下角连接按钮</li>
+    <li>首次使用会提示「连接请求」，点击「确定」</li>
+  </ol>
+
+  <h3>8.6 路由器（OpenClash/PassWall）</h3>
+  <p>如果想让全屋设备都走代理，可以在路由器上配置：</p>
+  <ul>
+    <li><strong>OpenWrt 固件</strong>：安装 OpenClash 或 PassWall 插件</li>
+    <li><strong>配置方式</strong>：在 3X-UI 面板导出订阅链接，粘贴到路由器插件的订阅管理中</li>
+    <li><strong>推荐路由器</strong>：软路由（J4125/N100 等小主机刷 OpenWrt）效果最好</li>
+  </ul>
+</div>
+
+<!-- ============ 9 ============ -->
+<div class="card" id="s9">
+  <h2>九、常规维护与故障排查</h2>
+
+  <h3>9.1 日常维护清单</h3>
+  <table>
+    <thead><tr><th>频率</th><th>操作</th><th>命令</th></tr></thead>
+    <tbody>
+      <tr><td><strong>每周</strong></td><td>检查节点是否在线</td><td>访问面板 URL</td></tr>
+      <tr><td><strong>每月</strong></td><td>系统安全更新</td><td><code class="inline">apt update && apt upgrade -y</code></td></tr>
+      <tr><td><strong>每月</strong></td><td>更新 3X-UI</td><td>SSH 执行 <code class="inline">x-ui</code> → 选择更新选项</td></tr>
+      <tr><td><strong>每季度</strong></td><td>检查流量使用</td><td>面板仪表盘查看或 VPS 商家后台</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9.2 常见故障排查</h3>
+
+  <h4>故障 1：节点突然连不上了</h4>
+  <p><strong>排查步骤：</strong></p>
+  <ol>
+    <li>Ping 一下你的 VPS IP → 如果 ping 不通，IP 可能被墙了</li>
+    <li>如果能 ping 通但 443 端口不通 → 端口被封了（常见）</li>
+    <li>如果能 ping 通且端口通，但节点不通 → 检查 Xray 进程：<code class="inline">systemctl status x-ui</code></li>
+  </ol>
+  <p><strong>IP 被墙的解决方案：</strong></p>
+  <ul>
+    <li><strong>RackNerd</strong>：先换端口试试（如 8443），如果 IP 被封 → 花 $3 购买新 IP</li>
+    <li><strong>搬瓦工</strong>：在 KiwiVM 面板切换到其他机房（免费换机房=免费换 IP）</li>
+  </ul>
+
+  <h4>故障 2：速度很慢</h4>
+  <ol>
+    <li>是否在晚高峰（20:00-23:00）？普通 BGP 线路晚高峰必然降速</li>
+    <li>检查 BBR 是否开启：<code class="inline">sysctl net.ipv4.tcp_congestion_control</code></li>
+    <li>搬瓦工用户：尝试切换到 DC6 或软银机房</li>
+  </ol>
+
+  <h4>故障 3：面板网站打不开</h4>
+  <ol>
+    <li>SSH 登录后执行：<code class="inline">systemctl status x-ui</code></li>
+    <li>如果服务挂了：<code class="inline">systemctl restart x-ui</code></li>
+    <li>检查防火墙：<code class="inline">iptables -L -n | grep 2053</code></li>
+  </ol>
+
+  <h3>9.3 3X-UI 面板常用管理命令</h3>
+  <pre><code>x-ui              # 进入管理菜单
+x-ui start        # 启动面板
+x-ui stop         # 停止面板
+x-ui restart      # 重启面板
+x-ui status       # 查看面板状态
+x-ui enable       # 开机自启
+x-ui disable      # 取消开机自启
+x-ui log          # 查看日志
+x-ui update       # 更新面板
+x-ui install      # 安装面板
+x-ui uninstall    # 卸载面板</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>9.4 更换 IP 操作指南</h3>
+  <p><strong>RackNerd 更换 IP：</strong></p>
+  <ol>
+    <li>登录 <a href="https://nerdvm.racknerd.com/">nerdvm.racknerd.com</a></li>
+    <li>找到对应 VPS → <strong>Settings</strong> → <strong>Change IP</strong></li>
+    <li>支付 $3（支持支付宝），新 IP 邮件通知</li>
+    <li>拿到新 IP 后 SSH 登录，确认 x-ui 正常运行</li>
+  </ol>
+  <p><strong>搬瓦工更换机房（= 更换 IP）：</strong></p>
+  <ol>
+    <li>登录搬瓦工 KiwiVM 面板</li>
+    <li><strong>Migrate to another datacenter</strong></li>
+    <li>选择目标机房（如从 DC3 迁到 DC6）</li>
+    <li>等待几分钟，系统会自动分配新 IP</li>
+    <li>无需重新安装任何东西，节点配置中的 IP 需要手动更新</li>
+  </ol>
+</div>
+
+<!-- ============ 10 ============ -->
+<div class="card" id="s10">
+  <h2>十、速查清单：从零到能用</h2>
+
+  <h3>路径 A：RackNerd（¥65/年）</h3>
+  <ul class="checklist">
+    <li>打开 LegacyVPS 传家宝监控站找套餐 → legacyvps.com/scanidc?providers=RackNerd</li>
+    <li>选购 $8.89-$15/年 套餐，机房选 Los Angeles DC02</li>
+    <li>注册时 Country 选 China，支付方式选 Alipay</li>
+    <li>填写真实邮箱（非常重要！）</li>
+    <li>支付宝扫码付款</li>
+    <li>查收邮件 → 拿到 IP + Root 密码</li>
+    <li>SSH 登录（FinalShell），修改 root 密码</li>
+  </ul>
+
+  <h3>路径 B：搬瓦工（¥365-1,239/年）</h3>
+  <ul class="checklist">
+    <li>访问 bandwagonhost.com</li>
+    <li>选择 KVM $49.99/年 或 CN2 GIA-E $169.99/年</li>
+    <li>输入优惠码 BWHCGLUKKB</li>
+    <li>国家选 China，支付方式选 Alipay</li>
+    <li>填写真实邮箱</li>
+    <li>支付宝扫码付款</li>
+    <li>查收邮件 → 拿到 IP + Root 密码</li>
+    <li>SSH 登录，修改 root 密码</li>
+  </ul>
+
+  <h3>两条路径共同的部署步骤</h3>
+  <ul class="checklist">
+    <li>SSH 登录后执行：apt update && apt upgrade -y</li>
+    <li>开启 BBR 加速（三条命令）</li>
+    <li>安装 3X-UI 面板（一条 curl 命令）</li>
+    <li>浏览器登录 http://你的IP:2053</li>
+    <li>添加入站：协议 vless | 端口 443 | 安全 reality | Dest microsoft.com:443</li>
+    <li>uTLS chrome | Flow xtls-rprx-vision</li>
+    <li>导出二维码/链接</li>
+    <li>客户端导入：Windows→v2rayN / macOS→Clash Verge / iOS→Shadowrocket / Android→v2rayNG</li>
+    <li>打开 Google 测试 ✅</li>
+  </ul>
+</div>
+
+<!-- ============ Appendix ============ -->
+<div class="card" id="appendix">
+  <h2>附录 A：关于 PayPal/海外支付的补充说明</h2>
+
+  <h3>A.1 重要重申</h3>
+  <p><strong>本文推荐的 RackNerd 和搬瓦工都支持支付宝直接支付，你不需要 PayPal。</strong> 大多数主流海外 VPS 商家（CloudCone、Vultr 等）也都支持支付宝。</p>
+
+  <h3>A.2 如果你确实想注册 PayPal（解锁更多商家）</h3>
+  <ul>
+    <li><strong>中国区 PayPal 足够</strong>，不需要美区。中国区注册门槛最低。</li>
+    <li>绑定一张中国银联借记卡即可（推荐绑定专门用于网购的卡，不要用工资卡）</li>
+    <li>中国区 PayPal 年度限额 $50,000，个人使用绰绰有余</li>
+    <li>如果需要<strong>无限流量 VPS</strong>（如 BuyVM $2/月起），可以用 PayPal 支付</li>
+  </ul>
+
+  <h3>A.3 其他支付场景</h3>
+  <table>
+    <thead><tr><th>场景</th><th>最方便的支付方式</th></tr></thead>
+    <tbody>
+      <tr><td>iOS 下载 Shadowrocket</td><td>美区 Apple Gift Card（淘宝购买）</td></tr>
+      <tr><td>不想实名</td><td>加密货币（USDT），但门槛高</td></tr>
+      <tr><td>需要退款保障</td><td>PayPal（有 180 天争议期）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ References ============ -->
+<div class="card" id="refs">
+  <h2>参考资料</h2>
+  <ol>
+    <li>P3TERX - 2026年国外高性价比便宜VPS推荐：<a href="https://p3terx.com/archives/cheap-and-costeffective-vps-recommended.html">p3terx.com</a></li>
+    <li>BandwagonHost中文网 - 2026搬瓦工购买教程：<a href="https://www.bandwagonhost.net/716.html">bandwagonhost.net</a></li>
+    <li>NodeSeek - RackNerd从购买到SSH保姆级教程：<a href="https://www.nodeseek.com/post-571417-1">nodeseek.com</a></li>
+    <li>一个机场 - 3X-UI面板搭建教程：<a href="https://ygjc.cc/guide/docker-3x-ui">ygjc.cc</a></li>
+    <li>3X-UI GitHub 官方仓库：<a href="https://github.com/MHSanaei/3x-ui">github.com/MHSanaei/3x-ui</a></li>
+    <li>RackNerd 2026促销：<a href="https://www.laozuo.org/32598.html">laozuo.org</a></li>
+    <li>阿里云开发者社区 - 2026轻量服务器价格：<a href="https://developer.aliyun.com/article/1724308">developer.aliyun.com</a></li>
+    <li>2025翻墙协议深度对比分析报告：<a href="https://www.nbhd.cloud/2025-fan-qiang-xie-yi-shen-du-dui-bi-ji-zhu-fen-xi-bao-gao/">nbhd.cloud</a></li>
+    <li>BBR 加速终极指南：<a href="https://www.bwghost.me/linux-bbr-guide.html">bwghost.me</a></li>
+    <li>知乎 - PayPal美国注册教程：<a href="https://zhuanlan.zhihu.com/p/1949508764391700206">zhuanlan.zhihu.com</a></li>
+  </ol>
+</div>
+
+<footer>
+  <p>本手册仅用于技术学习与研究目的 · 最后更新 2026年6月5日</p>
+  <p><a href="#">返回顶部</a></p>
+</footer>
+
+</div>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.parentElement;
+  const code = pre.querySelector('code');
+  // Get only the code content, not the button text
+  const text = code.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>
