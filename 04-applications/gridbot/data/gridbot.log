@@ -1,0 +1,136 @@
+2026-06-07 18:53:33 [INFO] main: Database initialized
+2026-06-07 18:53:33 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 18:53:33 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 18:53:33 [ERROR] fastapi: Form data requires "python-multipart" to be installed. 
+You can install "python-multipart" with: 
+
+pip install python-multipart
+
+2026-06-07 18:54:25 [INFO] main: Database initialized
+2026-06-07 18:54:25 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 18:54:25 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 18:54:25 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 18:54:25 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 18:54:25 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 18:54:31 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): www.okx.com:443
+2026-06-07 18:55:01 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 18:55:02 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (2): www.okx.com:443
+2026-06-07 18:55:32 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 18:55:34 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (3): www.okx.com:443
+2026-06-07 18:56:04 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (4): www.okx.com:443
+2026-06-07 18:56:34 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 18:56:35 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (5): www.okx.com:443
+2026-06-07 18:57:05 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 18:57:07 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (6): www.okx.com:443
+2026-06-07 18:57:37 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (7): www.okx.com:443
+2026-06-07 18:58:07 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 18:58:08 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (8): www.okx.com:443
+2026-06-07 18:58:38 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 18:58:40 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (9): www.okx.com:443
+2026-06-07 18:59:10 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (10): www.okx.com:443
+2026-06-07 18:59:40 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 18:59:41 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (11): www.okx.com:443
+2026-06-07 19:00:11 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:00:13 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (12): www.okx.com:443
+2026-06-07 19:00:43 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (13): www.okx.com:443
+2026-06-07 19:01:13 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:01:14 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (14): www.okx.com:443
+2026-06-07 19:02:38 [INFO] main: Database initialized
+2026-06-07 19:02:38 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 19:02:38 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 19:02:38 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 19:02:38 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 19:02:38 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 19:02:52 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): www.okx.com:443
+2026-06-07 19:03:22 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:03:23 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (2): www.okx.com:443
+2026-06-07 19:03:53 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:03:55 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (3): www.okx.com:443
+2026-06-07 19:04:25 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (4): www.okx.com:443
+2026-06-07 19:04:55 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:04:56 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (5): www.okx.com:443
+2026-06-07 19:05:26 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:05:28 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (6): www.okx.com:443
+2026-06-07 19:05:58 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (7): www.okx.com:443
+2026-06-07 19:06:28 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:06:29 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (8): www.okx.com:443
+2026-06-07 19:06:59 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:07:01 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (9): www.okx.com:443
+2026-06-07 19:07:31 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (10): www.okx.com:443
+2026-06-07 19:08:01 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:08:02 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (11): www.okx.com:443
+2026-06-07 19:08:32 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:08:34 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (12): www.okx.com:443
+2026-06-07 19:09:04 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (13): www.okx.com:443
+2026-06-07 19:09:34 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:09:35 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (14): www.okx.com:443
+2026-06-07 19:10:05 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:10:07 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (15): www.okx.com:443
+2026-06-07 19:10:37 [INFO] main: Shutting down...
+2026-06-07 19:10:37 [WARNING] core.engine: All grids paused (circuit breaker)
+2026-06-07 19:10:37 [INFO] main: GridBot stopped
+2026-06-07 19:10:37 [INFO] main: Shutting down...
+2026-06-07 19:10:37 [INFO] main: Shutting down...
+2026-06-07 19:16:19 [INFO] main: Database initialized
+2026-06-07 19:16:19 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 19:16:19 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 19:16:19 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 19:16:19 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 19:16:19 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 19:36:14 [WARNING] apscheduler.executors.default: Run time of job "GridEngine.tick_all (trigger: interval[0:00:05], next run at: 2026-06-07 19:36:14 CST)" was missed by 0:00:04.421847
+2026-06-07 19:38:27 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): www.okx.com:443
+2026-06-07 19:38:57 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:38:58 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (2): www.okx.com:443
+2026-06-07 19:39:28 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:39:30 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (3): www.okx.com:443
+2026-06-07 19:39:32 [INFO] main: Database initialized
+2026-06-07 19:39:32 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 19:39:32 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 19:39:32 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 19:39:32 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 19:39:32 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 19:39:32 [INFO] main: Shutting down...
+2026-06-07 19:39:32 [WARNING] core.engine: All grids paused (circuit breaker)
+2026-06-07 19:39:32 [INFO] main: GridBot stopped
+2026-06-07 19:40:00 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (4): www.okx.com:443
+2026-06-07 19:40:30 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:40:31 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (5): www.okx.com:443
+2026-06-07 19:41:01 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:41:03 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (6): www.okx.com:443
+2026-06-07 19:41:33 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (7): www.okx.com:443
+2026-06-07 19:42:03 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:42:04 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (8): www.okx.com:443
+2026-06-07 19:42:34 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:42:36 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (9): www.okx.com:443
+2026-06-07 19:43:06 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (10): www.okx.com:443
+2026-06-07 19:43:36 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 1.0s
+2026-06-07 19:43:37 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (11): www.okx.com:443
+2026-06-07 19:44:07 [WARNING] core.exchange: Network error: okx GET https://www.okx.com/api/v5/public/instruments?instType=SPOT, retrying in 2.0s
+2026-06-07 19:44:10 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (12): www.okx.com:443
+2026-06-07 19:45:48 [INFO] main: Database initialized
+2026-06-07 19:45:48 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 19:45:48 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): www.okx.com:443
+2026-06-07 19:45:53 [WARNING] core.exchange: OKX exchange unreachable: okx GET https://www.okx.com/api/v5/public/time. Dashboard will work but trading is disabled. Set OKX_PROXY if behind firewall.
+2026-06-07 19:45:53 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 19:45:53 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 19:45:53 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 19:45:53 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 19:45:59 [DEBUG] core.exchange: Skipping fetch_ticker: exchange not connected
+2026-06-07 19:45:59 [DEBUG] core.exchange: Skipping fetch_balance: exchange not connected
+2026-06-07 19:46:06 [INFO] main: Shutting down...
+2026-06-07 19:46:06 [WARNING] core.engine: All grids paused (circuit breaker)
+2026-06-07 19:46:06 [INFO] main: GridBot stopped
+2026-06-07 19:46:06 [INFO] main: Shutting down...
+2026-06-07 19:46:24 [INFO] main: Database initialized
+2026-06-07 19:46:24 [INFO] core.exchange: OKX Sandbox mode enabled
+2026-06-07 19:46:24 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): www.okx.com:443
+2026-06-07 19:46:24 [WARNING] core.exchange: OKX exchange unreachable: okx GET https://www.okx.com/api/v5/public/time. Dashboard will work but trading is disabled. Set OKX_PROXY if behind firewall.
+2026-06-07 19:46:24 [INFO] core.engine: Recovery complete: 0/0 grids restored
+2026-06-07 19:46:24 [INFO] main: Scheduler started: tick=5s, AI=4h
+2026-06-07 19:46:24 [INFO] main: Dashboard: http://0.0.0.0:8000
+2026-06-07 19:46:24 [DEBUG] asyncio: Using selector: KqueueSelector
+2026-06-07 19:46:27 [DEBUG] core.exchange: Skipping fetch_balance: exchange not connected
+2026-06-07 19:46:32 [INFO] main: Shutting down...
+2026-06-07 19:46:32 [WARNING] core.engine: All grids paused (circuit breaker)
+2026-06-07 19:46:32 [INFO] main: GridBot stopped
+2026-06-07 19:46:32 [INFO] main: Shutting down...

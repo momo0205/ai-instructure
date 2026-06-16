@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.MiraClient" parent="android:Theme.Material.NoActionBar" />
+</resources>

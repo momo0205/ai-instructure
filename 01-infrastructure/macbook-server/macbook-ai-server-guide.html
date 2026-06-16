@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MacBook Air → AI 服务器 从零搭建指南</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d2991d;
+    --red: #f85149;
+    --purple: #a371f7;
+    --cyan: #39d2c0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", "Menlo", monospace;
+    line-height: 1.65;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+  h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; color: var(--purple); margin: 2.8rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; color: var(--orange); margin: 1.2rem 0 0.6rem; }
+  p, li { color: var(--muted); font-size: 0.88rem; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-green { background: #1a3a2a; color: var(--green); }
+  .badge-orange { background: #3a2e1a; color: var(--orange); }
+  .badge-red { background: #3a1a1a; color: var(--red); }
+  .badge-purple { background: #2a1a3a; color: var(--purple); }
+  .badge-cyan { background: #1a3035; color: var(--cyan); }
+
+  .phase { margin: 2rem 0; }
+  .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.3rem;
+    margin: 1rem 0;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+  .step:hover { border-color: var(--accent); }
+  .step.done { opacity: 0.5; }
+  .step.done .step-title { text-decoration: line-through; }
+  .step input[type="checkbox"] {
+    margin-top: 0.3rem;
+    width: 1.15rem; height: 1.15rem;
+    accent-color: var(--green);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; min-width: 0; }
+  .step-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .step-desc { color: var(--muted); font-size: 0.83rem; margin: 0.3rem 0 0.6rem; }
+
+  pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin: 0.6rem 0;
+    position: relative;
+  }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.83rem; }
+  .inline-code {
+    background: #1c2333;
+    color: var(--accent);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.82rem;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 0.5rem; right: 0.5rem;
+    background: var(--border);
+    color: var(--muted);
+    border: none;
+    border-radius: 4px;
+    padding: 0.2rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-family: inherit;
+    transition: background 0.2s;
+    z-index: 1;
+  }
+  .copy-btn:hover { background: var(--accent); color: #fff; }
+  .copy-btn.copied { background: var(--green); color: #fff; }
+  .code-block { position: relative; }
+
+  .tip, .warn, .danger, .info {
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    margin: 0.7rem 0;
+    font-size: 0.83rem;
+  }
+  .tip { background: #1a2a3a; border-left: 3px solid var(--accent); color: #b0c8e0; }
+  .warn { background: #3a2e1a; border-left: 3px solid var(--orange); color: #d4b060; }
+  .danger { background: #3a1a1a; border-left: 3px solid var(--red); color: #d4a0a0; }
+  .info { background: #1a2a2a; border-left: 3px solid var(--cyan); color: #a0d4c0; }
+
+  .prereq-card {
+    background: #1a2230;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.8rem 0;
+  }
+  .prereq-card h4 { color: var(--accent); margin-bottom: 0.4rem; font-size: 0.9rem; }
+  .prereq-card a { font-size: 0.82rem; }
+
+  .link-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 0.3rem 0.5rem 0.3rem 0;
+    transition: opacity 0.2s;
+  }
+  .link-btn:hover { opacity: 0.85; text-decoration: none; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin: 0.8rem 0; }
+  th, td { padding: 0.5rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); }
+  th { color: var(--text); font-weight: 600; }
+
+  ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+  li { margin: 0.25rem 0; }
+
+  .progress-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--accent));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .progress-text { font-size: 0.82rem; color: var(--muted); text-align: center; }
+
+  .toc { list-style: none; padding: 0; columns: 2; }
+  .toc li { padding: 0.15rem 0; }
+  .toc a { color: var(--accent); font-size: 0.85rem; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  .section-nav {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .section-nav a {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .section-nav a:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 640px) {
+    body { padding: 1rem 0.5rem; }
+    pre { font-size: 0.7rem; padding: 0.6rem; }
+    .step { padding: 0.8rem; }
+    .toc { columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-container">
+  <h1 style="display:inline;">🖥️ MacBook Air → AI 服务器</h1>
+  <span class="badge badge-green" style="margin-left:1rem;">从零搭建指南 v2.2</span>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <p class="progress-text" id="progress-text">进度：0 / 36 步完成</p>
+</div>
+
+<p class="subtitle">
+  把一台闲置的 M1/M2 MacBook Air 彻底格式化，从零打造成 7×24 小时运行的 AI 终端服务器。<br>
+  通过 <strong>Cloudflare Tunnel</strong> 安全暴露到公网，SSH 远程管理，运行 DeepSeek / Claude Code / Codex CLI 等 AI Agent。
+</p>
+
+<hr>
+
+<h2>📋 前置条件检查</h2>
+<p>开始之前，确保你已有以下基础设施。这遵循"知识阶梯"原则——每个项目站在前面的基础上。</p>
+
+<div class="prereq-card">
+  <h4>✅ 前提 1：VPN 中转站 + FlClash（境外 IP 访问能力）</h4>
+  <p style="font-size:0.82rem; margin-top:0.3rem;">
+    MacBook 安装 Homebrew、npm 包、cloudflared 等需要访问境外网络。<br>
+    你之前搭的 VPN 中转站提供了 Clash 订阅链接 → 导入 FlClash → 终端设环境变量指向 <code class="inline-code">127.0.0.1:7890</code>。
+  </p>
+  <a class="link-btn" href="../vpn-relay/VPN中转站完整部署手册.html" target="_blank">📖 VPN 中转站手册</a>
+  <a class="link-btn" href="https://github.com/chen08209/FlClash/releases" target="_blank">📦 FlClash 下载</a>
+</div>
+
+<div class="prereq-card">
+  <h4>✅ 前提 2：基础的远程管理概念</h4>
+  <p style="font-size:0.82rem; margin-top:0.3rem;">
+    理解 SSH 密钥认证、端口、防火墙的基本概念会让后续步骤更顺畅。
+  </p>
+  <a class="link-btn" href="../vps-quick-access/VPS快速访问手册.html" target="_blank">📖 查看 VPS 管理手册</a>
+</div>
+
+<div class="prereq-card">
+  <h4>🔧 前提 3：你需要的资料清单</h4>
+  <table>
+    <tr><th>资料</th><th>说明</th><th>获取方式</th></tr>
+    <tr><td>邮箱地址</td><td>用于注册域名、Cloudflare、DeepSeek</td><td>已有的即可</td></tr>
+    <tr><td>支付方式</td><td>信用卡/PayPal，用于域名购买、API 充值</td><td>银联/Visa/Mastercard</td></tr>
+    <tr><td>DeepSeek API Key</td><td>CodeWhale 运行必需</td><td><a href="https://platform.deepseek.com/" target="_blank">platform.deepseek.com</a> → API Keys</td></tr>
+    <tr><td>域名</td><td>Cloudflare Tunnel 必需</td><td>下面会详细指引</td></tr>
+    <tr><td>U 盘</td><td>传输 SSH 公钥用（可选）</td><td>任何 FAT32/exFAT 格式的 U 盘</td></tr>
+  </table>
+</div>
+
+<hr>
+
+<h2>📑 快速导航</h2>
+<nav class="section-nav">
+  <a href="#p0">Phase 0 · 准备</a>
+  <a href="#p1">Phase 1 · 格式化</a>
+  <a href="#p2">Phase 2 · 系统基础</a>
+  <a href="#p3">Phase 3 · 安全加固</a>
+  <a href="#p4">Phase 4 · 防休眠</a>
+  <a href="#p5">Phase 5 · Cloudflare Tunnel</a>
+  <a href="#p6">Phase 6 · 开发环境</a>
+  <a href="#p7">Phase 7 · AI Agent</a>
+  <a href="#p8">Phase 8 · 服务管理</a>
+  <a href="#p9">Phase 9 · 维护</a>
+  <a href="#trouble">附录 · 排障</a>
+  <a href="#final-check">附录 · 检查清单</a>
+</nav>
+
+<ul class="toc">
+  <li><a href="#p0">Phase 0 · 准备工作（当前电脑）</a></li>
+  <li><a href="#p1">Phase 1 · 格式化 & 重装 macOS</a></li>
+  <li><a href="#p2">Phase 2 · 系统基础配置</a></li>
+  <li><a href="#p3">Phase 3 · 安全加固</a></li>
+  <li><a href="#p4">Phase 4 · 防止休眠 & 合盖运行</a></li>
+  <li><a href="#p5">Phase 5 · Cloudflare Tunnel 公网暴露</a></li>
+  <li><a href="#p6">Phase 6 · 开发环境</a></li>
+  <li><a href="#p7">Phase 7 · AI Agent 工具</a></li>
+  <li><a href="#p8">Phase 8 · launchd 服务管理</a></li>
+  <li><a href="#p9">Phase 9 · 日常维护 & 监控</a></li>
+  <li><a href="#trouble">附录 A · 故障排除</a></li>
+  <li><a href="#final-check">附录 B · 最终检查清单</a></li>
+</ul>
+
+<hr>
+
+<!-- ======================== PHASE 0 ======================== -->
+<h2 id="p0">Phase 0 · 准备工作 <span class="badge badge-purple">当前电脑</span></h2>
+<div class="info">
+  📍 <strong>位置</strong>：以下所有操作在你<strong>当前使用的电脑</strong>上完成，不要搞混。
+</div>
+
+<div class="phase" data-phase="0">
+
+  <!-- 0.1 域名注册 -->
+  <div class="step" data-step="0-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">0.1 注册域名</div>
+      <div class="step-desc">Cloudflare Tunnel 需要一个域名。推荐在 Cloudflare Registrar（按成本价出售，无中间商加价）直接注册。</div>
+
+      <h4 style="color:var(--text); margin:0.8rem 0 0.4rem; font-size:0.85rem;">推荐注册方式：</h4>
+
+      <p><strong>方式 A：Cloudflare Registrar（推荐）</strong></p>
+      <a class="link-btn" href="https://dash.cloudflare.com/?to=/:account/domains/register" target="_blank">🔗 Cloudflare 域名注册直达</a>
+      <ol>
+        <li>打开上述链接 → 登录 Cloudflare 账号（没有就注册一个）</li>
+        <li>在搜索框输入你想要的域名，例如 <code class="inline-code">your-name.xyz</code></li>
+        <li>Cloudflare 会显示价格（.xyz 通常 $0.99-$10/年）</li>
+        <li>点击 <strong>"Purchase"</strong> 购买</li>
+        <li>填写注册信息（姓名、地址、邮箱），建议<strong>开启 WHOIS 隐私保护</strong>（免费）</li>
+        <li>用信用卡/PayPal 支付</li>
+        <li>购买后域名自动添加到你的 Cloudflare 账户，DNS 也自动配置好</li>
+      </ol>
+
+      <p style="margin-top:0.8rem;"><strong>方式 B：Namesilo（备选）</strong></p>
+      <a class="link-btn" href="https://www.namesilo.com/" target="_blank">🔗 Namesilo 官网</a>
+      <ol>
+        <li>搜索域名 → 购买。Namesilo 也提供免费 WHOIS 隐私。</li>
+        <li>买完后需要手动把 DNS 服务器改为 Cloudflare 的（下面步骤 0.2）</li>
+      </ol>
+
+      <div class="tip">
+        💡 <strong>省钱建议</strong>：<code class="inline-code">.xyz</code> 首年只要 $0.99，<code class="inline-code">.top</code> 也很便宜。对于个人服务器完全够用。本文后续用 <code class="inline-code">your-domain.xyz</code> 作为占位符，请换成你自己的域名。
+      </div>
+    </div>
+  </div>
+
+  <!-- 0.2 Cloudflare -->
+  <div class="step" data-step="0-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">0.2 将域名添加到 Cloudflare（如果 0.1 用了方式 B）</div>
+      <div class="step-desc">如果你在 Cloudflare Registrar 买的域名，此步自动完成，直接跳到 0.3。</div>
+      <a class="link-btn" href="https://dash.cloudflare.com/" target="_blank">🔗 Cloudflare Dashboard</a>
+      <ol>
+        <li>登录 → 点击左侧 <strong>"Websites"</strong> → 点击 <strong>"Add a site"</strong></li>
+        <li>输入你的域名 → 点击 <strong>"Continue"</strong></li>
+        <li>选择 <strong>Free</strong> 计划 → 点击 <strong>"Continue"</strong></li>
+        <li>Cloudflare 会自动扫描现有 DNS 记录，直接点击 <strong>"Continue"</strong></li>
+        <li>你会看到两个 Cloudflare 名称服务器（Nameservers），格式类似：
+          <div class="code-block"><pre><code>alice.ns.cloudflare.com
+bob.ns.cloudflare.com</code></pre></div>
+        </li>
+        <li>复制这两个地址，去 Namesilo（或你的域名注册商）后台，找到 DNS/Nameserver 设置</li>
+        <li>把 Namesilo 默认的 DNS 替换为 Cloudflare 提供的两个地址</li>
+        <li>保存后等待 DNS 生效（通常 5-30 分钟，最长 48 小时）</li>
+        <li>回到 Cloudflare 页面，点击 <strong>"Done, check nameservers"</strong>，等待验证通过</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 0.3 SSH 密钥 -->
+  <div class="step" data-step="0-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">0.3 生成 SSH 密钥对</div>
+      <div class="step-desc">在你的当前电脑上生成一对 ed25519 密钥，用于远程登录 MacBook 服务器（不用密码）。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>ssh-keygen -t ed25519 -C "macbook-server" -f ~/.ssh/macbook_server</code></pre>
+      </div>
+      <p style="font-size:0.8rem; color:var(--muted)">
+        按提示可以直接回车（不设密码，方便自动化；如果想更安全可以设密码，连接时需要输入）。<br>
+        生成两个文件：
+        <code class="inline-code">~/.ssh/macbook_server</code>（私钥，<strong>绝对保密！</strong>）<br>
+        <code class="inline-code">~/.ssh/macbook_server.pub</code>（公钥，稍后放到 MacBook 上）
+      </p>
+    </div>
+  </div>
+
+  <!-- 0.4 API Key -->
+  <div class="step" data-step="0-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">0.4 获取 DeepSeek API Key</div>
+      <div class="step-desc">CodeWhale 需要 DeepSeek API Key。建议顺便充值 $5-$20 作为初始余额。</div>
+      <a class="link-btn" href="https://platform.deepseek.com/api_keys" target="_blank">🔗 DeepSeek API Keys 页面</a>
+      <ol>
+        <li>打开上述链接 → 注册/登录 DeepSeek 账号</li>
+        <li>点击 <strong>"创建 API Key"</strong>（Create API Key）</li>
+        <li>命名（例如 "macbook-server"）→ 创建</li>
+        <li><strong>立即复制保存！</strong>只显示一次，格式为 <code class="inline-code">sk-xxxxxxxx</code></li>
+        <li>建议去 <a href="https://platform.deepseek.com/billing" target="_blank" style="color:var(--accent)">Billing 页面</a> 充值 $5-$20</li>
+      </ol>
+      <div class="warn">
+        ⚠️ <strong>重要</strong>：API Key 只显示一次。把它保存到密码管理器或安全笔记中。
+      </div>
+    </div>
+  </div>
+
+  <!-- 0.5 准备 FlClash 安装包 -->
+  <div class="step" data-step="0-5">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">0.5 提前下载 FlClash 安装包（放到 U 盘）</div>
+      <div class="step-desc">MacBook 格式化后需要用 FlClash 访问境外网络。提前下载好 .dmg，拷贝到 U 盘里，格式化后直接安装，省得又被网络问题卡住。</div>
+
+      <a class="link-btn" href="https://github.com/chen08209/FlClash/releases" target="_blank">🔗 FlClash GitHub Releases</a>
+      <a class="link-btn" href="https://flclash.app/" target="_blank">🔗 FlClash 官网</a>
+      <ol>
+        <li>打开 GitHub Releases → 找到最新版本</li>
+        <li>下载 <strong>macOS arm64</strong> 版本（<code class="inline-code">FlClash-macos-arm64-*.dmg</code>）</li>
+        <li>同时把 VPN 中转站的 <strong>Clash 订阅链接</strong>记下来（或保存到文本文件放 U 盘里）</li>
+        <li>把 .dmg 文件和订阅链接文本文件拷贝到 U 盘</li>
+      </ol>
+
+      <p style="font-size:0.82rem; margin-top:0.5rem;">
+        FlClash 默认在本地开放：
+        <strong>HTTP 代理</strong> <code class="inline-code">127.0.0.1:7890</code> ·
+        <strong>SOCKS5 代理</strong> <code class="inline-code">127.0.0.1:7891</code>
+      </p>
+      <a class="link-btn" href="../vpn-relay/VPN中转站完整部署手册.html" target="_blank">📖 VPN 中转站手册（获取订阅链接）</a>
+
+      <div class="tip">
+        💡 <strong>为什么用 FlClash？</strong><br>
+        ① GUI 切换节点无需改环境变量<br>
+        ② 代理地址永远 <code class="inline-code">127.0.0.1:7890</code><br>
+        ③ 分流规则：国内直连，国外走代理<br>
+        ④ 提前下载到 U 盘，格式化后插上就能装，零网络依赖
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 1 ======================== -->
+<h2 id="p1">Phase 1 · 格式化 & 重装 macOS <span class="badge badge-red">MacBook 上操作</span></h2>
+<div class="info">
+  📍 <strong>位置切换</strong>：从现在开始，<strong>所有操作都在 MacBook Air 上执行</strong>。把你的当前电脑放在一边。
+</div>
+
+<div class="danger">
+  ⚠️ <strong>最终警告</strong>：以下操作将永久删除 MacBook 上的所有数据。确认已备份重要文件！
+</div>
+
+<div class="phase" data-phase="1">
+
+  <div class="step" data-step="1-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">1.1 退出 iCloud 和 Apple 服务</div>
+      <div class="step-desc">在抹掉 Mac 之前，正确退出所有 Apple 服务，避免激活锁问题。</div>
+      <ol>
+        <li><strong>系统设置</strong> → 顶部点击你的 Apple ID → 滚动到底部 → <strong>"退出登录"</strong></li>
+        <li>如果系统询问是否保留数据，选择<strong>不保留</strong></li>
+        <li>关闭"查找我的 Mac"（需要输入 Apple ID 密码）</li>
+        <li>打开 <strong>信息</strong> App → 菜单栏"信息" → 设置 → iMessage → 退出登录</li>
+        <li>打开 <strong>FaceTime</strong> App → 菜单栏"FaceTime" → 设置 → 退出登录</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="1-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">1.2 抹掉所有内容和设置</div>
+      <div class="step-desc">Apple Silicon Mac 的抹掉方式非常简洁——系统设置里直接操作即可。</div>
+      <ol>
+        <li>打开 <strong>系统设置</strong> → <strong>通用</strong> → <strong>传输或还原</strong></li>
+        <li>点击 <strong>"抹掉所有内容和设置"</strong></li>
+        <li>输入管理员密码确认</li>
+        <li>系统会提示你退出 Apple ID（如果你没做 1.1）</li>
+        <li>点击第二次确认 → Mac 自动重启</li>
+        <li>屏幕变黑，显示 Apple logo + 进度条（约 5-15 分钟）</li>
+        <li>完成后自动进入 <strong>设置助手</strong>（Hello 界面）</li>
+      </ol>
+      <div class="tip">
+        💡 Apple Silicon Mac 的"抹掉所有内容"是通过销毁加密卷密钥来实现的，等同于真正的安全擦除。不需要进入恢复模式。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="1-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">1.3 通过设置助手初始化 Mac</div>
+      <div class="step-desc">重新激活 Mac 并创建管理员账户。以下是<strong>服务器优化的设置方案</strong>。</div>
+      <table>
+        <tr><th>设置项</th><th>选择</th><th>原因</th></tr>
+        <tr><td>国家/地区</td><td>按实际情况</td><td>影响 App Store 可用性</td></tr>
+        <tr><td>Wi-Fi</td><td>连接家庭网络</td><td>必须联网</td></tr>
+        <tr><td>迁移助理</td><td><strong>以后再说 / 跳过</strong></td><td>不需要迁移数据</td></tr>
+        <tr><td>Apple ID 登录</td><td><strong>跳过 / 稍后设置</strong></td><td>服务器不需要 iCloud</td></tr>
+        <tr><td>条款与条件</td><td>同意</td><td>必须</td></tr>
+        <tr><td>账户名</td><td><code class="inline-code">admin</code></td><td>简洁、语义清晰</td></tr>
+        <tr><td>密码</td><td>设置一个强密码</td><td>记住它！以后 sudo 和 GUI 登录都要用</td></tr>
+        <tr><td>Siri</td><td><strong>禁用</strong></td><td>服务器不需要</td></tr>
+        <tr><td>屏幕使用时间</td><td><strong>跳过</strong></td><td>-</td></tr>
+        <tr><td>FileVault 加密</td><td><strong>不启用</strong></td><td>重要：加密导致重启后需手动解锁</td></tr>
+        <tr><td>外观</td><td>深色（推荐）</td><td>省电</td></tr>
+        <tr><td>定位服务</td><td><strong>禁用</strong></td><td>服务器不需要</td></tr>
+        <tr><td>分析数据</td><td><strong>不共享</strong></td><td>-</td></tr>
+      </table>
+      <div class="warn">
+        ⚠️ <strong>FileVault 必须关掉！</strong>如果启用了 FileVault，每次重启 Mac 都需要物理输入密码才能解密磁盘并启动系统。这对远程服务器是致命的。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="1-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">1.4 进入桌面后立即更新 macOS</div>
+      <div class="step-desc">确保系统是最新版本，获取最新的安全补丁。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>softwareupdate --install --all --restart</code></pre>
+      </div>
+      <p style="font-size:0.8rem; color:var(--muted)">
+        机器会自动重启。重启后回到桌面，继续下一步。
+      </p>
+    </div>
+  </div>
+
+  <div class="step" data-step="1-5">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">1.5 安装 FlClash + 配置终端代理环境变量</div>
+      <div class="step-desc">FlClash 提供 GUI 管理代理节点，但终端工具（brew、npm、git、curl）不会自动走系统代理。需要设环境变量指向 FlClash 的本地端口。</div>
+
+      <p><strong>① 先安装 FlClash（如果还没装）</strong></p>
+      <a class="link-btn" href="https://github.com/chen08209/FlClash/releases" target="_blank">🔗 下载 FlClash</a>
+      <p style="font-size:0.82rem; margin-top:0.3rem;">
+        下载 macOS arm64 的 .dmg → 拖入 Applications → 打开后粘贴 VPN 中转站的 Clash 订阅链接 → 选一个节点。
+      </p>
+
+      <p style="margin-top:0.8rem;"><strong>② 设置终端环境变量（指向 FlClash 本地端口）</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># FlClash 默认 HTTP 代理端口是 7890，SOCKS5 是 7891（到 FlClash 设置里确认）
+export https_proxy=http://127.0.0.1:7890
+export http_proxy=http://127.0.0.1:7890
+export all_proxy=socks5://127.0.0.1:7891
+
+# 排除本地和内网地址（避免代理拦截局域网流量）
+export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local
+
+# 测试代理
+curl -I https://www.google.com 2>&1 | head -1
+# 应该看到 HTTP/2 200
+
+# 持久化
+echo 'export https_proxy=http://127.0.0.1:7890' >> ~/.zshrc
+echo 'export http_proxy=http://127.0.0.1:7890' >> ~/.zshrc
+echo 'export all_proxy=socks5://127.0.0.1:7891' >> ~/.zshrc
+echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local' >> ~/.zshrc</code></pre>
+      </div>
+
+      <div class="tip">
+        💡 <strong>端口号确认</strong>：打开 FlClash → 设置 → 查看 HTTP/SOCKS5 端口。<br>
+        如果端口不是 7890/7891，把上面命令中的端口换成实际值。<br>
+        <strong>以后代理地址永远不变</strong>（都是 <code class="inline-code">127.0.0.1</code>），换节点在 FlClash 里点一下就行。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 2 ======================== -->
+<h2 id="p2">Phase 2 · 系统基础配置</h2>
+
+<div class="phase" data-phase="2">
+
+  <div class="step" data-step="2-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">2.1 安装 Xcode Command Line Tools</div>
+      <div class="step-desc">包含 git、make、gcc、clang 等基础开发工具。Homebrew 和几乎所有包都依赖它。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>xcode-select --install</code></pre>
+      </div>
+      <p style="font-size:0.8rem; color:var(--muted)">
+        弹出 GUI 对话框 → 点击"安装" → 等待约 2-5 分钟。完成后验证：<code class="inline-code">git --version</code>
+      </p>
+    </div>
+  </div>
+
+  <div class="step" data-step="2-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">2.2 安装 Homebrew</div>
+      <div class="step-desc">macOS 的事实标准包管理器，用一条命令安装几乎所有工具。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</code></pre>
+      </div>
+      <p style="font-size:0.8rem; color:var(--muted)">
+        按提示输入密码（sudo 需要）。安装完成后，终端会提示你运行两条命令来将 brew 加入 PATH。照做即可：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="2-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">2.3 配置 Git</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>git config --global user.name "MacBook Server"
+git config --global user.email "admin@your-domain.xyz"
+git config --global init.defaultBranch main</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="2-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">2.4 优化系统设置（服务器模式）</div>
+      <div class="step-desc">关掉不必要的后台进程，减少资源消耗。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 关闭 Spotlight 索引（节省 CPU 和磁盘 I/O）
+sudo mdutil -a -i off
+
+# 如果你想保留某些目录的索引：
+# sudo mdutil -i on /Users/admin/code
+
+# 关闭不必要的动画（减少 GPU 使用）
+defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+
+# 关闭自动软件更新弹窗（手动管理更新）
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool false</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 3 ======================== -->
+<h2 id="p3">Phase 3 · 安全加固</h2>
+<div class="info">
+  🔒 目标：让这台暴露在公网的 MacBook 只有你通过 SSH 密钥才能登录，其他所有途径全部封死。
+</div>
+
+<div class="phase" data-phase="3">
+
+  <div class="step" data-step="3-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.1 启用 macOS 内置防火墙 + 隐身模式</div>
+      <div class="step-desc">隐身模式让 Mac 不响应 ICMP ping 请求，攻击者无法探测到你的设备在线。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 启用防火墙
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+
+# 启用隐身模式（不响应 ping）
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on
+
+# 验证
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+# 输出：Firewall is enabled. (State = 1)
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode
+# 输出：Stealth mode enabled</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="3-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.2 在路由器上设置静态 IP（强烈推荐）</div>
+      <div class="step-desc">防止 MacBook 的内网 IP 变动导致 Cloudflare Tunnel 无法工作。</div>
+      <ol>
+        <li>在 MacBook 上查看当前信息：
+          <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">复制</button><pre><code># 查看内网 IP
+ifconfig en0 | grep "inet "
+# 查看 MAC 地址
+ifconfig en0 | grep ether</code></pre></div>
+        </li>
+        <li>登录你的路由器管理页面（通常是 <code class="inline-code">192.168.1.1</code> 或 <code class="inline-code">192.168.0.1</code>）</li>
+        <li>找到 <strong>DHCP 设置</strong> → <strong>静态 IP 分配</strong> 或 <strong>地址预留</strong></li>
+        <li>添加一条规则：MAC 地址 → 固定 IP（例如 <code class="inline-code">192.168.1.100</code>）</li>
+        <li>保存，MacBook 下次连接会自动获取这个固定 IP</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="3-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.3 启用 SSH 远程登录</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 启用 SSH（Mac 称之为"远程登录"）
+sudo systemsetup -setremotelogin on
+
+# 验证
+sudo systemsetup -getremotelogin
+# 输出：Remote Login: On</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="3-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.4 把 SSH 公钥传输到 MacBook</div>
+      <div class="step-desc">把 Phase 0 生成的公钥内容放到 MacBook 的 authorized_keys 里。</div>
+
+      <p><strong>方式 A：从当前电脑用 ssh-copy-id（如果 MacBook IP 已知）</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 在你的当前电脑上执行
+ssh-copy-id -i ~/.ssh/macbook_server.pub admin@192.168.1.100</code></pre>
+      </div>
+
+      <p><strong>方式 B：U 盘 / AirDrop 手动复制（在 MacBook 上执行）</strong></p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 在 MacBook 的终端中执行
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+
+# 编辑 authorized_keys，把公钥内容粘贴进去
+nano ~/.ssh/authorized_keys
+# 粘贴 macbook_server.pub 的完整内容，保存 (Ctrl+X → Y → Enter)</code></pre>
+      </div>
+
+      <div class="warn">
+        ⚠️ 确保 <code class="inline-code">~/.ssh/authorized_keys</code> 的权限是 <code class="inline-code">600</code>（只允许所有者读写），否则 SSH 会拒绝使用它。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="3-5">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.5 强化 SSH 安全配置</div>
+      <div class="step-desc">禁用密码登录、改用非标准端口、禁止 root 登录。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 备份原配置
+sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+
+# 编辑 SSH 配置
+sudo nano /etc/ssh/sshd_config</code></pre>
+      </div>
+      <p style="font-size:0.83rem;">找到并修改以下行（去掉行首的 # 注释）：</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>Port 2222                       # 改为非标准端口（避开扫描器）
+PermitRootLogin no              # 禁止 root 直接登录
+PasswordAuthentication no       # 禁止密码登录，仅允许密钥
+ChallengeResponseAuthentication no  # 禁止键盘交互登录
+PubkeyAuthentication yes        # 启用密钥认证
+AuthorizedKeysFile .ssh/authorized_keys</code></pre>
+      </div>
+
+      <div class="warn">
+        ⚠️ <strong>在重启 sshd 之前，先测试能否用密钥登录！</strong>开一个新终端窗口测试：
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 在你的当前电脑上测试（MacBook IP 用实际地址）
+ssh -i ~/.ssh/macbook_server -p 22 admin@192.168.1.100
+
+# 能成功登录后再继续</code></pre>
+      </div>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 检查配置语法
+sudo sshd -t
+# 无输出 = 配置正确
+
+# 重启 SSH 服务（兼容 macOS Ventura+）
+# 方式 1（推荐）：
+sudo launchctl kickstart -k system/com.openssh.sshd
+
+# 如果方式 1 不行，用方式 2：
+# sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist 2>/dev/null
+# sudo launchctl load /System/Library/LaunchDaemons/ssh.plist 2>/dev/null
+
+# 如果两种方式都被 SIP 拦截，重启 MacBook：
+# sudo shutdown -r now
+
+# 用新端口重新测试（在你的当前电脑上）
+ssh -i ~/.ssh/macbook_server -p 2222 admin@192.168.1.100</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="3-6">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">3.6 配置 ~/.ssh/config（可选，方便连接）</div>
+      <div class="step-desc">在你的<strong>当前电脑</strong>上配置 SSH 别名，以后只需 <code class="inline-code">ssh macbook</code> 即可连接。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 在你的当前电脑上编辑 ~/.ssh/config
+nano ~/.ssh/config
+
+# 添加：
+Host macbook
+  HostName 192.168.1.100
+  Port 2222
+  User admin
+  IdentityFile ~/.ssh/macbook_server
+
+# 保存后测试：
+ssh macbook</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 4 ======================== -->
+<h2 id="p4">Phase 4 · 防止休眠 & 合盖运行</h2>
+<div class="info">
+  💤 MacBook 作为服务器必须 7×24 运行。macOS 默认会在空闲时进入睡眠，必须全部禁用。
+</div>
+
+<div class="phase" data-phase="4">
+
+  <div class="step" data-step="4-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">4.1 系统设置 → 电源管理</div>
+      <div class="step-desc">通过 GUI 设置最直观。</div>
+      <ol>
+        <li><strong>系统设置</strong> → <strong>电池</strong> → <strong>选项</strong></li>
+        <li>"显示器关闭时防止自动休眠" → <strong>开启</strong></li>
+        <li><strong>系统设置</strong> → <strong>锁定屏幕</strong></li>
+        <li>"使用电源适配器时，在非活跃状态下关闭显示器" → <strong>永不</strong></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="4-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">4.2 pmset 命令行彻底禁用睡眠</div>
+      <div class="step-desc">pmset 是 macOS 电源管理的底层工具，修改后永久生效（直到下次手动改回）。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 查看当前所有电源设置
+pmset -g
+
+# ====== 禁用所有形式的睡眠 ======
+sudo pmset -a disablesleep 1       # 总开关：禁用系统睡眠（macOS 12-13 有效，14+ 需验证）
+sudo pmset -a sleep 0              # 禁止定时睡眠
+sudo pmset -a displaysleep 0       # 禁止显示器睡眠
+sudo pmset -a disksleep 0          # 禁止硬盘睡眠
+sudo pmset -a hibernatemode 0      # 禁用休眠（写入内存到磁盘）
+sudo pmset -a standby 0            # 禁用 standby 模式
+sudo pmset -a autopoweroff 0       # 禁用自动关机
+
+# 验证所有值都是 0
+pmset -g</code></pre>
+      </div>
+      <table>
+        <tr><th>设置项</th><th>作用</th></tr>
+        <tr><td><code>disablesleep 1</code></td><td>总开关，禁用所有系统睡眠</td></tr>
+        <tr><td><code>sleep 0</code></td><td>系统定时睡眠（分钟），0 = 永不</td></tr>
+        <tr><td><code>displaysleep 0</code></td><td>显示器定时关闭，0 = 永不</td></tr>
+        <tr><td><code>hibernatemode 0</code></td><td>0 = 禁用休眠（不写内存到磁盘）</td></tr>
+        <tr><td><code>standby 0</code></td><td>禁用深度 standby</td></tr>
+      </table>
+      <div class="tip">
+        💡 如果需要恢复睡眠：<code class="inline-code">sudo pmset -a disablesleep 0</code> 即可。<br>
+        ⚠️ <strong>注意</strong>：macOS 14 Sonoma 及以上版本中 <code class="inline-code">disablesleep</code> 可能已被废弃。如果执行后 <code class="inline-code">pmset -g</code> 中看不到此参数，说明系统已忽略，此时仅靠其他 sleep/standby 设置 + caffeinate 的双重保险。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="4-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">4.3 caffeinate 开机自启（双重保险）</div>
+      <div class="step-desc">caffeinate 是 macOS 自带命令，持续运行可以阻止系统空闲睡眠。通过 launchd 设为开机自启。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>cat > ~/Library/LaunchAgents/com.server.caffeinate.plist << 'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;Label&lt;/key&gt;
+    &lt;string&gt;com.server.caffeinate&lt;/string&gt;
+    &lt;key&gt;ProgramArguments&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;/usr/bin/caffeinate&lt;/string&gt;
+        &lt;string&gt;-d&lt;/string&gt;
+        &lt;string&gt;-i&lt;/string&gt;
+        &lt;string&gt;-m&lt;/string&gt;
+        &lt;string&gt;-s&lt;/string&gt;
+    &lt;/array&gt;
+    &lt;key&gt;RunAtLoad&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;KeepAlive&lt;/key&gt;
+    &lt;true/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+EOF
+
+launchctl load ~/Library/LaunchAgents/com.server.caffeinate.plist
+
+# 验证 caffeinate 正在运行
+ps aux | grep caffeinate</code></pre>
+      </div>
+      <p style="font-size:0.82rem; color:var(--muted)">
+        caffeinate 参数说明：<code>-d</code> 防显示器睡眠、<code>-i</code> 防系统空闲睡眠、<code>-m</code> 防磁盘睡眠、<code>-s</code> 防 AC 电源睡眠。
+      </p>
+    </div>
+  </div>
+
+  <div class="step" data-step="4-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">4.4 关于合盖运行</div>
+      <div class="step-desc">MacBook Air 作为一个长期运行的服务器，建议如何处理盖子？</div>
+      <p style="font-size:0.83rem;">
+        MacBook 在<strong>连接外接电源</strong>时合盖会自动进入 Clamshell 模式，系统继续运行。<br>
+        但如果没有外接显示器，某些 macOS 版本可能仍然会触发睡眠。<br>
+        最稳妥的做法：<strong>合盖但接电源</strong> + 上面配好的 pmset + caffeinate。
+      </p>
+      <div class="tip">
+        💡 <strong>物理建议</strong>：如果条件允许，<strong>开盖使用</strong>（屏幕亮度调最低）散热最好。合盖运行时注意通风，不要放在封闭的柜子里。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 5 ======================== -->
+<h2 id="p5">Phase 5 · Cloudflare Tunnel 公网暴露</h2>
+<div class="info">
+  🌐 Cloudflare Tunnel 在你家和 Cloudflare 全球网络之间建立一条加密隧道。外部访问者连接 Cloudflare 的节点，Cloudflare 通过隧道将请求转发到你的 MacBook。<strong>无需在路由器上开任何端口，也不暴露你家 IP。</strong>
+</div>
+
+<div class="phase" data-phase="5">
+
+  <div class="step" data-step="5-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.1 安装 cloudflared</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>brew install cloudflared
+
+# 验证
+cloudflared version</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.2 登录 Cloudflare（在 MacBook 上）</div>
+      <div class="step-desc">此命令会打开浏览器，跳转到 Cloudflare 授权页面。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>cloudflared tunnel login</code></pre>
+      </div>
+      <ol>
+        <li>浏览器自动打开 → 选择你在 Phase 0 注册域名的那个 Cloudflare 账号</li>
+        <li>点击 <strong>"Authorize"</strong> 授权</li>
+        <li>授权成功后，证书保存在 <code class="inline-code">~/.cloudflared/cert.pem</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.3 创建隧道</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 创建名为 macbook-server 的隧道
+cloudflared tunnel create macbook-server
+
+# 查看隧道列表（记录 UUID）
+cloudflared tunnel list
+# 输出示例：
+# ID                                    NAME             CREATED
+# abcd1234-5678-90ab-cdef-1234567890ab  macbook-server   2026-06-07...</code></pre>
+      </div>
+      <p style="font-size:0.82rem; color:var(--muted)">
+        记录下隧道 UUID，下一步配置要用。凭证文件保存在 <code class="inline-code">~/.cloudflared/&lt;uuid&gt;.json</code>。
+      </p>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.4 创建隧道配置文件</div>
+      <div class="step-desc">告诉 cloudflared：什么域名转发到什么本地端口。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>mkdir -p ~/.cloudflared
+nano ~/.cloudflared/config.yml</code></pre>
+      </div>
+      <p style="font-size:0.83rem;">写入以下内容（<strong>替换 YOUR_TUNNEL_UUID、your-domain.xyz、以及用户名 admin</strong>）：</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>tunnel: YOUR_TUNNEL_UUID
+credentials-file: /Users/admin/.cloudflared/YOUR_TUNNEL_UUID.json
+
+ingress:
+  # SSH 隧道（端口改为你在 sshd_config 中设置的 2222）
+  - hostname: ssh.your-domain.xyz
+    service: ssh://localhost:2222
+
+  # 如果有 web 服务，加上 HTTP 映射
+  # - hostname: app.your-domain.xyz
+  #   service: http://localhost:3000
+
+  # 默认规则：拒绝所有未匹配的请求
+  - service: http_status:404</code></pre>
+      </div>
+      <div class="tip">
+        💡 <code class="inline-code">ssh://localhost:2222</code> 表示将匹配到的域名流量转发到 MacBook 本地的 SSH 端口（我们改成了 2222）。Cloudflare 会自动处理 SSH 协议。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-5">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.5 创建 DNS 记录</div>
+      <div class="step-desc">在 Cloudflare DNS 中创建指向隧道的记录。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 为每个 hostname 创建 DNS 记录
+cloudflared tunnel route dns macbook-server ssh.your-domain.xyz
+
+# 查看 DNS 记录是否创建成功
+cloudflared tunnel route ip show</code></pre>
+      </div>
+      <p style="font-size:0.82rem; color:var(--muted)">
+        这条命令会自动在 Cloudflare DNS 中添加一条 CNAME 记录：<code class="inline-code">ssh.your-domain.xyz → &lt;tunnel-uuid&gt;.cfargotunnel.com</code>
+      </p>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-6">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.6 测试隧道</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 前台运行隧道（看日志方便调试）
+cloudflared tunnel run macbook-server
+
+# 如果看到 "Registered tunnel connection" 就是成功了</code></pre>
+      </div>
+      <p style="font-size:0.83rem;">隧道跑起来后，在<strong>你的当前电脑</strong>上测试 SSH 连接：</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 在你当前电脑上执行
+ssh -i ~/.ssh/macbook_server admin@ssh.your-domain.xyz -p 22</code></pre>
+      </div>
+      <div class="info">
+        📝 注意：通过 Cloudflare Tunnel 连接 SSH 时，端口用的是 <strong>22</strong>（Cloudflare 边缘节点端口），而不是我们改过的 2222。2222 只用于 MacBook 本地。
+      </div>
+      <p style="font-size:0.83rem;">测试成功后，Ctrl+C 停止前台运行的隧道，下一步用 launchd 让它在后台运行。</p>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-7">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.7 安装为系统服务（开机自启）</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 安装为 launchd 服务
+sudo cloudflared service install
+
+# 启动服务
+sudo launchctl start com.cloudflare.cloudflared
+
+# 检查运行状态
+sudo launchctl list | grep cloudflared
+# 应该看到一行，第一个数字是 PID，非 0 表示正在运行</code></pre>
+      </div>
+      <p style="font-size:0.83rem;">
+        <code class="inline-code">cloudflared service install</code> 会自动创建 plist 并加载。配置文件读取 <code class="inline-code">/etc/cloudflared/config.yml</code>，如果你把配置文件放在了 <code class="inline-code">~/.cloudflared/config.yml</code>，需要复制过去：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>sudo mkdir -p /etc/cloudflared
+sudo cp ~/.cloudflared/config.yml /etc/cloudflared/
+sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
+# 修改 config.yml 中的 credentials-file 路径为 /etc/cloudflared/</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-8">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.8 Cloudflare Access OTP 验证（可选，强烈推荐）</div>
+      <div class="step-desc">为 SSH 隧道增加额外身份验证层。即使攻击者知道你的域名，也必须通过邮箱验证码才能建立连接。</div>
+      <a class="link-btn" href="https://one.dash.cloudflare.com/" target="_blank">🔗 Cloudflare Zero Trust Dashboard</a>
+      <ol>
+        <li>打开上面链接 → 进入 <strong>Access</strong> → <strong>Applications</strong></li>
+        <li>点击 <strong>"Add an application"</strong> → 选择 <strong>"Self-hosted"</strong></li>
+        <li>Application name: <code class="inline-code">SSH Access</code></li>
+        <li>Subdomain: <code class="inline-code">ssh</code>，Domain: <code class="inline-code">your-domain.xyz</code></li>
+        <li>点击 <strong>"Next"</strong></li>
+        <li><strong>Add policy</strong>：
+          <ul>
+            <li>Policy name: <code class="inline-code">Allow-My-Email</code></li>
+            <li>Action: <strong>Allow</strong></li>
+            <li>Include → Emails → 输入你的邮箱</li>
+          </ul>
+        </li>
+        <li>点击 <strong>"Next"</strong> → <strong>"Add application"</strong></li>
+      </ol>
+      <p style="font-size:0.83rem; margin-top:0.5rem;">然后在你的<strong>当前电脑</strong>的 <code class="inline-code">~/.ssh/config</code> 中加入：</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>Host macbook
+  HostName ssh.your-domain.xyz
+  User admin
+  Port 22
+  IdentityFile ~/.ssh/macbook_server
+  ProxyCommand cloudflared access ssh --hostname %h</code></pre>
+      </div>
+      <p style="font-size:0.83rem;">之后每次 SSH 连接，浏览器会打开 Cloudflare Access 页面，需要输入邮箱收到的 OTP 验证码才能建立连接。</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 6 ======================== -->
+<h2 id="p6">Phase 6 · 开发环境</h2>
+
+<div class="phase" data-phase="6">
+
+  <div class="step" data-step="6-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">6.1 安装 nvm（Node.js 版本管理器）</div>
+      <div class="step-desc">大部分 AI Agent CLI 工具都是 Node.js 包，用 nvm 管理版本。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+
+# 重新加载
+source ~/.zshrc
+
+# 安装最新 LTS
+nvm install --lts
+nvm use --lts
+nvm alias default lts/*
+
+# 验证
+node --version && npm --version</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="6-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">6.2 安装 Python & 常用工具</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>brew install python@3.12 tmux htop ripgrep fd jq git-lfs</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 7 ======================== -->
+<h2 id="p7">Phase 7 · AI Agent 工具</h2>
+
+<div class="phase" data-phase="7">
+
+  <div class="step" data-step="7-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">7.1 安装 CodeWhale（DeepSeek CLI Agent）🐳</div>
+      <div class="step-desc">终端原生 AI 编程助手，专为 DeepSeek V4 设计。~98% prompt cache 命中率，1M context。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># npm 全局安装（推荐）
+npm install -g codewhale
+
+# 其他安装方式（可选）：
+# brew install codewhale
+# cargo install codewhale-tui --locked
+
+# 设置 API Key（替换为你 Phase 0 获取的 key）
+echo 'export DEEPSEEK_API_KEY="sk-your-api-key-here"' >> ~/.zshrc
+source ~/.zshrc
+
+# 启动
+codewhale
+
+# 首次运行会提示选择 endpoint。如果你在国内使用 VPN 中转站代理，选择默认 endpoint 即可</code></pre>
+      </div>
+      <a class="link-btn" href="https://www.codewhale.ai/" target="_blank">🔗 CodeWhale 官网</a>
+      <a class="link-btn" href="https://github.com/usewhale/DeepSeek-Code-Whale" target="_blank">📦 GitHub</a>
+    </div>
+  </div>
+
+  <div class="step" data-step="7-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">7.2 安装 Claude Code（后续）</div>
+      <div class="step-desc">Anthropic 官方的终端 AI 编程助手。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>npm install -g @anthropic-ai/claude-code
+echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="7-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">7.3 安装 OpenAI Codex CLI（后续）</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>npm install -g @openai/codex
+echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 8 ======================== -->
+<h2 id="p8">Phase 8 · launchd 服务管理</h2>
+<p>macOS 使用 <code class="inline-code">launchd</code> 管理系统服务和用户服务。用户级服务放在 <code class="inline-code">~/Library/LaunchAgents/</code>，系统级在 <code class="inline-code">/Library/LaunchDaemons/</code>。</p>
+
+<div class="phase" data-phase="8">
+
+  <div class="step" data-step="8-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">8.1 launchd plist 通用模板</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>cat > ~/Library/LaunchAgents/com.example.myservice.plist << 'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;Label&lt;/key&gt;
+    &lt;string&gt;com.example.myservice&lt;/string&gt;
+    &lt;key&gt;ProgramArguments&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;/path/to/your/script.sh&lt;/string&gt;
+    &lt;/array&gt;
+    &lt;key&gt;RunAtLoad&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;KeepAlive&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;WorkingDirectory&lt;/key&gt;
+    &lt;string&gt;/path/to/working/dir&lt;/string&gt;
+    &lt;key&gt;StandardOutPath&lt;/key&gt;
+    &lt;string&gt;/tmp/myservice.log&lt;/string&gt;
+    &lt;key&gt;StandardErrorPath&lt;/key&gt;
+    &lt;string&gt;/tmp/myservice.err&lt;/string&gt;
+    &lt;key&gt;EnvironmentVariables&lt;/key&gt;
+    &lt;dict&gt;
+        &lt;key&gt;PATH&lt;/key&gt;
+        &lt;string&gt;/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin&lt;/string&gt;
+    &lt;/dict&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+EOF
+
+launchctl load ~/Library/LaunchAgents/com.example.myservice.plist</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="8-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">8.2 常用 launchctl 命令速查</div>
+      <table>
+        <tr><th>命令</th><th>作用</th></tr>
+        <tr><td><code>launchctl load ~/Library/LaunchAgents/com.xxx.plist</code></td><td>加载并启动服务</td></tr>
+        <tr><td><code>launchctl unload ~/Library/LaunchAgents/com.xxx.plist</code></td><td>卸载并停止服务</td></tr>
+        <tr><td><code>launchctl list</code></td><td>列出所有用户服务及其状态</td></tr>
+        <tr><td><code>launchctl list | grep com.xxx</code></td><td>查看特定服务状态（PID 非 0 = 运行中）</td></tr>
+        <tr><td><code>launchctl kickstart gui/$(id -u)/com.xxx</code></td><td>重启服务（不卸载的情况下）</td></tr>
+        <tr><td><code>sudo launchctl list</code></td><td>查看系统级服务（如 cloudflared）</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== PHASE 9 ======================== -->
+<h2 id="p9">Phase 9 · 日常维护 & 监控</h2>
+
+<div class="phase" data-phase="9">
+
+  <div class="step" data-step="9-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">9.1 创建健康检查脚本</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>mkdir -p ~/scripts
+cat > ~/scripts/healthcheck.sh << 'EOF'
+#!/bin/bash
+echo "=== MacBook Server Health Check ==="
+echo "Time: $(date)"
+echo "Uptime: $(uptime)"
+echo ""
+echo "--- Disk ---"
+df -h / | tail -1
+echo ""
+echo "--- Memory ---"
+memory_pressure | head -1
+echo ""
+echo "--- Key Services ---"
+echo -n "SSH (port 2222): "
+lsof -i :2222 2>/dev/null | grep -q LISTEN && echo "✅ Running" || echo "❌ DOWN"
+echo -n "Cloudflared: "
+pgrep -x cloudflared > /dev/null && echo "✅ Running" || echo "❌ DOWN"
+echo -n "Caffeinate: "
+pgrep -x caffeinate > /dev/null && echo "✅ Running" || echo "❌ DOWN"
+echo ""
+echo "--- Recent Reboots ---"
+last reboot | head -3
+EOF
+chmod +x ~/scripts/healthcheck.sh
+
+# 运行一次看看
+~/scripts/healthcheck.sh</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="9-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">9.2 备份关键配置</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>mkdir -p ~/server-config-backup
+cp ~/.ssh/config ~/server-config-backup/ 2>/dev/null
+cp ~/.cloudflared/config.yml ~/server-config-backup/
+cp /etc/ssh/sshd_config ~/server-config-backup/
+cp ~/.zshrc ~/server-config-backup/
+
+cd ~/server-config-backup
+git init && git add . && git commit -m "Initial backup $(date +%F)"
+echo "Backup done in ~/server-config-backup/"</code></pre>
+      </div>
+      <div class="tip">
+        💡 建议把这个备份目录推送到 GitHub 私有仓库。这样即使 MacBook 硬盘损坏也能恢复配置。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="9-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">9.3 设置定期系统更新提醒</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 检查可用更新（不定期安装，手动决定）
+softwareupdate -l
+
+# 设置为自动检查
+sudo softwareupdate --schedule on
+
+# 每周手动更新一次（建议）
+sudo softwareupdate -i -a --restart</code></pre>
+      </div>
+      <div class="warn">
+        ⚠️ macOS 大版本更新（如 macOS 14 → 15）可能影响兼容性，建议先观望再升级。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="9-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">9.4 安装 fail2ban（可选，防 SSH 暴力破解）</div>
+      <div class="step-desc">虽然我们已经禁用了密码登录，但加上 fail2ban 可以在网络层面自动封禁恶意 IP。</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>brew install fail2ban
+sudo cp /opt/homebrew/etc/fail2ban/jail.conf /opt/homebrew/etc/fail2ban/jail.local
+
+# 编辑 jail.local
+sudo nano /opt/homebrew/etc/fail2ban/jail.local
+# 找到 [sshd] 部分，设置 enabled = true
+
+# 启动
+sudo brew services start fail2ban</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== 故障排除 ======================== -->
+<hr>
+<h2 id="trouble">附录 A · 故障排除</h2>
+
+<div class="phase" data-phase="trouble">
+
+  <div class="step" data-step="tr-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">🔧 SSH 连不上</div>
+      <div class="step-desc">从外网通过 Cloudflare Tunnel 连不上 MacBook。</div>
+      <ol>
+        <li><strong>确认 cloudflared 在运行</strong>：
+          <code class="inline-code">sudo launchctl list | grep cloudflared</code>（看 PID 是否非 0）</li>
+        <li><strong>确认 SSH 服务在监听 2222</strong>：
+          <code class="inline-code">sudo lsof -i :2222</code>（应该看到 LISTEN）</li>
+        <li><strong>确认 DNS 解析正常</strong>：
+          <code class="inline-code">nslookup ssh.your-domain.xyz</code>（应该返回 Cloudflare 的 IP）</li>
+        <li><strong>查看 cloudflared 日志</strong>：
+          <code class="inline-code">sudo tail -f /var/log/cloudflared.log</code></li>
+        <li><strong>如果使用了 Access OTP</strong>：确保当前电脑也安装了 <code class="inline-code">cloudflared</code></li>
+        <li><strong>检查密钥权限</strong>：<code class="inline-code">ls -la ~/.ssh/authorized_keys</code> 必须是 <code class="inline-code">-rw-------</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="tr-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">🔧 MacBook 睡着了/连不上</div>
+      <div class="step-desc">突然连不上，怀疑系统休眠了。</div>
+      <ol>
+        <li>物理走到 MacBook 旁边（😂），打开盖子看看</li>
+        <li>检查 pmset：<code class="inline-code">pmset -g | grep sleep</code>（确认 disablesleep = 1）</li>
+        <li>检查 caffeinate：<code class="inline-code">ps aux | grep caffeinate</code></li>
+        <li>如果确实休眠了，重新执行 4.2 和 4.3</li>
+      </ol>
+      <div class="warn">
+        ⚠️ 有些 macOS 更新会<strong>重置 pmset 设置</strong>！每次大版本更新后务必重新检查。
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="tr-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">🔧 Cloudflare Tunnel 连不上</div>
+      <ol>
+        <li><strong>查看服务状态</strong>：
+          <code class="inline-code">sudo launchctl list | grep cloudflared</code></li>
+        <li><strong>手动前台运行看日志</strong>：
+          <code class="inline-code">sudo cloudflared tunnel run macbook-server</code></li>
+        <li><strong>常见错误</strong>：
+          <ul>
+            <li><code>ERR Couldn't start tunnel</code> → 检查 <code class="inline-code">credentials-file</code> 路径是否正确</li>
+            <li><code>ERR Unable to reach the origin service</code> → 确认 SSH 服务在对应端口监听</li>
+            <li><code>DNS resolution failed</code> → 确认 <code class="inline-code">cloudflared tunnel route dns</code> 已执行</li>
+          </ul>
+        </li>
+        <li><strong>重启隧道服务</strong>：
+          <code class="inline-code">sudo launchctl kickstart system/com.cloudflare.cloudflared</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="tr-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">🔧 重启后 SSH/cloudflared 没启动</div>
+      <div class="step-desc">MacBook 意外重启后，远程连不上了。</div>
+      <ol>
+        <li><strong>macOS SSH 服务默认开机自启</strong>（通过"远程登录"开关控制的），确认：
+          <code class="inline-code">sudo systemsetup -getremotelogin</code> 返回 On</li>
+        <li><strong>cloudflared 作为系统级 daemon 应该自启</strong>：
+          确认 <code class="inline-code">/Library/LaunchDaemons/com.cloudflare.cloudflared.plist</code> 存在</li>
+        <li>如果系统更新后被禁用，重新执行 5.7</li>
+        <li><strong>FileVault</strong>：如果之前没听劝开启了 FileVault，重启后必须物理输入密码！</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== 检查清单 ======================== -->
+<hr>
+<h2 id="final-check">附录 B · 最终检查清单</h2>
+
+<div class="phase" data-phase="final">
+
+  <div class="step" data-step="fc-1">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">从外网测试 SSH（用手机热点断开 Wi-Fi 测试）</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>ssh macbook
+# 或
+ssh -i ~/.ssh/macbook_server admin@ssh.your-domain.xyz</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" data-step="fc-2">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">确认合盖 30 分钟后仍可 SSH 连接</div>
+      <div class="step-desc">合上 MacBook 盖子，等 30 分钟（或隔夜），再尝试 SSH 连接。</div>
+    </div>
+  </div>
+
+  <div class="step" data-step="fc-3">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">重启测试</div>
+      <div class="step-desc">在 MacBook 上执行 <code class="inline-code">sudo shutdown -r now</code>，等 2 分钟后尝试 SSH 连接。确保云隧道和 SSH 都自动恢复了。</div>
+    </div>
+  </div>
+
+  <div class="step" data-step="fc-4">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">确认 CodeWhale 可用</div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code>ssh macbook
+codewhale
+# 应该看到交互界面</code></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<hr>
+
+<h2>📊 最终架构总览</h2>
+
+<pre style="font-size:0.78rem; line-height:1.8; background:var(--card); padding:1.2rem; border-radius:8px; border:1px solid var(--border);">
+┌──────────────────────────────────────────────────────────────┐
+│                         互联网                                │
+│                                                               │
+│  你的电脑 ──SSH:22──▶ Cloudflare Edge ◀──Tunnel── 家里的 MacBook │
+│  (客户端)          ssh.your-domain.xyz         (服务器)       │
+│                                                               │
+│  Cloudflare 提供：                                             │
+│  • DDoS 防护（Free 套餐）        • 隐藏真实 IP                  │
+│  • 自动 SSL/TLS                 • OTP 验证（可选）             │
+└──────────────────────────────────────────────────────────────┘
+
+MacBook Air (Apple Silicon M1/M2)
+├── macOS 最新版（FileVault ❌）
+├── 防火墙：启用 + 隐身模式
+├── SSH：端口 2222，仅 ed25519 密钥认证，禁止密码
+├── caffeinate：永久防休眠（launchd 自启）
+├── cloudflared：Cloudflare Tunnel（系统 daemon 自启）
+├── pmset：disablesleep 1 + 所有电源睡眠禁用
+├── nvm + Node.js LTS / Python 3.12
+├── AI Agent 工具
+│   ├── ✅ CodeWhale (DeepSeek V4)
+│   ├── 📅 Claude Code (待安装)
+│   └── 📅 OpenAI Codex CLI (待安装)
+└── launchd 管理所有后台服务</pre>
+
+<h3 style="margin-top:1.5rem;">网络拓扑</h3>
+<pre style="font-size:0.78rem; line-height:1.8; background:var(--card); padding:1.2rem; border-radius:8px; border:1px solid var(--border);">
+互联网
+  │
+  ├── Cloudflare Edge (ssh.your-domain.xyz:22)
+  │     │
+  │     └── Cloudflare Tunnel (cloudflared)
+  │           │
+  │           └── localhost:2222 → macOS SSH daemon
+  │
+  └── VPN 中转站 (你的 VPS)
+        │
+        └── Clash 订阅 → FlClash (MacBook 本地)
+              ├── HTTP:  127.0.0.1:7890
+              ├── SOCKS5: 127.0.0.1:7891
+              └── 终端工具通过环境变量指向本地端口
+                    ├── Homebrew · npm · git · curl
+                    └── AI Agent API 调用（DeepSeek/Anthropic/OpenAI）</pre>
+
+<hr>
+
+<p style="text-align:center; color:var(--muted); font-size:0.78rem;">
+  v2.2 · 2026-06-07 · 知识阶梯：基础设施层 → 可支撑所有上层应用<br>
+  依赖：<a href="../vpn-relay/VPN中转站完整部署手册.html" style="color:var(--accent)">VPN 中转站</a>（提供 Clash 订阅） + <a href="https://github.com/chen08209/FlClash/releases" target="_blank" style="color:var(--accent)">FlClash</a>（客户端）<br>
+  下一个目标：在 MacBook 上部署 <a href="../../04-applications/gridbot/" style="color:var(--accent)">GridBot</a>
+</p>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  const code = pre ? pre.textContent : '';
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('.step input[type="checkbox"]');
+  const checked = document.querySelectorAll('.step input[type="checkbox"]:checked');
+  const pct = all.length > 0 ? Math.round((checked.length / all.length) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = '进度：' + checked.length + ' / ' + all.length + ' 步完成';
+
+  checked.forEach(cb => cb.closest('.step').classList.add('done'));
+  all.forEach(cb => { if (!cb.checked) cb.closest('.step').classList.remove('done'); });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = JSON.parse(localStorage.getItem('macbook-server-checklist-v2') || '{}');
+  document.querySelectorAll('.step input[type="checkbox"]').forEach((cb, i) => {
+    if (saved['step-' + i]) cb.checked = true;
+    cb.addEventListener('change', () => {
+      const s = {};
+      document.querySelectorAll('.step input[type="checkbox"]').forEach((c, j) => {
+        s['step-' + j] = c.checked;
+      });
+      localStorage.setItem('macbook-server-checklist-v2', JSON.stringify(s));
+      updateProgress();
+    });
+  });
+  updateProgress();
+});
+</script>
+
+</body>
+</html>

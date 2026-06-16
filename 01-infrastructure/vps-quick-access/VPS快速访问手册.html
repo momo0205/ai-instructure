@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPS 快速访问手册</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #162032;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+    --accent: #3b82f6;
+    --accent-light: #1d4ed8;
+    --success: #10b981;
+    --success-bg: #064e3b;
+    --warning: #f59e0b;
+    --warning-bg: #451a03;
+    --danger: #ef4444;
+    --danger-bg: #450a0a;
+    --code-bg: #0f172a;
+    --code-fg: #7dd3fc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%);
+    padding: 40px 24px 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  header p { color: #93c5fd; font-size: 0.9rem; }
+  .ip-badge {
+    display: inline-block;
+    background: rgba(59,130,246,0.2);
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 6px 20px;
+    font-size: 1.1rem;
+    font-family: monospace;
+    color: #7dd3fc;
+    margin-top: 14px;
+    letter-spacing: 1px;
+  }
+  .container { max-width: 780px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  .section { margin-bottom: 24px; }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+
+  .link-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .link-card:hover { border-color: var(--accent); }
+  .link-card .label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .link-card .label .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .link-card .dot-blue { background: #3b82f6; }
+  .link-card .dot-green { background: #10b981; }
+  .link-card .dot-purple { background: #a855f7; }
+  .link-card .dot-orange { background: #f59e0b; }
+  .link-card .url {
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+    font-size: 0.95rem;
+    color: #7dd3fc;
+    word-break: break-all;
+    margin-bottom: 10px;
+  }
+  .link-card .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.copied { background: var(--success); color: #fff; }
+
+  .cred-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .cred-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .cred-row:last-child { border-bottom: none; }
+  .cred-key {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .cred-val {
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+    font-size: 0.9rem;
+    color: var(--text);
+    flex: 1;
+    word-break: break-all;
+  }
+  .cred-val.masked { filter: blur(5px); transition: filter 0.2s; cursor: pointer; }
+  .cred-val.masked:hover { filter: none; }
+  .cred-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .cred-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .cred-copy.copied { background: var(--success); color: #fff; border-color: var(--success); }
+
+  .cmd-card {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    position: relative;
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    line-height: 1.6;
+  }
+  .cmd-card .cmd-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+  }
+  .cmd-card pre { white-space: pre-wrap; word-break: break-all; }
+  .cmd-copy {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 4px;
+    color: var(--muted);
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cmd-copy:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .cmd-copy.copied { background: var(--success); color: #fff; }
+
+  .tip-box {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+  }
+  .tip-warn { background: var(--warning-bg); border-color: var(--warning); color: #fcd34d; }
+  .tip-info { background: #172554; border-color: var(--accent); color: #93c5fd; }
+  .tip-success { background: var(--success-bg); border-color: var(--success); color: #6ee7b7; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .tag-blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
+  .tag-green { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .tag-orange { background: rgba(245,158,11,0.2); color: #fcd34d; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px 0 40px; }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.3rem; }
+    .cred-key { width: 90px; }
+    .cred-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ VPS 节点快速访问手册</h1>
+  <p>ColoCrossing · Los Angeles · $10.99/年</p>
+  <div class="ip-badge">23.94.184.3</div>
+</header>
+
+<div class="container">
+
+  <!-- 面板访问 -->
+  <div class="section">
+    <div class="section-title">管理面板</div>
+
+    <div class="link-card">
+      <div class="label"><span class="dot dot-blue"></span>3X-UI 面板地址</div>
+      <div class="url" id="panel-url">https://23.94.184.3:18080/xui-2026/</div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://23.94.184.3:18080/xui-2026/" target="_blank">打开面板</a>
+        <button class="btn btn-ghost" onclick="copyText('https://23.94.184.3:18080/xui-2026/', this)">复制地址</button>
+      </div>
+    </div>
+
+    <div class="link-card">
+      <div class="label"><span class="dot dot-green"></span>订阅链接（v2rayNG / 通用）</div>
+      <div class="url" id="sub-url">https://23.94.184.3:18081/sub-2026/<span style="color:#f59e0b">【你的订阅ID】</span></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="copyText(document.getElementById('sub-url').innerText, this)">复制订阅链接</button>
+      </div>
+    </div>
+
+    <div class="link-card">
+      <div class="label"><span class="dot dot-purple"></span>Clash / Mihomo 订阅链接</div>
+      <div class="url">上方订阅地址在 Clash 客户端中填入即可（面板已开启 Clash/Mihomo 格式）</div>
+    </div>
+
+    <div class="tip-box tip-success">
+      ✅ 面板已启用 HTTPS（Let's Encrypt 自动续期），安全访问。
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 登录凭据 -->
+  <div class="section">
+    <div class="section-title">登录凭据 <span style="font-size:0.7rem;color:var(--muted);text-transform:none;letter-spacing:0">(悬停查看密码)</span></div>
+
+    <div class="cred-card">
+      <div class="cred-row">
+        <div class="cred-key">服务器 IP</div>
+        <div class="cred-val">23.94.184.3</div>
+        <button class="cred-copy" onclick="copyAndMark('23.94.184.3', this)">复制</button>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">SSH 端口</div>
+        <div class="cred-val">22</div>
+        <button class="cred-copy" onclick="copyAndMark('22', this)">复制</button>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">SSH 用户名</div>
+        <div class="cred-val">root</div>
+        <button class="cred-copy" onclick="copyAndMark('root', this)">复制</button>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">SSH 密码</div>
+        <div class="cred-val masked" title="悬停查看">【在此填入你的 Root 密码】</div>
+        <button class="cred-copy" onclick="copyAndMark(this.parentElement.querySelector('.cred-val').innerText, this)">复制</button>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">面板用户名</div>
+        <div class="cred-val">【在此填入面板用户名】</div>
+        <button class="cred-copy" onclick="copyAndMark(this.parentElement.querySelector('.cred-val').innerText, this)">复制</button>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">面板密码</div>
+        <div class="cred-val masked" title="悬停查看">【在此填入面板密码】</div>
+        <button class="cred-copy" onclick="copyAndMark(this.parentElement.querySelector('.cred-val').innerText, this)">复制</button>
+      </div>
+    </div>
+
+    <div class="tip-box tip-info">
+      💡 建议将实际密码填入上方（本文件保存在本地，不上传任何地方）
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- SSH 连接 -->
+  <div class="section">
+    <div class="section-title">SSH 连接命令</div>
+
+    <div class="cmd-card">
+      <div class="cmd-label"># macOS / Linux 终端</div>
+      <pre>ssh root@23.94.184.3</pre>
+      <button class="cmd-copy" onclick="copyCmd(this)">复制</button>
+    </div>
+
+    <div class="tip-box tip-success">
+      ✅ 首次连接提示 "Are you sure?" 输入 yes 回车 → 输入 Root 密码（不显示字符是正常的）
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 端口配置 -->
+  <div class="section">
+    <div class="section-title">端口一览</div>
+
+    <div class="cred-card">
+      <div class="cred-row">
+        <div class="cred-key">SSH</div>
+        <div class="cred-val">22 <span class="tag tag-green">开放</span></div>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">节点端口</div>
+        <div class="cred-val">443 <span class="tag tag-green">开放</span> <span style="color:var(--muted);font-size:0.82rem">VLESS + Reality</span></div>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">面板端口</div>
+        <div class="cred-val">18080 <span class="tag tag-blue">3X-UI 面板</span></div>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">订阅端口</div>
+        <div class="cred-val">18081 <span class="tag tag-blue">订阅服务</span></div>
+      </div>
+      <div class="cred-row">
+        <div class="cred-key">HTTP 验证</div>
+        <div class="cred-val">80 <span class="tag tag-orange">SSL 续期用</span></div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-label"># 如需放行新端口（SSH 执行）</div>
+      <pre>ufw allow 18080/tcp
+ufw allow 18081/tcp</pre>
+      <button class="cmd-copy" onclick="copyCmd(this)">复制</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 常用管理命令 -->
+  <div class="section">
+    <div class="section-title">常用管理命令</div>
+
+    <div class="cmd-card">
+      <div class="cmd-label"># 面板管理</div>
+      <pre>x-ui              # 进入管理菜单
+x-ui restart      # 重启面板
+x-ui status       # 查看面板状态
+x-ui update       # 更新面板版本
+x-ui log          # 查看运行日志</pre>
+      <button class="cmd-copy" onclick="copyCmd(this)">复制</button>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-label"># 系统维护（每月执行一次）</div>
+      <pre>apt update && apt upgrade -y</pre>
+      <button class="cmd-copy" onclick="copyCmd(this)">复制</button>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-label"># 节点连不上时排查</div>
+      <pre>systemctl status x-ui          # 检查面板是否运行
+ss -tlnp | grep 443            # 检查节点端口是否监听
+ufw status verbose             # 检查防火墙</pre>
+      <button class="cmd-copy" onclick="copyCmd(this)">复制</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 管理后台 -->
+  <div class="section">
+    <div class="section-title">ColoCrossing 管理后台</div>
+    <div class="link-card">
+      <div class="label"><span class="dot dot-orange"></span>VPS 管理面板（重启/重装/重置密码）</div>
+      <div class="url">https://cloud.colocrossing.com</div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://cloud.colocrossing.com" target="_blank">打开管理后台</a>
+      </div>
+    </div>
+    <div class="tip-box tip-info">
+      💡 忘记 Root 密码时登录此处重置，不影响任何已安装的服务
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>ColoCrossing VPS · 23.94.184.3 · 洛杉矶 · $10.99/年</p>
+  <p style="margin-top:4px">此文件仅供本地查阅，请勿上传或分享</p>
+</footer>
+
+<script>
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '已复制 ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copyAndMark(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copyCmd(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>

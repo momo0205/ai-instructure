@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.json">
+<title>Mira 投研终端</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d2991d;
+  --red: #f85149;
+  --purple: #a371f7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+h1 { font-size: 1.3rem; color: var(--accent); }
+h2 { font-size: 1.1rem; color: var(--purple); margin: 1rem 0 0.5rem; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+}
+.header h1 { font-size: 1.1rem; }
+.header .badge {
+  font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px;
+  background: #1a3a2a; color: var(--green);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.3rem; padding: 0.55rem 1rem; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--text); font-size: 0.85rem; cursor: pointer;
+  transition: all 0.15s; text-decoration: none; min-width: 80px;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.danger { border-color: var(--red); color: var(--red); }
+.btn.small { padding: 0.3rem 0.6rem; font-size: 0.75rem; min-width: auto; }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem; margin: 0.6rem 0;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.4rem;
+}
+.card-title { font-weight: 600; font-size: 0.9rem; }
+.card-subtitle { font-size: 0.75rem; color: var(--muted); }
+.card-actions { display: flex; gap: 0.4rem; }
+
+input, select, textarea {
+  width: 100%; padding: 0.55rem 0.7rem; border-radius: 6px;
+  border: 1px solid var(--border); background: #0d1117;
+  color: var(--text); font-size: 0.85rem; font-family: inherit;
+  margin: 0.3rem 0 0.6rem; outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+label { font-size: 0.82rem; color: var(--muted); display: block; margin-top: 0.3rem; }
+select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; }
+
+.hidden { display: none !important; }
+
+#md-content { padding: 0.5rem 0; word-wrap: break-word; }
+#md-content h2, #md-content h3 { margin-top: 1.2rem; }
+#md-content table {
+  width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.82rem;
+}
+#md-content th, #md-content td {
+  padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border);
+}
+#md-content th { color: var(--text); font-weight: 600; }
+#md-content code {
+  background: #1c2333; color: var(--accent); padding: 0.1rem 0.35rem;
+  border-radius: 3px; font-size: 0.8rem; font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+#md-content pre {
+  background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.8rem; overflow-x: auto; font-size: 0.78rem; margin: 0.5rem 0;
+}
+#md-content pre code { background: none; color: var(--text); padding: 0; }
+
+.toast {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #000; padding: 0.5rem 1.2rem;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  z-index: 999; opacity: 0; transition: opacity 0.3s;
+}
+.toast.show { opacity: 1; }
+
+.spinner {
+  display: inline-block; width: 1rem; height: 1rem;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 0.4rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 1rem;
+}
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1.2rem; width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h3 { color: var(--orange); margin-bottom: 0.8rem; font-size: 0.95rem; }
+
+.param-row { margin: 0.3rem 0 0.6rem; }
+.param-actions { display: flex; gap: 0.4rem; margin-top: 0.8rem; }
+
+.empty-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+#loading-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; flex-direction: column; gap: 0.8rem;
+}
+#loading-overlay .spinner { width: 2rem; height: 2rem; border-width: 3px; }
+
+.back-btn {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font-size: 0.85rem; padding: 0.3rem 0; margin-bottom: 0.6rem;
+}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay" class="hidden">
+  <div class="spinner"></div>
+  <span style="color:var(--muted);font-size:0.85rem" id="loading-text">请求中...</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ==================== Screen 1: 端点列表 ==================== -->
+<div id="screen-list">
+  <div class="header">
+    <h1>Mira 投研终端</h1>
+    <span class="badge">PWA</span>
+  </div>
+  <div id="endpoint-list"></div>
+  <button class="btn primary" style="width:100%;margin-top:0.8rem" onclick="showAddModal()">+ 添加端点</button>
+</div>
+
+<!-- ==================== Screen 2: 参数输入 ==================== -->
+<div id="screen-request" class="hidden">
+  <button class="back-btn" onclick="showScreen('list')">← 返回</button>
+  <h2 id="request-title"></h2>
+  <div id="request-form"></div>
+  <button class="btn primary" style="width:100%;margin-top:0.8rem" onclick="sendRequest()">
+    <span id="send-btn-text">发送请求</span>
+  </button>
+</div>
+
+<!-- ==================== Screen 3: Markdown 结果 ==================== -->
+<div id="screen-result" class="hidden">
+  <button class="back-btn" onclick="showScreen('request')">← 返回</button>
+  <div id="md-content"></div>
+</div>
+
+<!-- ==================== 添加/编辑端点弹窗 ==================== -->
+<div id="modal-edit" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modal-title">添加端点</h3>
+    <label>端点名称</label>
+    <input id="edit-name" placeholder="例如：我的策略分析">
+    <label>URL</label>
+    <input id="edit-url" placeholder="http://192.168.1.100:8080/api">
+    <label>HTTP 方法</label>
+    <select id="edit-method">
+      <option value="POST">POST</option>
+      <option value="GET">GET</option>
+    </select>
+    <label>响应中 Markdown 字段名（JSON key）</label>
+    <input id="edit-response-field" placeholder="例如：markdown" value="markdown">
+
+    <h3 style="margin-top:1rem;font-size:0.85rem;color:var(--muted)">参数列表</h3>
+    <div id="param-edit-list"></div>
+    <button class="btn small" onclick="addParamRow()" style="margin-top:0.4rem">+ 添加参数</button>
+
+    <div class="param-actions">
+      <button class="btn" onclick="closeModal('modal-edit')">取消</button>
+      <button class="btn primary" onclick="saveEndpoint()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEMO_MARKDOWN = `# 特变电工（600089）Quick Map
+
+**行情快照**：¥12.85（2026-06-16），较昨收 -2.13%，成交额 3.21 亿，换手 1.87%
+*数据来源：腾讯财经 HTTP*
+
+---
+
+## 核心判断
+
+特变电工正处于 **"新能源产业链出清 + 特高压订单兑现"** 的双主线交织期。2025 全年营收 ¥892 亿（+4.3% YoY），归母净利 ¥53.6 亿（-12.1%），增收不增利的格局未变——毛利率从 22.3% 压缩至 19.8%，核心压力来自多晶硅价格低迷和变压器业务竞争加剧。
+
+当前 **PE 15.7x，PB 1.12**，处于 5 年历史分位的 **23%**——估值不高，但低估值背后是市场对盈利能力的持续质疑。
+
+> ⚠️ **关键判断**：估值修复的催化剂不在"便宜"，而在"盈利拐点可验证"。
+
+---
+
+## 事实 vs 推断
+
+| 层面 | 内容 |
+|------|------|
+| **事实** | 2025 全年营收 ¥892 亿，归母净利 ¥53.6 亿（-12.1% YoY） |
+| **事实** | 变压器业务订单 ¥127 亿（+31%），特高压直流中标份额提升至 28% |
+| **事实** | 多晶硅价格从 ¥150/kg 跌至 ¥42/kg，新特能源板块亏损 ¥8.3 亿 |
+| **事实** | 46 家机构一致预期 2026E EPS ¥0.82（区间 0.71–0.96，分歧度偏高） |
+| **推断** | 2026H1 变压器交付加速将驱动毛利率触底反弹 |
+| **推断** | 多晶硅已接近全行业现金成本，进一步下跌空间有限 |
+| **推断** | 当前估值隐含的是"新特能源继续亏损"的悲观假设 |
+
+---
+
+## 数据来源
+
+| 数据项 | 来源 | 状态 |
+|--------|------|------|
+| K 线 & 财务快照 | mootdx（通达信 TCP 7709） | ✅ 已获取 |
+| PE / PB / 市值 | 腾讯财经 HTTP | ✅ 已获取 |
+| 一致预期 EPS | 同花顺 iFinD | ✅ 已获取 |
+| 北向资金 & 融资融券 | 东财 datacenter | ✅ 已获取 |
+| 三表（资产负债表/利润表/现金流） | 新浪财经 | ✅ 已获取 |
+| 最新公告 | 巨潮 cninfo | ✅ 已获取 |
+| 龙虎榜席位 | 东财 push2 | ⚠️ 近 30 日未上榜 |
+
+---
+
+## Source Gap
+
+1. **分业务毛利率拆分缺失**：只知道总毛利率 19.8%，不清楚变压器/线缆/新能源工程/多晶硅各自的毛利贡献
+2. **海外 EPC 项目回款进度**：特变电工有大量海外工程总包项目，回款周期和汇率风险未建模
+3. **多晶硅产能出清节奏**：新特能源何时扭亏是最大的预期差来源，但行业出清速度难以预测
+
+---
+
+## 估值快照
+
+| 指标 | 当前值 | 5 年均值 | 分位数 |
+|------|--------|----------|--------|
+| PE (TTM) | 15.7 | 21.3 | 23% |
+| PB | 1.12 | 1.68 | 18% |
+| EV/EBITDA | 8.9 | 11.5 | 19% |
+| 股息率 | 2.8% | 2.1% | 72% |
+
+\`\`\`
+估值结论：PB 跌破 1.2x 已接近 2018 年熊市底部水平（1.05x），
+但如果新特能源继续亏损侵蚀净资产，PB 的"底部"可能进一步下移。
+\`\`\`
+
+---
+
+## 关键反转条件
+
+\`\`\`python
+monitor = {
+    "must_refresh_if": [
+        "变压器毛利率回升至 22% 以上",
+        "多晶硅价格反弹至 ¥60/kg 以上",
+        "新特能源单季扭亏",
+        "特高压新批次中标份额 > 30%"
+    ],
+    "stale_after": "2026 年中报发布（预计 2026 年 8 月）",
+    "invalidation": "PB 持续低于 1.0x 超过 2 个月且无基本面改善信号"
+}
+\`\`\`
+
+---
+
+## 下一步
+
+> 升级为 **standard** 深度？需要：
+> 1. 分业务线拆解毛利结构
+> 2. 重建特高压订单交付时间表
+> 3. 测算多晶硅不同价格情景下的 EPS 敏感性
+>
+> 如果只是方向判断，当前 quick_map 已够用。
+\``;
+
+const MIRA_PRESETS = [
+  {
+    id: "mira-research",
+    name: "Mira 投研",
+    url: "http://{server}:8080/research",
+    method: "POST",
+    params: [
+      {key:"ticker",label:"股票代码",type:"text",default:"600519"},
+      {key:"depth",label:"研究深度",type:"select",options:["quick_map","standard","deep_dive"],default:"standard"},
+      {key:"market",label:"市场范围",type:"text",default:"A 股"}
+    ],
+    responseField: "markdown",
+    isPreset: true
+  },
+  {
+    id: "mira-briefing",
+    name: "Mira 市场简报",
+    url: "http://{server}:8080/briefing",
+    method: "POST",
+    params: [
+      {key:"market",label:"市场范围",type:"text",default:"沪深两市"}
+    ],
+    responseField: "markdown",
+    isPreset: true
+  },
+  {
+    id: "mira-industry",
+    name: "Mira 行业分析",
+    url: "http://{server}:8080/industry",
+    method: "POST",
+    params: [
+      {key:"concept",label:"行业/概念",type:"text",default:"人工智能"},
+      {key:"market",label:"市场范围",type:"text",default:"A 股"}
+    ],
+    responseField: "markdown",
+    isPreset: true
+  },
+  {
+    id: "demo-md",
+    name: "📄 Markdown 渲染测试",
+    url: "demo://markdown",
+    method: "GET",
+    params: [],
+    responseField: "markdown",
+    isPreset: true,
+    isDemo: true
+  }
+];
+
+function loadEndpoints() {
+  const raw = localStorage.getItem("mira-endpoints");
+  const custom = raw ? JSON.parse(raw) : [];
+  return [...MIRA_PRESETS, ...custom];
+}
+
+function saveCustomEndpoints(endpoints) {
+  const custom = endpoints.filter(e => !e.isPreset);
+  localStorage.setItem("mira-endpoints", JSON.stringify(custom));
+}
+
+let currentEndpoint = null;
+let editingId = null;
+
+// ==================== Navigation ====================
+function showScreen(screen) {
+  ["list","request","result"].forEach(s => {
+    document.getElementById("screen-" + s).classList.toggle("hidden", s !== screen);
+  });
+}
+
+function showLoading(text) {
+  document.getElementById("loading-text").textContent = text || "请求中...";
+  document.getElementById("loading-overlay").classList.remove("hidden");
+}
+function hideLoading() {
+  document.getElementById("loading-overlay").classList.add("hidden");
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+// ==================== Screen 1: Endpoint List ====================
+function renderEndpointList() {
+  const endpoints = loadEndpoints();
+  const container = document.getElementById("endpoint-list");
+
+  if (endpoints.length === 0) {
+    container.innerHTML = '<div class="empty-state">还没有端点，点击下方按钮添加</div>';
+    return;
+  }
+
+  container.innerHTML = endpoints.map((ep, idx) => `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${ep.name}${ep.isPreset ? ' <span class="badge">内置</span>' : ''}</div>
+          <div class="card-subtitle">${ep.method} ${ep.url}</div>
+        </div>
+        <div class="card-actions">
+          ${ep.isPreset ? '' : `<button class="btn small" onclick="editEndpoint('${ep.id}')">编辑</button>`}
+          ${ep.isPreset ? '' : `<button class="btn small danger" onclick="deleteEndpoint('${ep.id}')">删除</button>`}
+          <button class="btn primary small" onclick="openRequest('${ep.id}')">运行</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+renderEndpointList();
+
+// ==================== Screen 2: Request Form ====================
+function openRequest(id) {
+  currentEndpoint = loadEndpoints().find(e => e.id === id);
+  if (!currentEndpoint) return;
+
+  document.getElementById("request-title").textContent = currentEndpoint.name;
+
+  const form = document.getElementById("request-form");
+  const params = currentEndpoint.params || [];
+  form.innerHTML = params.map(p => `
+    <div class="param-row">
+      <label>${p.label} (${p.key})</label>
+      ${p.type === "select" ? `
+        <select id="param-${p.key}">
+          ${(p.options||[]).map(o => `<option value="${o}" ${o===p.default?'selected':''}>${o}</option>`).join("")}
+        </select>
+      ` : `
+        <input id="param-${p.key}" type="text" value="${p.default || ''}" placeholder="${p.label}">
+      `}
+    </div>
+  `).join("");
+
+  document.getElementById("send-btn-text").textContent = "发送请求";
+  showScreen("request");
+}
+
+async function sendRequest() {
+  if (!currentEndpoint) return;
+
+  // Demo mode: skip network, show built-in complex markdown
+  if (currentEndpoint.isDemo) {
+    showLoading("渲染中...");
+    await new Promise(r => setTimeout(r, 300));
+    document.getElementById("md-content").innerHTML = marked.parse(DEMO_MARKDOWN);
+    showScreen("result");
+    hideLoading();
+    return;
+  }
+
+  showLoading("发送请求...");
+
+  const params = currentEndpoint.params || [];
+  const body = {};
+  params.forEach(p => {
+    const el = document.getElementById("param-" + p.key);
+    body[p.key] = el ? el.value : (p.default || "");
+  });
+
+  try {
+    const method = currentEndpoint.method || "POST";
+    const fetchOpts = {
+      method,
+      headers: { "Content-Type": "application/json" }
+    };
+    if (method !== "GET") fetchOpts.body = JSON.stringify(body);
+
+    const resp = await fetch(currentEndpoint.url, fetchOpts);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+    const data = await resp.json();
+    const mdField = currentEndpoint.responseField || "markdown";
+    const mdContent = data[mdField];
+
+    if (!mdContent) throw new Error("响应中没有找到 " + mdField + " 字段");
+
+    document.getElementById("md-content").innerHTML = marked.parse(mdContent);
+    showScreen("result");
+  } catch (err) {
+    toast("请求失败: " + err.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// ==================== Modal: Add/Edit Endpoint ====================
+function showAddModal() {
+  editingId = null;
+  document.getElementById("modal-title").textContent = "添加端点";
+  document.getElementById("edit-name").value = "";
+  document.getElementById("edit-url").value = "http://192.168.1.100:8080/";
+  document.getElementById("edit-method").value = "POST";
+  document.getElementById("edit-response-field").value = "markdown";
+  document.getElementById("param-edit-list").innerHTML = "";
+  addParamRow();
+  document.getElementById("modal-edit").classList.remove("hidden");
+}
+
+function editEndpoint(id) {
+  const ep = loadEndpoints().find(e => e.id === id);
+  if (!ep || ep.isPreset) return;
+  editingId = id;
+  document.getElementById("modal-title").textContent = "编辑端点";
+  document.getElementById("edit-name").value = ep.name;
+  document.getElementById("edit-url").value = ep.url;
+  document.getElementById("edit-method").value = ep.method;
+  document.getElementById("edit-response-field").value = ep.responseField || "markdown";
+
+  const paramList = document.getElementById("param-edit-list");
+  paramList.innerHTML = "";
+  (ep.params || []).forEach(p => addParamRow(p));
+  if ((ep.params || []).length === 0) addParamRow();
+
+  document.getElementById("modal-edit").classList.remove("hidden");
+}
+
+function addParamRow(prefill) {
+  const container = document.getElementById("param-edit-list");
+  const idx = container.children.length;
+  const div = document.createElement("div");
+  div.className = "param-row";
+  div.innerHTML = `
+    <div style="display:flex;gap:0.4rem;">
+      <input placeholder="参数 key" value="${prefill?.key || ''}" class="param-key" style="flex:1">
+      <input placeholder="标签" value="${prefill?.label || ''}" class="param-label" style="flex:1">
+      <select class="param-type" style="width:80px" onchange="this.closest('.param-row').querySelector('.param-options-row').classList.toggle('hidden',this.value!=='select')">
+        <option value="text" ${(prefill?.type||'text')==='text'?'selected':''}>文本</option>
+        <option value="select" ${prefill?.type==='select'?'selected':''}>选择</option>
+      </select>
+      <button class="btn small danger" onclick="this.closest('.param-row').remove()">✕</button>
+    </div>
+    <div class="param-options-row ${prefill?.type==='select'?'':'hidden'}">
+      <input placeholder="选项（逗号分隔）" value="${(prefill?.options||[]).join(',')}" class="param-options" style="margin-top:0.3rem">
+    </div>
+    <input placeholder="默认值" value="${prefill?.default || ''}" class="param-default" style="margin-top:0.3rem">
+  `;
+  container.appendChild(div);
+}
+
+function saveEndpoint() {
+  const name = document.getElementById("edit-name").value.trim();
+  const url = document.getElementById("edit-url").value.trim();
+  if (!name || !url) { toast("名称和 URL 不能为空"); return; }
+
+  const params = [];
+  document.querySelectorAll("#param-edit-list .param-row").forEach(row => {
+    const key = row.querySelector(".param-key").value.trim();
+    const label = row.querySelector(".param-label").value.trim();
+    if (!key) return;
+    const type = row.querySelector(".param-type").value;
+    const defVal = row.querySelector(".param-default").value;
+    const param = { key, label: label || key, type, default: defVal };
+    if (type === "select") {
+      param.options = (row.querySelector(".param-options").value || "").split(",").map(s => s.trim()).filter(Boolean);
+    }
+    params.push(param);
+  });
+
+  const ep = {
+    id: editingId || "custom-" + Date.now(),
+    name, url,
+    method: document.getElementById("edit-method").value,
+    responseField: document.getElementById("edit-response-field").value.trim() || "markdown",
+    params, isPreset: false
+  };
+
+  const endpoints = loadEndpoints();
+  const idx = endpoints.findIndex(e => e.id === ep.id);
+  if (idx >= 0) endpoints[idx] = ep;
+  else endpoints.push(ep);
+  saveCustomEndpoints(endpoints);
+
+  closeModal("modal-edit");
+  renderEndpointList();
+  toast(editingId ? "已更新" : "已添加");
+}
+
+function deleteEndpoint(id) {
+  if (!confirm("确定删除这个端点？")) return;
+  const endpoints = loadEndpoints().filter(e => e.id !== id);
+  saveCustomEndpoints(endpoints);
+  renderEndpointList();
+  toast("已删除");
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add("hidden");
+}
+
+// Close modal on overlay click
+document.getElementById("modal-edit").addEventListener("click", function(e) {
+  if (e.target === this) closeModal("modal-edit");
+});
+
+// Register service worker for offline caching
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</body>
+</html>

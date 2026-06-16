@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ColoCrossing VPS 翻墙节点完整部署手册</title>
+<style>
+  :root {
+    --bg: #f8f9fb;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --border: #e0e0e0;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #1e293b;
+    --code-fg: #e2e8f0;
+    --inline-code-bg: #f1f5f9;
+    --inline-code-fg: #e11d48;
+    --table-stripe: #f1f5f9;
+    --table-header: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  header {
+    background: linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%);
+    color: #fff;
+    padding: 56px 0 44px;
+    text-align: center;
+  }
+  header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 10px; }
+  header p { color: #bfdbfe; font-size: 0.95rem; }
+  header .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border-radius: 999px;
+    padding: 4px 16px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    color: #dbeafe;
+  }
+  header .badge strong { color: #fff; }
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+  }
+  nav.toc h2 { font-size: 1.1rem; margin-bottom: 14px; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 32px; }
+  nav.toc ol li { counter-increment: toc; margin-bottom: 5px; }
+  nav.toc ol li::before {
+    content: counter(toc);
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  nav.toc ol li a { color: var(--text); text-decoration: none; font-size: 0.9rem; }
+  nav.toc ol li a:hover { color: var(--accent); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 { font-size: 1.5rem; border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 22px; }
+  .card h3 { font-size: 1.2rem; margin: 28px 0 12px; }
+  .card h4 { font-size: 1.05rem; margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 0.92rem; }
+  thead th { background: var(--table-header); font-weight: 600; text-align: left; padding: 10px 14px; white-space: nowrap; }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tbody tr:nth-child(even) { background: var(--table-stripe); }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 16px 18px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    margin: 10px 0 18px;
+    position: relative;
+  }
+  pre code { font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace; white-space: pre; }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(255,255,255,0.12);
+    color: #94a3b8;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+  .copy-btn.copied { background: var(--success); color: #fff; }
+  code.inline {
+    background: var(--inline-code-bg);
+    color: var(--inline-code-fg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+  }
+  .tip, .note, .warn, .danger-box {
+    border-left: 4px solid;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0 18px;
+    font-size: 0.93rem;
+  }
+  .tip { background: var(--success-light); border-color: var(--success); }
+  .note { background: var(--accent-light); border-color: var(--accent); }
+  .warn { background: var(--warning-light); border-color: var(--warning); }
+  .danger-box { background: var(--danger-light); border-color: var(--danger); }
+  .tip strong, .note strong, .warn strong, .danger-box strong { display: block; margin-bottom: 4px; }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 7px 0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+  }
+  .checklist li::before {
+    content: "☐";
+    color: var(--muted);
+    font-size: 1.2rem;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .flow {
+    background: var(--accent-light);
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.86rem;
+    text-align: center;
+    margin: 14px 0;
+    white-space: pre-line;
+    line-height: 2;
+  }
+  footer { text-align: center; padding: 40px 0; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); }
+  .price-highlight {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  @media (max-width: 768px) {
+    .container { padding: 20px 12px; }
+    header h1 { font-size: 1.4rem; }
+    .card { padding: 20px 16px; }
+    nav.toc ol { columns: 1; }
+    table { font-size: 0.78rem; }
+    thead th, tbody td { padding: 8px 6px; }
+    pre { font-size: 0.76rem; padding: 12px 14px; }
+  }
+  @media print {
+    body { background: #fff; }
+    header { background: #1a56db !important; -webkit-print-color-adjust: exact; }
+    .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .copy-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ColoCrossing VPS 翻墙节点 · 完整部署手册</h1>
+  <p>从购买到全平台可用，一步不漏</p>
+  <span class="badge">套餐：1GB / 30GB SSD / 40TB 流量 / 1Gbps · <strong>$10.99/年（≈¥80）</strong></span>
+</header>
+
+<div class="container">
+
+<!-- ============ TOC ============ -->
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s1">开始之前</a></li>
+    <li><a href="#s2">购买 VPS（保姆级）</a></li>
+    <li><a href="#s3">SSH 连接服务器</a></li>
+    <li><a href="#s4">系统初始化</a></li>
+    <li><a href="#s5">防火墙检查与放行</a></li>
+    <li><a href="#s6">安装 3X-UI 面板</a></li>
+    <li><a href="#s7">创建 Reality 节点</a></li>
+    <li><a href="#s8">开启 BBR 加速</a></li>
+    <li><a href="#s9">全平台客户端配置</a></li>
+    <li><a href="#s10">故障排查</a></li>
+    <li><a href="#s11">速查清单</a></li>
+    <li><a href="#appendix">附录：管理面板使用</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 1 ============ -->
+<div class="card" id="s1">
+  <h2>一、开始之前</h2>
+
+  <h3>你即将获得什么</h3>
+  <p>一台位于美国洛杉矶的 VPS 服务器，安装好代理服务后，在 Windows / macOS / iPhone / Android 上可以直接翻墙访问 Google、YouTube 等网站。</p>
+
+  <h3>你需要准备什么</h3>
+  <table>
+    <thead><tr><th>需要</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>手机支付宝</strong></td><td>扫码付款用，支持 ColoCrossing 直接支付</td></tr>
+      <tr><td><strong>一个常用邮箱</strong></td><td>接收订单和服务器信息（QQ/163/Gmail 均可）</td></tr>
+      <tr><td><strong>一台电脑</strong></td><td>用来 SSH 连接服务器（Windows/macOS/Linux 均可）</td></tr>
+      <tr><td><strong>约 30 分钟</strong></td><td>从购买到全平台可用</td></tr>
+      <tr><td><strong>约 ¥80</strong></td><td>一年费用，每天不到 2 毛 2</td></tr>
+    </tbody>
+  </table>
+
+  <h3>总流程（6 步）</h3>
+  <div class="flow">1. 购买 VPS（支付宝付款，5 分钟）
+2. SSH 登录服务器（2 分钟）
+3. 系统更新 + 防火墙配置（3 分钟）
+4. 安装 3X-UI 面板（3 分钟）
+5. 创建 Reality 节点（5 分钟）
+6. 客户端扫码导入（10 分钟）
+→ 完成！</div>
+</div>
+
+<!-- ============ 2 ============ -->
+<div class="card" id="s2">
+  <h2>二、购买 VPS</h2>
+
+  <div class="note"><strong>套餐信息确认</strong>你选择的套餐：1GB 内存 / 1 vCPU / 30GB SSD / <strong>40TB 月流量</strong> / 1Gbps 带宽 / $10.99/年。</div>
+
+  <h3>第一步：打开购买链接</h3>
+  <p>点击以下链接进入 ColoCrossing 配置页面：</p>
+  <p><a href="https://legacyvps.com/scanidc/go/ccs_154" target="_blank" style="font-size:1.1rem;font-weight:600;">https://legacyvps.com/scanidc/go/ccs_154</a></p>
+  <p>页面会显示套餐详情：<strong>Specials - Special 1GB RAM VPS</strong></p>
+
+  <h3>第二步：逐项填写配置</h3>
+  <table>
+    <thead><tr><th>选项</th><th>选择</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Billing Cycle</strong></td><td><strong>Annually $10.99 USD</strong></td><td>选年付</td></tr>
+      <tr><td><strong>Region（机房）</strong></td><td><strong>Los Angeles</strong> 🔥</td><td>到中国延迟最低，<strong>不要选 Buffalo/纽约</strong></td></tr>
+      <tr><td><strong>Operating System</strong></td><td><strong>Debian 12</strong> 或 <strong>Ubuntu 22.04</strong></td><td>推荐 Debian 12（更轻量）</td></tr>
+      <tr><td><strong>Hostname</strong></td><td>随便填，如 <code class="inline">my-vps.local</code></td><td>不影响使用</td></tr>
+      <tr><td><strong>Root Password</strong></td><td><strong>直接设你想要的密码</strong></td><td>不需要等邮件，现在就设好</td></tr>
+      <tr><td><strong>NS1 / NS2 Prefix</strong></td><td><strong>留空</strong></td><td>做代理不需要</td></tr>
+      <tr><td><strong>Additional IPs</strong></td><td><strong>不选</strong></td><td>默认 1 个 IPv4 够用</td></tr>
+      <tr><td><strong>Backup / cPanel</strong></td><td><strong>全都不勾选</strong></td><td>额外付费项目，不需要</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn"><strong>⚠️ 注意</strong>Region 务必选 <strong>Los Angeles</strong>，这是到中国大陆延迟最低的机房。如果选 Buffalo（纽约），延迟会高 50-80ms。</div>
+
+  <h3>第三步：结算付款</h3>
+  <ol>
+    <li>点击 <strong>Continue</strong></li>
+    <li>注册账号：邮箱必须真实（这是你的登录账号），国家选 <strong>China</strong></li>
+    <li>支付方式选 <strong>Alipay（支付宝）</strong></li>
+    <li>手机支付宝扫码支付</li>
+    <li>支付成功后页面显示订单确认，同时邮箱会收到确认邮件</li>
+  </ol>
+
+  <div class="tip"><strong>支付完成后</strong>你设置的 Root 密码会立即生效，不需要等邮件。但建议还是去邮箱确认一下订单信息。登录 ColoCrossing 后台的地址是：<a href="https://cloud.colocrossing.com">cloud.colocrossing.com</a></div>
+
+  <h3>第四步：获取服务器 IP</h3>
+  <p>支付完成后有两种方式获取 IP：</p>
+  <ul>
+    <li><strong>方式一</strong>：登录 <a href="https://cloud.colocrossing.com">cloud.colocrossing.com</a> → 点击你的 VPS → 查看 IP 地址</li>
+    <li><strong>方式二</strong>：等邮件（通常 1-5 分钟），邮件标题包含 "New Server Information"</li>
+  </ul>
+  <p>记下你的 <strong>IP 地址</strong>，下一步要用。</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<div class="card" id="s3">
+  <h2>三、SSH 连接服务器</h2>
+
+  <h3>3.1 选择 SSH 客户端</h3>
+
+  <div class="tip"><strong>macOS 用户首选：系统自带终端</strong>不需要安装任何软件，打开「终端」App（Spotlight 搜索 Terminal），输入一行命令直接连接，最简单最安全。</div>
+
+  <table>
+    <thead><tr><th>客户端</th><th>平台</th><th>推荐度</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>系统自带终端</strong></td><td>macOS / Linux</td><td>⭐⭐⭐⭐⭐ macOS 首选</td><td>不需要安装，直接用</td></tr>
+      <tr><td><strong>FinalShell</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐ Windows 首选</td><td><a href="http://www.hostbuf.com/" target="_blank">hostbuf.com</a></td></tr>
+      <tr><td><strong>XTerminal</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐</td><td><a href="https://www.xterminal.cn/" target="_blank">xterminal.cn</a></td></tr>
+      <tr><td><strong>Termius</strong></td><td>Windows/macOS/Linux</td><td>⭐⭐⭐⭐</td><td><a href="https://termius.com/" target="_blank">termius.com</a></td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 macOS / Linux：系统终端连接（推荐）</h3>
+  <ol>
+    <li>打开「终端」（Spotlight 搜索 Terminal，或「应用程序 → 实用工具 → 终端」）</li>
+    <li>输入以下命令（替换为你的实际 IP）：</li>
+  </ol>
+  <pre><code>ssh root@你的VPS的IP地址</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <ol start="3">
+    <li>首次连接提示 <code class="inline">Are you sure you want to continue connecting (yes/no)?</code> → 输入 <code class="inline">yes</code> 回车</li>
+    <li>输入购买时设置的 Root Password（输入时不显示字符，这是正常的）</li>
+    <li>看到 <code class="inline">root@xxx:~#</code> 表示连接成功</li>
+  </ol>
+
+  <h3>3.3 Windows：FinalShell 连接</h3>
+  <ol>
+    <li>打开 FinalShell，左上角「新建连接」</li>
+    <li>填写：
+      <ul>
+        <li><strong>主机</strong>：你的 VPS IP 地址</li>
+        <li><strong>端口</strong>：<code class="inline">22</code></li>
+        <li><strong>用户名</strong>：<code class="inline">root</code></li>
+        <li><strong>密码</strong>：购买时你自己设置的 Root Password</li>
+      </ul>
+    </li>
+    <li>点击「连接」，首次提示「接受密钥指纹」→ 点击「接受」</li>
+    <li>看到 <code class="inline">root@xxx:~#</code> 表示成功</li>
+  </ol>
+
+  <div class="note"><strong>Root Password 在哪里？</strong>就是你购买时在 ColoCrossing 配置页面「Root Password」栏自己填写的那个密码。ColoCrossing 是你自己设密码，不像其他商家需要等邮件。如果忘了，登录 <a href="https://cloud.colocrossing.com">cloud.colocrossing.com</a> → 找到你的 VPS → Reset Password 重置。</div>
+</div>
+
+<!-- ============ 4 ============ -->
+<div class="card" id="s4">
+  <h2>四、系统初始化</h2>
+  <p>连接成功后，依次复制粘贴以下命令到终端中执行（每次粘贴完一条，等执行完毕再贴下一条）。</p>
+
+  <h3>4.1 系统更新</h3>
+  <pre><code>apt update && apt upgrade -y</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>大约 2-3 分钟，如果提示 "Which services should be restarted?" 直接按回车即可。</p>
+
+  <h3>4.2 安装必要工具</h3>
+  <pre><code>apt install curl wget ufw -y</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+</div>
+
+<!-- ============ 5 ============ -->
+<div class="card" id="s5">
+  <h2>五、防火墙检查与放行 ⚠️ 关键步骤</h2>
+
+  <div class="danger-box"><strong>不能跳过这一步</strong>如果防火墙没放行端口，装好面板后网页会打不开、节点连不上。ColoCrossing 默认防火墙配置不像 RackNerd 那样全开。</div>
+
+  <h3>5.1 配置防火墙</h3>
+  <pre><code>ufw allow 22/tcp
+ufw allow 2053/tcp
+ufw allow 443/tcp
+ufw enable</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>执行 <code class="inline">ufw enable</code> 时会提示 "Command may disrupt existing ssh connections"，输入 <code class="inline">y</code> 回车。放心，22 端口已经放行了，SSH 不会断。</p>
+
+  <h3>5.2 验证防火墙</h3>
+  <pre><code>ufw status verbose</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>确认输出中 22、443、2053 三个端口都是 <code class="inline">ALLOW</code> 状态。</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<div class="card" id="s6">
+  <h2>六、安装 3X-UI 面板</h2>
+
+  <h3>6.1 先放行 80 端口（重要）</h3>
+  <p>安装脚本会询问是否签发 SSL 证书，需要 80 端口。先放行：</p>
+  <pre><code>ufw allow 80/tcp</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>6.2 一键安装</h3>
+  <pre><code>bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <p>脚本运行过程中会询问 SSL 证书设置，按以下回答：</p>
+  <table>
+    <thead><tr><th>问题</th><th>回答</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>Choose SSL certificate setup method (default 2 for IP):</td><td>直接回车</td><td>选 2：Let's Encrypt for IP（6天自动续期）</td></tr>
+      <tr><td>Do you have an IPv6 address to include?</td><td>直接回车</td><td>留空跳过</td></tr>
+      <tr><td>Port to use for ACME HTTP-01 listener (default 80):</td><td>直接回车</td><td>用 80 端口</td></tr>
+    </tbody>
+  </table>
+
+  <p>安装完成后，终端会输出如下信息（<strong>务必保存！</strong>）：</p>
+  <pre><code>═══════════════════════════════════════════
+     Panel Installation Complete!
+═══════════════════════════════════════════
+Username:    你的用户名
+Password:    你的密码
+Port:        2053
+WebBasePath: 随机路径
+Access URL:  http://你的IP:2053/随机路径
+═══════════════════════════════════════════</code></pre>
+  <div class="danger-box"><strong>立刻保存用户名和密码！</strong>这是面板的登录凭据，丢失后只能重置数据库（会丢失所有节点配置）。建议截图或记在备忘录里。</div>
+
+  <h3>6.3 登录面板</h3>
+  <ol>
+    <li>浏览器打开 <code class="inline">http://你的IP:2053</code>（注意是 <strong>http</strong> 不是 https）</li>
+    <li>输入安装时显示的用户名和密码</li>
+    <li>仪表盘显示系统信息 → 安装成功！</li>
+  </ol>
+
+  <div class="warn"><strong>打不开？</strong>确认输入的是 <code class="inline">http://</code> 不是 <code class="inline">https://</code>。如果还打不开，执行 <code class="inline">ufw status verbose</code> 检查 2053 端口是否是 ALLOW 状态。</div>
+
+  <h3>6.4 忘记密码怎么办</h3>
+  <p>SSH 登录后执行以下命令重置（替换为你想要的用户名和密码）：</p>
+  <pre><code>systemctl stop x-ui
+rm /etc/x-ui/x-ui.db
+systemctl start x-ui</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>执行后用 <code class="inline">admin</code> / <code class="inline">admin</code> 登录，进去后立即改密码。</p>
+</div>
+
+<!-- ============ 7 ============ -->
+<div class="card" id="s7">
+  <h2>七、创建 VLESS + Reality 节点 🔥 最关键的一步</h2>
+
+  <div class="note"><strong>理解「入站」和「客户端」的关系</strong>入站 = 服务器开的一扇门（协议、端口、加密方式）。客户端 = 一把钥匙（UUID 凭证）。必须先建门，再配钥匙，才能导出连接链接。</div>
+
+  <h3>7.1 添加入站</h3>
+  <ol>
+    <li>左侧菜单 → <strong>入站</strong> → 右上角 <strong>+ 添加入站</strong></li>
+    <li>表单分为四个区域（基础配置 / 协议 / 传输 / 安全），按下表逐项填写：</li>
+  </ol>
+
+  <h4>基础配置区域</h4>
+  <table>
+    <thead><tr><th>配置项</th><th>填写值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>备注</strong></td><td><code class="inline">ColoCrossing-LA</code></td><td>随意命名，便于识别</td></tr>
+      <tr><td><strong>协议</strong></td><td><code class="inline">vless</code></td><td>下拉选择 vless</td></tr>
+      <tr><td><strong>端口</strong></td><td><code class="inline">443</code></td><td>Reality 使用 443</td></tr>
+    </tbody>
+  </table>
+
+  <h4>协议区域</h4>
+  <table>
+    <thead><tr><th>配置项</th><th>填写值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>加密</strong></td><td><code class="inline">None</code></td><td>默认，不用改</td></tr>
+      <tr><td><strong>Vision testseed</strong></td><td>保持默认（900 500 900 256）</td><td>不用改，这是 xtls-rprx-vision 的流控参数</td></tr>
+    </tbody>
+  </table>
+
+  <h4>传输区域</h4>
+  <table>
+    <thead><tr><th>配置项</th><th>填写值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>传输</strong></td><td><code class="inline">RAW</code>（默认）</td><td>RAW 即 TCP，不用改</td></tr>
+    </tbody>
+  </table>
+
+  <h4>安全区域（选 Reality 后展开）</h4>
+  <table>
+    <thead><tr><th>配置项</th><th>填写值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>安全</strong></td><td><code class="inline">Reality</code></td><td>⚠️ <strong>必须选 Reality，不是 TLS</strong></td></tr>
+      <tr><td><strong>uTLS</strong></td><td><code class="inline">chrome</code></td><td>已默认，不用改</td></tr>
+      <tr><td><strong>目标 (Dest)</strong></td><td><code class="inline">www.microsoft.com:443</code></td><td>伪装目标站点</td></tr>
+      <tr><td><strong>SNI</strong></td><td><code class="inline">www.microsoft.com</code></td><td>与目标一致</td></tr>
+      <tr><td><strong>Short IDs</strong></td><td>点击右侧 <code class="inline">+</code> 号自动生成</td><td>生成后不用改</td></tr>
+      <tr><td><strong>公钥 / 私钥</strong></td><td>自动生成</td><td>不用动</td></tr>
+    </tbody>
+  </table>
+
+  <p>填完后点页面底部 <strong>「添加」</strong> 按钮保存。</p>
+
+  <h3>7.2 添加客户端（必须！）</h3>
+  <div class="danger-box"><strong>⚠️ 不添加客户端，导出的链接是空的！</strong>入站创建完后，必须为它添加至少一个客户端（连接凭证），才能生成可用的导入链接。</div>
+
+  <ol>
+    <li>左侧菜单 → <strong>客户端</strong> → <strong>+ 添加客户端</strong></li>
+    <li>按下表填写：</li>
+  </ol>
+
+  <table>
+    <thead><tr><th>配置项</th><th>填写值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>邮箱</strong></td><td>自动生成，不用改</td><td>仅用于面板内识别</td></tr>
+      <tr><td><strong>UUID</strong></td><td>自动生成，不用改</td><td>连接凭证，唯一标识</td></tr>
+      <tr><td><strong>Flow</strong></td><td><code class="inline">xtls-rprx-vision</code></td><td>⚠️ <strong>必须选这个</strong></td></tr>
+      <tr><td><strong>过期时间</strong></td><td>留空</td><td>留空 = 永不过期</td></tr>
+      <tr><td><strong>总流量 (GB)</strong></td><td><code class="inline">0</code></td><td>0 = 不限流量</td></tr>
+      <tr><td><strong>关联入站</strong></td><td><code class="inline">ColoCrossing-LA</code></td><td>关联到刚创建的入站</td></tr>
+    </tbody>
+  </table>
+  <p>点击 <strong>「创建」</strong> 保存。</p>
+
+  <div class="note"><strong>多设备怎么办？</strong>一个客户端可以同时在多台设备上使用（就像 WiFi 密码多台设备共用）。如果想单独管理每台设备的流量，可以为每台设备创建一个独立客户端。</div>
+
+  <h3>7.3 导出节点链接</h3>
+  <ol>
+    <li>左侧菜单 → <strong>入站</strong></li>
+    <li>找到 <code class="inline">ColoCrossing-LA</code> 那行，点右边的 <strong>⋮（三个点）</strong></li>
+    <li>选择 <strong>「导出链接」</strong></li>
+    <li>弹窗中会出现 <code class="inline">vless://...</code> 开头的链接</li>
+    <li>点击 <strong>「复制」</strong> 按钮复制链接</li>
+  </ol>
+
+  <div class="tip"><strong>Reality 协议是什么？</strong>目前抗封锁能力最强的协议，把代理流量伪装成访问微软的正常 HTTPS 流量，极大降低被检测和封锁的概率。</div>
+</div>
+
+<!-- ============ 8 ============ -->
+<div class="card" id="s8">
+  <h2>八、开启 BBR 加速</h2>
+  <p>BBR 是 Google 开发的 TCP 拥塞控制算法，可以显著提升跨境网络速度，开启后有 20-50% 的速度提升。</p>
+
+  <h3>8.1 一键开启</h3>
+  <pre><code>echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>8.2 验证</h3>
+  <pre><code>sysctl net.ipv4.tcp_congestion_control</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>输出应为：<code class="inline">net.ipv4.tcp_congestion_control = bbr</code></p>
+</div>
+
+<!-- ============ 9 ============ -->
+<div class="card" id="s9">
+  <h2>九、全平台客户端配置</h2>
+
+  <table>
+    <thead><tr><th>设备</th><th>安装哪个 App</th><th>获取方式</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Windows</strong></td><td>v2rayN</td><td>github.com/2dust/v2rayN/releases（下载 v2rayN-windows-64.zip）</td></tr>
+      <tr><td><strong>macOS</strong></td><td>Clash Verge Rev</td><td>github.com/clash-verge-rev/clash-verge-rev/releases（下载 .dmg）</td></tr>
+      <tr><td><strong>iPhone / iPad</strong></td><td>Shadowrocket（小火箭）</td><td>美区/港区 App Store 购买（$2.99）</td></tr>
+      <tr><td><strong>Android</strong></td><td>v2rayNG</td><td>Google Play 搜索下载</td></tr>
+      <tr><td><strong>Linux</strong></td><td>v2rayA</td><td>github.com/v2rayA/v2rayA/releases</td></tr>
+    </tbody>
+  </table>
+
+  <h3>通用导入方式</h3>
+  <p>在 3X-UI 面板点击节点的 <strong>「二维码」</strong>：</p>
+  <ul>
+    <li><strong>手机</strong>：直接用 App 扫码</li>
+    <li><strong>电脑</strong>：点击「复制」按钮复制链接 → App 中选择「从剪贴板导入」</li>
+  </ul>
+
+  <h3>各平台快速上手</h3>
+
+  <h4>Windows（v2rayN）</h4>
+  <ol>
+    <li>解压 v2rayN-windows-64.zip，运行 <code class="inline">v2rayN.exe</code></li>
+    <li>面板复制节点链接 → 托盘区右键 v2rayN → <strong>服务器</strong> → <strong>从剪贴板导入</strong></li>
+    <li>托盘区右键 → <strong>系统代理</strong> → <strong>自动配置系统代理</strong></li>
+    <li>浏览器访问 google.com 测试</li>
+  </ol>
+
+  <h4>macOS（Clash Verge Rev）</h4>
+  <ol>
+    <li>安装后打开 Clash Verge Rev</li>
+    <li>3X-UI 面板中点击「操作」→「分享」→ 复制 Clash Meta 格式链接</li>
+    <li>Clash Verge → <strong>Profiles</strong> → 粘贴链接 → <strong>Download</strong></li>
+    <li>开启 <strong>System Proxy</strong>，选择节点</li>
+  </ol>
+
+  <h4>iOS（Shadowrocket）</h4>
+  <ol>
+    <li>App Store 下载 Shadowrocket（需美区/港区 Apple ID）</li>
+    <li>右上角 <strong>+</strong> → <strong>扫描二维码</strong></li>
+    <li>打开开关，首次会提示「添加 VPN 配置」→ 允许 → 输入手机密码</li>
+  </ol>
+
+  <h4>Android（v2rayNG）</h4>
+  <ol>
+    <li>Google Play 下载 v2rayNG</li>
+    <li>右上角 <strong>+</strong> → <strong>扫描二维码</strong></li>
+    <li>点击右下角连接按钮</li>
+  </ol>
+
+  <div class="note"><strong>iOS 用户</strong>需要在美区/港区 App Store 才能搜到 Shadowrocket。注册美区 Apple ID 的方法：Apple ID 官网选「美国」地区，地址可用免税州生成器。付款方式选「无」，充值可淘宝买美区 Apple Gift Card。</div>
+</div>
+
+<!-- ============ 10 ============ -->
+<div class="card" id="s10">
+  <h2>十、故障排查</h2>
+
+  <h3>10.1 节点连不上</h3>
+  <table>
+    <thead><tr><th>检查项</th><th>命令/操作</th><th>正常结果</th></tr></thead>
+    <tbody>
+      <tr><td>服务是否运行</td><td><code class="inline">systemctl status x-ui</code></td><td>active (running)</td></tr>
+      <tr><td>443 端口是否监听</td><td><code class="inline">ss -tlnp | grep 443</code></td><td>有输出</td></tr>
+      <tr><td>防火墙是否放行</td><td><code class="inline">ufw status verbose | grep 443</code></td><td>ALLOW</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>如果服务没运行：</strong></p>
+  <pre><code>systemctl restart x-ui</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>10.2 面板打不开</h3>
+  <ol>
+    <li>确认输入的是 <code class="inline">http://</code> 不是 <code class="inline">https://</code></li>
+    <li>SSH 登录后执行：<code class="inline">systemctl restart x-ui</code></li>
+    <li>检查防火墙：<code class="inline">ufw status verbose | grep 2053</code></li>
+    <li>如没有 ALLOW，回第五步重新配置防火墙</li>
+  </ol>
+
+  <h3>10.3 速度慢</h3>
+  <ol>
+    <li>确认 BBR 已开启：<code class="inline">sysctl net.ipv4.tcp_congestion_control</code></li>
+    <li>晚高峰（20:00-23:00）普通 BGP 线路必然降速，这是正常的</li>
+    <li>如果任何时候都慢，可能 IP 段质量不好，考虑发工单要求更换</li>
+  </ol>
+
+  <h3>10.4 面板常用管理命令</h3>
+  <pre><code>x-ui              # 进入管理菜单
+x-ui restart      # 重启面板
+x-ui status       # 查看面板状态
+x-ui update       # 更新面板
+x-ui log          # 查看日志</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+
+  <h3>10.5 更换 IP（如被墙）</h3>
+  <p>如果 IP 被墙了（ping 不通、端口被封）：</p>
+  <ol>
+    <li>登录 <a href="https://cloud.colocrossing.com">cloud.colocrossing.com</a></li>
+    <li>找到你的 VPS → 查看是否有 IP 更换选项</li>
+    <li>如果没有自助更换选项，提交一个工单（Support Ticket），说明需要更换 IP</li>
+    <li>拿到新 IP 后，SSH 登录，更新 3X-UI 面板中的节点 IP 即可</li>
+  </ol>
+</div>
+
+<!-- ============ 11 ============ -->
+<div class="card" id="s11">
+  <h2>十一、速查清单</h2>
+
+  <h3>购买</h3>
+  <ul class="checklist">
+    <li>打开 https://legacyvps.com/scanidc/go/ccs_154</li>
+    <li>Region 选 Los Angeles</li>
+    <li>OS 选 Debian 12</li>
+    <li>设置 Root Password</li>
+    <li>Hostname 随便填，NS1/NS2 留空</li>
+    <li>不勾选任何额外付费项</li>
+    <li>支付方式选 Alipay，扫码付款</li>
+    <li>记下 IP 地址</li>
+  </ul>
+
+  <h3>部署（SSH 登录后按顺序执行）</h3>
+  <ul class="checklist">
+    <li>apt update && apt upgrade -y</li>
+    <li>apt install curl wget ufw -y</li>
+    <li>ufw allow 22/tcp && ufw allow 2053/tcp && ufw allow 443/tcp && ufw enable</li>
+    <li>ufw status verbose（确认三个端口都是 ALLOW）</li>
+    <li>echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf</li>
+    <li>echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf</li>
+    <li>sysctl -p</li>
+    <li>bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)</li>
+    <li>浏览器打开 http://你的IP:2053，登录</li>
+    <li>添加入站：vless / 443 / Reality / Dest www.microsoft.com:443 / SNI www.microsoft.com / uTLS chrome / ShortId 点 + 生成</li>
+    <li>左侧「客户端」→ 添加客户端 → Flow 选 xtls-rprx-vision → 关联入站 ColoCrossing-LA → 创建</li>
+    <li>回到「入站」→ ⋮ → 导出链接 → 复制 vless:// 链接 → 导入各客户端</li>
+    <li>打开 Google 测试 ✅</li>
+  </ul>
+</div>
+
+<!-- ============ Appendix ============ -->
+<div class="card" id="appendix">
+  <h2>附录 A：ColoCrossing 管理面板</h2>
+
+  <h3>登录地址</h3>
+  <p><a href="https://cloud.colocrossing.com">https://cloud.colocrossing.com</a></p>
+  <p>用户名为你购买时注册的邮箱，密码为你设置的密码。</p>
+
+  <h3>面板常用功能</h3>
+  <table>
+    <thead><tr><th>功能</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>查看 IP 和密码</strong></td><td>登录面板 → 点击你的 VPS → 查看详情页面</td></tr>
+      <tr><td><strong>重启服务器</strong></td><td>管理面板中点击 Reboot</td></tr>
+      <tr><td><strong>重装系统</strong></td><td>管理面板中点击 Reinstall（数据会丢失！）</td></tr>
+      <tr><td><strong>查看流量使用</strong></td><td>详情页面查看带宽图表</td></tr>
+      <tr><td><strong>提交工单</strong></td><td>遇到问题时联系客服的途径</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><strong>注意</strong>ColoCrossing 的管理面板登录凭据就是你的购买账号，不需要像 RackNerd 那样区分官网密码、SSH 密码和面板密码，这更简单。</div>
+
+  <h3>常规维护提醒</h3>
+  <table>
+    <thead><tr><th>频率</th><th>操作</th></tr></thead>
+    <tbody>
+      <tr><td><strong>每周</strong></td><td>浏览器访问面板 URL，确认节点在线</td></tr>
+      <tr><td><strong>每月</strong></td><td>SSH 登录执行 <code class="inline">apt update && apt upgrade -y</code></td></tr>
+      <tr><td><strong>每月</strong></td><td>SSH 执行 <code class="inline">x-ui update</code> 更新面板</td></tr>
+      <tr><td><strong>每季度</strong></td><td>管理面板查看流量使用量（40TB 一般用不完）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  <p>ColoCrossing VPS 翻墙节点部署手册 · 2026年6月5日</p>
+  <p>套餐：$10.99/年 · 1GB RAM · 30GB SSD · 40TB 流量 · 1Gbps · 洛杉矶</p>
+  <p><a href="#">返回顶部</a></p>
+</footer>
+
+</div>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.parentElement;
+  const code = pre.querySelector('code');
+  const text = code.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>

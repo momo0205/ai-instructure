@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridBot Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h1 { font-size: 24px; color: #38bdf8; }
+        .balance-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .balance-item { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 16px; font-size: 13px; }
+        .balance-item .coin { color: #38bdf8; font-weight: 600; }
+        .balance-item .amount { color: #e2e8f0; margin-left: 6px; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+        .stat-card .label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+        .section { margin-bottom: 24px; }
+        .section h2 { font-size: 18px; color: #94a3b8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .section h2 .toggle { font-size: 14px; transition: transform 0.2s; }
+        .section.collapsed .section-content { display: none; }
+        .section.collapsed h2 .toggle { transform: rotate(-90deg); }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+        th, td { padding: 12px 16px; text-align: left; font-size: 14px; }
+        th { background: #334155; color: #94a3b8; font-weight: 600; font-size: 12px; }
+        tr:not(:last-child) td { border-bottom: 1px solid #334155; }
+        tr:hover td { background: #1e3a5f; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .badge-running { background: #166534; color: #22c55e; }
+        .badge-idle { background: #334155; color: #94a3b8; }
+        .badge-paused { background: #713f12; color: #facc15; }
+        .badge-stopped { background: #450a0a; color: #ef4444; }
+        .badge-error { background: #450a0a; color: #ef4444; }
+        .btn { padding: 6px 14px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: #1d4ed8; color: #fff; }
+        .btn-start { background: #166534; color: #22c55e; }
+        .btn-pause { background: #713f12; color: #facc15; }
+        .btn-stop { background: #450a0a; color: #ef4444; }
+        form.create-form { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }
+        .form-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #94a3b8; font-weight: 600; }
+        .form-group input, .form-group select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #38bdf8; }
+        .ai-card { background: #1e293b; border: 1px solid #38bdf8; border-radius: 12px; padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .ai-card .info { flex: 1; }
+        .ai-card .symbol { font-size: 18px; font-weight: 700; color: #38bdf8; }
+        .ai-card .detail { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .ai-card .score { background: #38bdf8; color: #0f172a; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 14px; }
+        .ai-card .actions { display: flex; gap: 8px; align-items: center; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1000; animation: fadeOut 0.3s 2s forwards; }
+        .toast-success { background: #166534; color: #22c55e; }
+        .toast-error { background: #450a0a; color: #ef4444; }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+        a { color: #38bdf8; text-decoration: none; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 GridBot</h1>
+        <button class="btn btn-primary" onclick="location.reload()">刷新</button>
+    </div>
+
+    <div class="balance-bar">
+        {% for coin, amount in balances.items() %}
+        <div class="balance-item">
+            <span class="coin">{{ coin }}</span>
+            <span class="amount">{{ "%.4f"|format(amount) if amount < 1 else "%.2f"|format(amount) }}</span>
+        </div>
+        {% endfor %}
+        {% if balances|length == 0 %}
+        <div class="balance-item"><span style="color: #64748b;">余额加载中...</span></div>
+        {% endif %}
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="label">总盈亏 (USDT)</div>
+            <div class="value {% if total_pnl >= 0 %}positive{% else %}negative{% endif %}">
+                {{ "%+.4f"|format(total_pnl) }}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="label">活跃网格</div>
+            <div class="value">{{ active }} / {{ total_grids }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">今日交易</div>
+            <div class="value">{{ daily_stat.total_trades if daily_stat else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">今日盈亏</div>
+            <div class="value {% if daily_stat and daily_stat.total_realized_pnl >= 0 %}positive{% else %}negative{% endif %}">
+                {{ "%+.4f"|format(daily_stat.total_realized_pnl) if daily_stat else "0.0000" }}
+            </div>
+        </div>
+    </div>
+
+    {% if ai_recommendations and ai_recommendations|length > 0 %}
+    <div class="section" id="ai-section">
+        <h2 onclick="document.getElementById('ai-section').classList.toggle('collapsed')">
+            🧠 AI 推荐 <span class="toggle">▼</span>
+        </h2>
+        <div class="section-content">
+            {% for rec in ai_recommendations %}
+            <div class="ai-card">
+                <div class="info">
+                    <div class="symbol">{{ rec.symbol }} <span class="score">{{ "%.0f"|format(rec.suitability_score * 100) }}%</span></div>
+                    <div class="detail">
+                        {{ rec.reasoning }} · {{ rec.grid_type }}网格 · {{ rec.grid_count }}格 ·
+                        ±{{ rec.lower_buffer_pct }}% ~ +{{ rec.upper_buffer_pct }}%
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary"
+                        onclick="aiCreate('{{ rec.symbol }}', {{ rec.lower_buffer_pct }}, {{ rec.upper_buffer_pct }}, {{ rec.grid_count }}, '{{ rec.grid_type }}')">
+                        ⚡ 一键创建并启动
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section" id="create-section">
+        <h2 onclick="document.getElementById('create-section').classList.toggle('collapsed')">
+            ➕ 创建网格 <span class="toggle">▼</span>
+        </h2>
+        <div class="section-content">
+            <form class="create-form" id="create-form" onsubmit="createGrid(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>交易对</label>
+                        <select name="symbol" id="create-symbol" onchange="autoSuggest()">
+                            {% for w in whitelist %}
+                            <option value="{{ w.symbol }}" {% if w.in_use %}disabled{% endif %}>
+                                {{ w.symbol }}{% if w.in_use %} (已在使用){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>网格类型</label>
+                        <select name="grid_type" id="create-grid-type">
+                            <option value="arithmetic">等差网格</option>
+                            <option value="geometric">等比网格 (推荐)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>网格数量</label>
+                        <input type="number" name="grid_count" id="create-grid-count" value="20" min="5" max="100" onchange="autoSuggest()">
+                    </div>
+                    <div class="form-group">
+                        <label>投资金额 (USDT)</label>
+                        <input type="number" name="investment" id="create-investment" value="500" min="10" step="10">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>当前价格</label>
+                        <input type="text" id="create-current-price" value="加载中..." readonly style="color: #94a3b8;">
+                    </div>
+                    <div class="form-group">
+                        <label>下限价格</label>
+                        <input type="number" name="lower" id="create-lower" step="any" required>
+                    </div>
+                    <div class="form-group">
+                        <label>上限价格</label>
+                        <input type="number" name="upper" id="create-upper" step="any" required>
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">创建网格</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                    <label style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <input type="checkbox" name="auto_start" checked> 创建后自动启动
+                    </label>
+                    <span id="suggest-status" style="font-size: 11px; color: #64748b;"></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 网格列表</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>交易对</th>
+                    <th>状态</th>
+                    <th>类型</th>
+                    <th>区间</th>
+                    <th>当前价</th>
+                    <th>已实现盈亏</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in summaries %}
+                <tr>
+                    <td><a href="/grid/{{ s.id }}">#{{ s.id }}</a></td>
+                    <td>{{ s.symbol }}</td>
+                    <td><span class="badge badge-{{ s.status }}">{{ s.status }}</span></td>
+                    <td>{{ s.grid_type }}</td>
+                    <td>{{ "%.4f"|format(s.lower) }} - {{ "%.4f"|format(s.upper) }}</td>
+                    <td>{{ "%.4f"|format(s.current_price) }}</td>
+                    <td class="{% if s.realized_pnl >= 0 %}positive{% else %}negative{% endif %}">
+                        {{ "%+.4f"|format(s.realized_pnl) }}
+                    </td>
+                    <td style="display: flex; gap: 4px;">
+                        {% if s.status == 'idle' or s.status == 'stopped' %}
+                        <button class="btn btn-start" hx-post="/api/grid/{{ s.id }}/start" hx-swap="none" onclick="setTimeout(()=>location.reload(),500)">启动</button>
+                        {% elif s.status == 'running' %}
+                        <button class="btn btn-pause" hx-post="/api/grid/{{ s.id }}/pause" hx-swap="none" onclick="setTimeout(()=>location.reload(),500)">暂停</button>
+                        <button class="btn btn-stop" hx-post="/api/grid/{{ s.id }}/stop" hx-swap="none" onclick="setTimeout(()=>location.reload(),500)">停止</button>
+                        {% elif s.status == 'paused' %}
+                        <button class="btn btn-start" hx-post="/api/grid/{{ s.id }}/start" hx-swap="none" onclick="setTimeout(()=>location.reload(),500)">继续</button>
+                        <button class="btn btn-stop" hx-post="/api/grid/{{ s.id }}/stop" hx-swap="none" onclick="setTimeout(()=>location.reload(),500)">停止</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if summaries|length == 0 %}
+                <tr><td colspan="8" style="text-align: center; color: #64748b; padding: 24px;">暂无网格 — 使用上方表单或 AI 推荐创建</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>📝 最近交易</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>网格</th>
+                    <th>交易对</th>
+                    <th>买入价</th>
+                    <th>卖出价</th>
+                    <th>数量</th>
+                    <th>利润</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in recent_trades %}
+                <tr>
+                    <td>{{ t.sell_filled_at.strftime('%m-%d %H:%M:%S') }}</td>
+                    <td>#{{ t.grid_id }}</td>
+                    <td>{{ t.symbol }}</td>
+                    <td>{{ "%.4f"|format(t.buy_price) }}</td>
+                    <td>{{ "%.4f"|format(t.sell_price) }}</td>
+                    <td>{{ "%.4f"|format(t.quantity) }}</td>
+                    <td class="{% if t.profit >= 0 %}positive{% else %}negative{% endif %}">
+                        {{ "%+.4f"|format(t.profit) }}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if recent_trades|length == 0 %}
+                <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 24px;">暂无交易记录</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        async function autoSuggest() {
+            const symbol = document.getElementById('create-symbol').value;
+            const count = document.getElementById('create-grid-count').value || 20;
+            const status = document.getElementById('suggest-status');
+
+            try {
+                status.innerHTML = '<span class="spinner"></span> 获取价格...';
+                const resp = await fetch(`/api/suggest-interval?symbol=${encodeURIComponent(symbol)}&grid_count=${count}`);
+                const data = await resp.json();
+
+                if (data.error) { status.textContent = '⚠ ' + data.error; return; }
+
+                document.getElementById('create-current-price').value = data.current_price;
+                document.getElementById('create-lower').value = data.suggested_lower;
+                document.getElementById('create-upper').value = data.suggested_upper;
+                status.textContent = `✓ 步长: ${data.step}`;
+            } catch (e) {
+                status.textContent = '⚠ 获取失败';
+            }
+        }
+
+        async function createGrid(e) {
+            e.preventDefault();
+            const form = document.getElementById('create-form');
+            const formData = new FormData(form);
+
+            try {
+                const resp = await fetch('/api/grid/create', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast(`网格 #${data.grid_id} ${data.status}`, 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast(data.detail || '创建失败', 'error');
+                }
+            } catch (err) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        async function aiCreate(symbol, lowerPct, upperPct, gridCount, gridType) {
+            try {
+                const resp = await fetch(`/api/suggest-interval?symbol=${encodeURIComponent(symbol)}&buffer_pct=${lowerPct}&grid_count=${gridCount}`);
+                const data = await resp.json();
+                if (data.error) { showToast(data.error, 'error'); return; }
+
+                const formData = new FormData();
+                formData.append('symbol', symbol);
+                formData.append('lower', data.suggested_lower);
+                formData.append('upper', data.suggested_upper);
+                formData.append('grid_count', gridCount);
+                formData.append('investment', 500);
+                formData.append('grid_type', gridType);
+                formData.append('auto_start', 'true');
+
+                const createResp = await fetch('/api/grid/create', { method: 'POST', body: formData });
+                const createData = await createResp.json();
+                if (createResp.ok) {
+                    showToast(`✅ ${symbol} 网格已创建并启动`, 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast(createData.detail || '创建失败', 'error');
+                }
+            } catch (err) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast toast-${type}`;
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 2300);
+        }
+
+        autoSuggest();
+    </script>
+</body>
+</html>

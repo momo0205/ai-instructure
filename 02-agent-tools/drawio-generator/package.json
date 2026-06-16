@@ -1,0 +1,32 @@
+{
+  "name": "drawio-generator",
+  "version": "1.0.0",
+  "description": "AI-driven draw.io file generator with natural language support",
+  "main": "dist/index.js",
+  "bin": {
+    "drawio-gen": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "generate": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "drawio",
+    "diagram",
+    "generator",
+    "ai",
+    "flowchart"
+  ],
+  "author": "chenmao",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
