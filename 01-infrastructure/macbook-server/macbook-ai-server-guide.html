@@ -500,7 +500,7 @@ bob.ns.cloudflare.com</code></pre></div>
         <tr><td>迁移助理</td><td><strong>以后再说 / 跳过</strong></td><td>不需要迁移数据</td></tr>
         <tr><td>Apple ID 登录</td><td><strong>跳过 / 稍后设置</strong></td><td>服务器不需要 iCloud</td></tr>
         <tr><td>条款与条件</td><td>同意</td><td>必须</td></tr>
-        <tr><td>账户名</td><td><code class="inline-code">admin</code></td><td>简洁、语义清晰</td></tr>
+        <tr><td>账户名</td><td><code class=\"inline-code\">ironmao</code></td><td>简洁、语义清晰</td></tr>
         <tr><td>密码</td><td>设置一个强密码</td><td>记住它！以后 sudo 和 GUI 登录都要用</td></tr>
         <tr><td>Siri</td><td><strong>禁用</strong></td><td>服务器不需要</td></tr>
         <tr><td>屏幕使用时间</td><td><strong>跳过</strong></td><td>-</td></tr>
@@ -621,7 +621,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"</code></pre>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>git config --global user.name "ironmao"
-git config --global user.email "admin@ironmao.win"
+git config --global user.email "ironmao@ironmao.win"
 git config --global init.defaultBranch main</code></pre>
       </div>
     </div>
@@ -638,7 +638,7 @@ git config --global init.defaultBranch main</code></pre>
 sudo mdutil -a -i off
 
 # 如果你想保留某些目录的索引：
-# sudo mdutil -i on /Users/admin/code
+# sudo mdutil -i on /Users/ironmao/code
 
 # 关闭不必要的动画（减少 GPU 使用）
 defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
@@ -731,7 +731,7 @@ sudo systemsetup -getremotelogin
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 在你的客户端上执行
-ssh-copy-id -i ~/.ssh/ironmao.pub admin@192.168.1.100</code></pre>
+ssh-copy-id -i ~/.ssh/ironmao.pub ironmao@192.168.1.100</code></pre>
       </div>
 
       <p><strong>方式 B：U 盘 / AirDrop 手动复制（在 ironmao 上执行）</strong></p>
@@ -782,7 +782,7 @@ AuthorizedKeysFile .ssh/authorized_keys</code></pre>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 在你的客户端上测试（ironmao IP 用实际地址）
-ssh -i ~/.ssh/ironmao -p 22 admin@192.168.1.100
+ssh -i ~/.ssh/ironmao -p 22 ironmao@192.168.1.100
 
 # 能成功登录后再继续</code></pre>
       </div>
@@ -805,7 +805,7 @@ sudo launchctl kickstart -k system/com.openssh.sshd
 # sudo shutdown -r now
 
 # 用新端口重新测试（在你的客户端上）
-ssh -i ~/.ssh/ironmao -p 2222 admin@192.168.1.100</code></pre>
+ssh -i ~/.ssh/ironmao -p 2222 ironmao@192.168.1.100</code></pre>
       </div>
     </div>
   </div>
@@ -824,7 +824,7 @@ nano ~/.ssh/config
 Host ironmao
   HostName 192.168.1.100
   Port 2222
-  User admin
+  User ironmao
   IdentityFile ~/.ssh/ironmao
 
 # 保存后测试：
@@ -1024,11 +1024,11 @@ cloudflared tunnel list
         <pre><code>mkdir -p ~/.cloudflared
 nano ~/.cloudflared/config.yml</code></pre>
       </div>
-      <p style="font-size:0.83rem;">写入以下内容（<strong>替换 YOUR_TUNNEL_UUID、ironmao.win、以及用户名 admin</strong>）：</p>
+      <p style="font-size:0.83rem;">写入以下内容（<strong>替换 YOUR_TUNNEL_UUID、ironmao.win、以及用户名 ironmao</strong>）：</p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>tunnel: YOUR_TUNNEL_UUID
-credentials-file: /Users/admin/.cloudflared/YOUR_TUNNEL_UUID.json
+credentials-file: /Users/ironmao/.cloudflared/YOUR_TUNNEL_UUID.json
 
 ingress:
   # SSH 隧道（端口改为你在 sshd_config 中设置的 2222）
@@ -1082,7 +1082,7 @@ cloudflared tunnel run ironmao
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 在你客户端上执行
-ssh -i ~/.ssh/ironmao admin@ssh.ironmao.win -p 22</code></pre>
+ssh -i ~/.ssh/ironmao ironmao@ssh.ironmao.win -p 22</code></pre>
       </div>
       <div class="info">
         📝 注意：通过 Cloudflare Tunnel 连接 SSH 时，端口用的是 <strong>22</strong>（Cloudflare 边缘节点端口），而不是我们改过的 2222。2222 只用于 ironmao 本地。
@@ -1146,7 +1146,7 @@ sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>Host ironmao
   HostName ssh.ironmao.win
-  User admin
+  User ironmao
   Port 22
   IdentityFile ~/.ssh/ironmao
   ProxyCommand cloudflared access ssh --hostname %h</code></pre>
@@ -1557,7 +1557,7 @@ sudo brew services start fail2ban</code></pre>
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>ssh ironmao
 # 或
-ssh -i ~/.ssh/ironmao admin@ssh.ironmao.win</code></pre>
+ssh -i ~/.ssh/ironmao ironmao@ssh.ironmao.win</code></pre>
       </div>
     </div>
   </div>
