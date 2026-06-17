@@ -561,13 +561,22 @@ curl -I https://www.google.com 2>&1 | head -1
 echo 'export https_proxy=http://127.0.0.1:7890' >> ~/.zshrc
 echo 'export http_proxy=http://127.0.0.1:7890' >> ~/.zshrc
 echo 'export all_proxy=socks5://127.0.0.1:7891' >> ~/.zshrc
-echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local' >> ~/.zshrc</code></pre>
+echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local' >> ~/.zshrc
+
+# 添加快捷开关（代理崩了/想直连时使用）\ncat >> ~/.zshrc << 'EOF'\n\n# 代理开关\nalias proxy-on='export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7891 && echo \"✅ 代理已开启\"'\nalias proxy-off='unset https_proxy http_proxy all_proxy && echo \"❌ 代理已关闭\"'\nEOF\n\nsource ~/.zshrc</code></pre>
       </div>
 
       <div class="tip">
         💡 <strong>端口号确认</strong>：打开 FlClash → 设置 → 查看 HTTP/SOCKS5 端口。<br>
         如果端口不是 7890/7891，把上面命令中的端口换成实际值。<br>
-        <strong>以后代理地址永远不变</strong>（都是 <code class="inline-code">127.0.0.1</code>），换节点在 FlClash 里点一下就行。
+        <strong>以后代理地址永远不变</strong>（都是 <code class=\"inline-code\">127.0.0.1</code>），换节点在 FlClash 里点一下就行。
+      </div>
+
+      <div class=\"tip\">
+        💡 <strong>proxy-on / proxy-off 快捷切换</strong>：<br>
+        FlClash 的分流规则已自动区分国内直连和国外代理，<strong>建议一直开着</strong>。<br>
+        如果代理节点崩了需要临时直连，在终端输入 <code class=\"inline-code\">proxy-off</code>，恢复后输入 <code class=\"inline-code\">proxy-on</code>。<br>
+        注意：直连模式下 GitHub/npm 等境外服务不可用。
       </div>
     </div>
   </div>
