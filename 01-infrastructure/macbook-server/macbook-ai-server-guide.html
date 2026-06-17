@@ -563,7 +563,15 @@ echo 'export http_proxy=http://127.0.0.1:7890' >> ~/.zshrc
 echo 'export all_proxy=socks5://127.0.0.1:7891' >> ~/.zshrc
 echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local' >> ~/.zshrc
 
-# 添加快捷开关（代理崩了/想直连时使用）\ncat >> ~/.zshrc << 'EOF'\n\n# 代理开关\nalias proxy-on='export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7891 && echo \"✅ 代理已开启\"'\nalias proxy-off='unset https_proxy http_proxy all_proxy && echo \"❌ 代理已关闭\"'\nEOF\n\nsource ~/.zshrc</code></pre>
+# 添加快捷开关（代理崩了/想直连时使用）
+cat >> ~/.zshrc << 'EOF'
+
+# 代理开关
+alias proxy-on='export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7891 && echo \"✅ 代理已开启\"'
+alias proxy-off='unset https_proxy http_proxy all_proxy && echo \"❌ 代理已关闭\"'
+EOF
+
+source ~/.zshrc</code></pre>
       </div>
 
       <div class="tip">
@@ -1253,7 +1261,7 @@ npm config set registry https://registry.npmmirror.com
 npm install -g codewhale
 
 # 设置 API Key（替换为你 Phase 0 获取的 key）
-echo 'export DEEPSEEK_API_KEY=\"sk-your-api-key-here\"' >> ~/.zshrc
+echo 'export DEEPSEEK_API_KEY="sk-your-api-key-here"' >> ~/.zshrc
 source ~/.zshrc
 
 # 启动
