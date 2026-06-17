@@ -561,7 +561,7 @@ curl -I https://www.google.com 2>&1 | head -1
 echo 'export https_proxy=http://127.0.0.1:7890' >> ~/.zshrc
 echo 'export http_proxy=http://127.0.0.1:7890' >> ~/.zshrc
 echo 'export all_proxy=socks5://127.0.0.1:7891' >> ~/.zshrc
-echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local' >> ~/.zshrc
+echo 'export no_proxy=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.local,api.deepseek.com,deepseek.com' >> ~/.zshrc
 
 # 添加快捷开关（代理崩了/想直连时使用）
 cat >> ~/.zshrc << 'EOF'
