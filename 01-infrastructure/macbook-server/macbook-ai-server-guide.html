@@ -1247,7 +1247,19 @@ node --version && npm --version</code></pre>
       <div class="step-desc">终端原生 AI 编程助手，专为 DeepSeek V4 设计。~98% prompt cache 命中率，1M context。</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 使用淘宝镜像加速（国内必备）\nnpm config set registry https://registry.npmmirror.com\n\nnpm install -g codewhale\n\n# 设置 API Key（替换为你 Phase 0 获取的 key）\necho 'export DEEPSEEK_API_KEY=\"sk-your-api-key-here\"' >> ~/.zshrc\nsource ~/.zshrc\n\n# 启动\ncodewhale\n\n# 首次运行会提示选择 endpoint，选默认即可</code></pre>
+        <pre><code># 使用淘宝镜像加速（国内必备）
+npm config set registry https://registry.npmmirror.com
+
+npm install -g codewhale
+
+# 设置 API Key（替换为你 Phase 0 获取的 key）
+echo 'export DEEPSEEK_API_KEY=\"sk-your-api-key-here\"' >> ~/.zshrc
+source ~/.zshrc
+
+# 启动
+codewhale
+
+# 首次运行会提示选择 endpoint，选默认即可</code></pre>
       </div>
       <a class="link-btn" href="https://www.codewhale.ai/" target="_blank">🔗 CodeWhale 官网</a>
       <a class="link-btn" href="https://github.com/usewhale/DeepSeek-Code-Whale" target="_blank">📦 GitHub</a>
