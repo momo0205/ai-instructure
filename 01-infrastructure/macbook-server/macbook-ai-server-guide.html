@@ -698,6 +698,10 @@ ifconfig en0 | grep ether</code></pre></div>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">3.3 启用 SSH 远程登录</div>
+      <div class="warn">
+        ⚠️ 如果报错 <code class="inline-code">requires full disk access privileges</code>：<br>
+        打开 <strong>系统设置 → 隐私与安全性 → 完全磁盘访问权限</strong>，点击 + 添加<strong>终端</strong>，打开开关后重试。
+      </div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 启用 SSH（Mac 称之为"远程登录"）
