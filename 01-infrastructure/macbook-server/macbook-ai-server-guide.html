@@ -214,7 +214,7 @@
 
 <div class="progress-container">
   <h1 style="display:inline;">🖥️ MacBook Air → AI 服务器</h1>
-  <span class="badge badge-green" style="margin-left:1rem;">从零搭建指南 v2.2</span>
+  <span class="badge badge-green" style="margin-left:1rem;">从零搭建指南 v2.3</span>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
   <p class="progress-text" id="progress-text">进度：0 / 36 步完成</p>
 </div>
@@ -224,6 +224,13 @@
   通过 <strong>Cloudflare Tunnel</strong> 安全暴露到公网，SSH 远程管理，运行 DeepSeek / Claude Code / Codex CLI 等 AI Agent。
 </p>
 
+<div class="info" style="margin-bottom:1.5rem;">
+  <strong>📌 本文涉及两台设备：</strong><br>
+  · <strong>客户端</strong>：你日常使用的电脑（<strong>当前这台</strong>），用于远程登录和管理ironmao<br>
+  · <strong>ironmao</strong>：要搭建的 MacBook Air 服务器（<strong>被管理的目标机器</strong>）<br>
+  每个步骤都标注了操作位置，不要搞混。
+</div>
+
 <hr>
 
 <h2>📋 前置条件检查</h2>
@@ -232,7 +239,7 @@
 <div class="prereq-card">
   <h4>✅ 前提 1：VPN 中转站 + FlClash（境外 IP 访问能力）</h4>
   <p style="font-size:0.82rem; margin-top:0.3rem;">
-    MacBook 安装 Homebrew、npm 包、cloudflared 等需要访问境外网络。<br>
+    ironmao 安装 Homebrew、npm 包、cloudflared 等需要访问境外网络。<br>
     你之前搭的 VPN 中转站提供了 Clash 订阅链接 → 导入 FlClash → 终端设环境变量指向 <code class="inline-code">127.0.0.1:7890</code>。
   </p>
   <a class="link-btn" href="../vpn-relay/VPN中转站完整部署手册.html" target="_blank">📖 VPN 中转站手册</a>
@@ -278,7 +285,7 @@
 </nav>
 
 <ul class="toc">
-  <li><a href="#p0">Phase 0 · 准备工作（当前电脑）</a></li>
+  <li><a href="#p0">Phase 0 · 准备工作（客户端）</a></li>
   <li><a href="#p1">Phase 1 · 格式化 & 重装 macOS</a></li>
   <li><a href="#p2">Phase 2 · 系统基础配置</a></li>
   <li><a href="#p3">Phase 3 · 安全加固</a></li>
@@ -295,9 +302,9 @@
 <hr>
 
 <!-- ======================== PHASE 0 ======================== -->
-<h2 id="p0">Phase 0 · 准备工作 <span class="badge badge-purple">当前电脑</span></h2>
+<h2 id="p0">Phase 0 · 准备工作 <span class="badge badge-purple">客户端</span></h2>
 <div class="info">
-  📍 <strong>位置</strong>：以下所有操作在你<strong>当前使用的电脑</strong>上完成，不要搞混。
+  📍 <strong>位置</strong>：以下所有操作在<strong>客户端</strong>上完成，不是ironmao。
 </div>
 
 <div class="phase" data-phase="0">
@@ -365,16 +372,16 @@ bob.ns.cloudflare.com</code></pre></div>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">0.3 生成 SSH 密钥对</div>
-      <div class="step-desc">在你的当前电脑上生成一对 ed25519 密钥，用于远程登录 MacBook 服务器（不用密码）。</div>
+      <div class="step-desc">在你的客户端上生成一对 ed25519 密钥，用于远程登录 ironmao 服务器（不用密码）。</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>ssh-keygen -t ed25519 -C "macbook-server" -f ~/.ssh/macbook_server</code></pre>
+        <pre><code>ssh-keygen -t ed25519 -C "ironmao" -f ~/.ssh/ironmao</code></pre>
       </div>
       <p style="font-size:0.8rem; color:var(--muted)">
         按提示可以直接回车（不设密码，方便自动化；如果想更安全可以设密码，连接时需要输入）。<br>
         生成两个文件：
-        <code class="inline-code">~/.ssh/macbook_server</code>（私钥，<strong>绝对保密！</strong>）<br>
-        <code class="inline-code">~/.ssh/macbook_server.pub</code>（公钥，稍后放到 MacBook 上）
+        <code class="inline-code">~/.ssh/ironmao</code>（私钥，<strong>绝对保密！</strong>）<br>
+        <code class="inline-code">~/.ssh/ironmao.pub</code>（公钥，稍后放到 ironmao 上）
       </p>
     </div>
   </div>
@@ -389,7 +396,7 @@ bob.ns.cloudflare.com</code></pre></div>
       <ol>
         <li>打开上述链接 → 注册/登录 DeepSeek 账号</li>
         <li>点击 <strong>"创建 API Key"</strong>（Create API Key）</li>
-        <li>命名（例如 "macbook-server"）→ 创建</li>
+        <li>命名（例如 "ironmao"）→ 创建</li>
         <li><strong>立即复制保存！</strong>只显示一次，格式为 <code class="inline-code">sk-xxxxxxxx</code></li>
         <li>建议去 <a href="https://platform.deepseek.com/billing" target="_blank" style="color:var(--accent)">Billing 页面</a> 充值 $5-$20</li>
       </ol>
@@ -404,7 +411,7 @@ bob.ns.cloudflare.com</code></pre></div>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">0.5 提前下载 FlClash 安装包（放到 U 盘）</div>
-      <div class="step-desc">MacBook 格式化后需要用 FlClash 访问境外网络。提前下载好 .dmg，拷贝到 U 盘里，格式化后直接安装，省得又被网络问题卡住。</div>
+      <div class="step-desc">ironmao 格式化后需要用 FlClash 访问境外网络。提前下载好 .dmg，拷贝到 U 盘里，格式化后直接安装，省得又被网络问题卡住。</div>
 
       <a class="link-btn" href="https://github.com/chen08209/FlClash/releases" target="_blank">🔗 FlClash GitHub Releases</a>
       <a class="link-btn" href="https://flclash.app/" target="_blank">🔗 FlClash 官网</a>
@@ -435,13 +442,13 @@ bob.ns.cloudflare.com</code></pre></div>
 </div>
 
 <!-- ======================== PHASE 1 ======================== -->
-<h2 id="p1">Phase 1 · 格式化 & 重装 macOS <span class="badge badge-red">MacBook 上操作</span></h2>
+<h2 id="p1">Phase 1 · 格式化 & 重装 macOS <span class="badge badge-red">ironmao</span></h2>
 <div class="info">
-  📍 <strong>位置切换</strong>：从现在开始，<strong>所有操作都在 MacBook Air 上执行</strong>。把你的当前电脑放在一边。
+  📍 <strong>位置切换</strong>：从现在开始，<strong>所有操作都在 ironmao（MacBook Air）上执行</strong>。客户端放一边。
 </div>
 
 <div class="danger">
-  ⚠️ <strong>最终警告</strong>：以下操作将永久删除 MacBook 上的所有数据。确认已备份重要文件！
+  ⚠️ <strong>最终警告</strong>：以下操作将永久删除 ironmao 上的所有数据。确认已备份重要文件！
 </div>
 
 <div class="phase" data-phase="1">
@@ -613,7 +620,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"</code></pre>
       <div class="step-title">2.3 配置 Git</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>git config --global user.name "MacBook Server"
+        <pre><code>git config --global user.name "ironmao"
 git config --global user.email "admin@ironmao.win"
 git config --global init.defaultBranch main</code></pre>
       </div>
@@ -647,7 +654,7 @@ sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownl
 <!-- ======================== PHASE 3 ======================== -->
 <h2 id="p3">Phase 3 · 安全加固</h2>
 <div class="info">
-  🔒 目标：让这台暴露在公网的 MacBook 只有你通过 SSH 密钥才能登录，其他所有途径全部封死。
+  🔒 目标：让这台暴露在公网的 ironmao 只有你通过 SSH 密钥才能登录，其他所有途径全部封死。
 </div>
 
 <div class="phase" data-phase="3">
@@ -677,10 +684,10 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode
   <div class="step" data-step="3-2">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">3.2 在路由器上设置静态 IP（强烈推荐）</div>
-      <div class="step-desc">防止 MacBook 的内网 IP 变动导致 Cloudflare Tunnel 无法工作。</div>
+      <div class="step-title">3.2 在路由器上设置静态 IP（可选/可跳过）<span class="badge badge-green" style="margin-left:0.5rem;">可跳过</span></div>
+      <div class="step-desc">ironmao 通过 Cloudflare Tunnel 对外暴露，不依赖固定内网 IP。此步仅当你需要局域网直连 ironmao（不走隧道）时有用。</div>
       <ol>
-        <li>在 MacBook 上查看当前信息：
+        <li>在 ironmao 上查看当前信息：
           <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">复制</button><pre><code># 查看内网 IP
 ifconfig en0 | grep "inet "
 # 查看 MAC 地址
@@ -689,7 +696,7 @@ ifconfig en0 | grep ether</code></pre></div>
         <li>登录你的路由器管理页面（通常是 <code class="inline-code">192.168.1.1</code> 或 <code class="inline-code">192.168.0.1</code>）</li>
         <li>找到 <strong>DHCP 设置</strong> → <strong>静态 IP 分配</strong> 或 <strong>地址预留</strong></li>
         <li>添加一条规则：MAC 地址 → 固定 IP（例如 <code class="inline-code">192.168.1.100</code>）</li>
-        <li>保存，MacBook 下次连接会自动获取这个固定 IP</li>
+        <li>保存，ironmao 下次连接会自动获取这个固定 IP</li>
       </ol>
     </div>
   </div>
@@ -717,26 +724,26 @@ sudo systemsetup -getremotelogin
   <div class="step" data-step="3-4">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">3.4 把 SSH 公钥传输到 MacBook</div>
-      <div class="step-desc">把 Phase 0 生成的公钥内容放到 MacBook 的 authorized_keys 里。</div>
+      <div class="step-title">3.4 把 SSH 公钥传输到 ironmao</div>
+      <div class="step-desc">把 Phase 0 生成的公钥内容放到 ironmao 的 authorized_keys 里。</div>
 
-      <p><strong>方式 A：从当前电脑用 ssh-copy-id（如果 MacBook IP 已知）</strong></p>
+      <p><strong>方式 A：从客户端用 ssh-copy-id（如果 ironmao IP 已知）</strong></p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 在你的当前电脑上执行
-ssh-copy-id -i ~/.ssh/macbook_server.pub admin@192.168.1.100</code></pre>
+        <pre><code># 在你的客户端上执行
+ssh-copy-id -i ~/.ssh/ironmao.pub admin@192.168.1.100</code></pre>
       </div>
 
-      <p><strong>方式 B：U 盘 / AirDrop 手动复制（在 MacBook 上执行）</strong></p>
+      <p><strong>方式 B：U 盘 / AirDrop 手动复制（在 ironmao 上执行）</strong></p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 在 MacBook 的终端中执行
+        <pre><code># 在 ironmao 的终端中执行
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
 
 # 编辑 authorized_keys，把公钥内容粘贴进去
 nano ~/.ssh/authorized_keys
-# 粘贴 macbook_server.pub 的完整内容，保存 (Ctrl+X → Y → Enter)</code></pre>
+# 粘贴 ironmao.pub 的完整内容，保存 (Ctrl+X → Y → Enter)</code></pre>
       </div>
 
       <div class="warn">
@@ -774,8 +781,8 @@ AuthorizedKeysFile .ssh/authorized_keys</code></pre>
       </div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 在你的当前电脑上测试（MacBook IP 用实际地址）
-ssh -i ~/.ssh/macbook_server -p 22 admin@192.168.1.100
+        <pre><code># 在你的客户端上测试（ironmao IP 用实际地址）
+ssh -i ~/.ssh/ironmao -p 22 admin@192.168.1.100
 
 # 能成功登录后再继续</code></pre>
       </div>
@@ -794,11 +801,11 @@ sudo launchctl kickstart -k system/com.openssh.sshd
 # sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist 2>/dev/null
 # sudo launchctl load /System/Library/LaunchDaemons/ssh.plist 2>/dev/null
 
-# 如果两种方式都被 SIP 拦截，重启 MacBook：
+# 如果两种方式都被 SIP 拦截，重启 ironmao：
 # sudo shutdown -r now
 
-# 用新端口重新测试（在你的当前电脑上）
-ssh -i ~/.ssh/macbook_server -p 2222 admin@192.168.1.100</code></pre>
+# 用新端口重新测试（在你的客户端上）
+ssh -i ~/.ssh/ironmao -p 2222 admin@192.168.1.100</code></pre>
       </div>
     </div>
   </div>
@@ -807,21 +814,21 @@ ssh -i ~/.ssh/macbook_server -p 2222 admin@192.168.1.100</code></pre>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">3.6 配置 ~/.ssh/config（可选，方便连接）</div>
-      <div class="step-desc">在你的<strong>当前电脑</strong>上配置 SSH 别名，以后只需 <code class="inline-code">ssh macbook</code> 即可连接。</div>
+      <div class="step-desc">在你的<strong>客户端</strong>上配置 SSH 别名，以后只需 <code class="inline-code">ssh ironmao</code> 即可连接。</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 在你的当前电脑上编辑 ~/.ssh/config
+        <pre><code># 在你的客户端上编辑 ~/.ssh/config
 nano ~/.ssh/config
 
 # 添加：
-Host macbook
+Host ironmao
   HostName 192.168.1.100
   Port 2222
   User admin
-  IdentityFile ~/.ssh/macbook_server
+  IdentityFile ~/.ssh/ironmao
 
 # 保存后测试：
-ssh macbook</code></pre>
+ssh ironmao</code></pre>
       </div>
     </div>
   </div>
@@ -950,7 +957,7 @@ ps aux | grep caffeinate</code></pre>
 <!-- ======================== PHASE 5 ======================== -->
 <h2 id="p5">Phase 5 · Cloudflare Tunnel 公网暴露</h2>
 <div class="info">
-  🌐 Cloudflare Tunnel 在你家和 Cloudflare 全球网络之间建立一条加密隧道。外部访问者连接 Cloudflare 的节点，Cloudflare 通过隧道将请求转发到你的 MacBook。<strong>无需在路由器上开任何端口，也不暴露你家 IP。</strong>
+  🌐 Cloudflare Tunnel 在你家和 Cloudflare 全球网络之间建立一条加密隧道。外部访问者连接 Cloudflare 的节点，Cloudflare 通过隧道将请求转发到你的 ironmao。<strong>无需在路由器上开任何端口，也不暴露你家 IP。</strong>
 </div>
 
 <div class="phase" data-phase="5">
@@ -972,7 +979,7 @@ cloudflared version</code></pre>
   <div class="step" data-step="5-2">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">5.2 登录 Cloudflare（在 MacBook 上）</div>
+      <div class="step-title">5.2 登录 Cloudflare（在 ironmao 上）</div>
       <div class="step-desc">此命令会打开浏览器，跳转到 Cloudflare 授权页面。</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
@@ -992,14 +999,14 @@ cloudflared version</code></pre>
       <div class="step-title">5.3 创建隧道</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 创建名为 macbook-server 的隧道
-cloudflared tunnel create macbook-server
+        <pre><code># 创建名为 ironmao 的隧道
+cloudflared tunnel create ironmao
 
 # 查看隧道列表（记录 UUID）
 cloudflared tunnel list
 # 输出示例：
 # ID                                    NAME             CREATED
-# abcd1234-5678-90ab-cdef-1234567890ab  macbook-server   2026-06-07...</code></pre>
+# abcd1234-5678-90ab-cdef-1234567890ab  ironmao   2026-06-07...</code></pre>
       </div>
       <p style="font-size:0.82rem; color:var(--muted)">
         记录下隧道 UUID，下一步配置要用。凭证文件保存在 <code class="inline-code">~/.cloudflared/&lt;uuid&gt;.json</code>。
@@ -1036,7 +1043,7 @@ ingress:
   - service: http_status:404</code></pre>
       </div>
       <div class="tip">
-        💡 <code class="inline-code">ssh://localhost:2222</code> 表示将匹配到的域名流量转发到 MacBook 本地的 SSH 端口（我们改成了 2222）。Cloudflare 会自动处理 SSH 协议。
+        💡 <code class="inline-code">ssh://localhost:2222</code> 表示将匹配到的域名流量转发到 ironmao 本地的 SSH 端口（我们改成了 2222）。Cloudflare 会自动处理 SSH 协议。
       </div>
     </div>
   </div>
@@ -1049,7 +1056,7 @@ ingress:
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 为每个 hostname 创建 DNS 记录
-cloudflared tunnel route dns macbook-server ssh.ironmao.win
+cloudflared tunnel route dns ironmao ssh.ironmao.win
 
 # 查看 DNS 记录是否创建成功
 cloudflared tunnel route ip show</code></pre>
@@ -1067,18 +1074,18 @@ cloudflared tunnel route ip show</code></pre>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 前台运行隧道（看日志方便调试）
-cloudflared tunnel run macbook-server
+cloudflared tunnel run ironmao
 
 # 如果看到 "Registered tunnel connection" 就是成功了</code></pre>
       </div>
-      <p style="font-size:0.83rem;">隧道跑起来后，在<strong>你的当前电脑</strong>上测试 SSH 连接：</p>
+      <p style="font-size:0.83rem;">隧道跑起来后，在<strong>你的客户端</strong>上测试 SSH 连接：</p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code># 在你当前电脑上执行
-ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win -p 22</code></pre>
+        <pre><code># 在你客户端上执行
+ssh -i ~/.ssh/ironmao admin@ssh.ironmao.win -p 22</code></pre>
       </div>
       <div class="info">
-        📝 注意：通过 Cloudflare Tunnel 连接 SSH 时，端口用的是 <strong>22</strong>（Cloudflare 边缘节点端口），而不是我们改过的 2222。2222 只用于 MacBook 本地。
+        📝 注意：通过 Cloudflare Tunnel 连接 SSH 时，端口用的是 <strong>22</strong>（Cloudflare 边缘节点端口），而不是我们改过的 2222。2222 只用于 ironmao 本地。
       </div>
       <p style="font-size:0.83rem;">测试成功后，Ctrl+C 停止前台运行的隧道，下一步用 launchd 让它在后台运行。</p>
     </div>
@@ -1134,14 +1141,14 @@ sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
         </li>
         <li>点击 <strong>"Next"</strong> → <strong>"Add application"</strong></li>
       </ol>
-      <p style="font-size:0.83rem; margin-top:0.5rem;">然后在你的<strong>当前电脑</strong>的 <code class="inline-code">~/.ssh/config</code> 中加入：</p>
+      <p style="font-size:0.83rem; margin-top:0.5rem;">然后在你的<strong>客户端</strong>的 <code class="inline-code">~/.ssh/config</code> 中加入：</p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>Host macbook
+        <pre><code>Host ironmao
   HostName ssh.ironmao.win
   User admin
   Port 22
-  IdentityFile ~/.ssh/macbook_server
+  IdentityFile ~/.ssh/ironmao
   ProxyCommand cloudflared access ssh --hostname %h</code></pre>
       </div>
       <p style="font-size:0.83rem;">之后每次 SSH 连接，浏览器会打开 Cloudflare Access 页面，需要输入邮箱收到的 OTP 验证码才能建立连接。</p>
@@ -1155,23 +1162,23 @@ sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
       <div class="step-desc">Cloudflare Tunnel 的核心机制决定了它不依赖网络环境。</div>
 
       <div class="info" style="margin-top:0.5rem;">
-        <strong>📡 核心原理（一句话）：</strong>隧道是 MacBook <strong>主动连接</strong> Cloudflare 的，不是外部连接 MacBook。
+        <strong>📡 核心原理（一句话）：</strong>隧道是 ironmao <strong>主动连接</strong> Cloudflare 的，不是外部连接 ironmao。
       </div>
 
       <table style="margin:0.8rem 0;">
         <tr><th>场景</th><th>需要做什么</th><th>原因</th></tr>
         <tr><td>换了宽带运营商</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 自动重连，域名不变</td></tr>
-        <tr><td>搬了家（新网络环境）</td><td style="color:var(--green)">不需要任何操作</td><td>同上。MacBook 插电联网即可</td></tr>
+        <tr><td>搬了家（新网络环境）</td><td style="color:var(--green)">不需要任何操作</td><td>同上。ironmao 插电联网即可</td></tr>
         <tr><td>路由器换了新的</td><td style="color:var(--orange)">重新设置一下静态 IP（可选）</td><td>只影响局域网直连，不影响通过域名远程访问</td></tr>
         <tr><td>断电/断网后恢复</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 作为系统 daemon 开机自启（步骤 5.7）</td></tr>
       </table>
 
       <p style="font-size:0.83rem; margin-top:0.5rem;">
-        与传统的 DDNS + 端口转发方案不同，Cloudflare Tunnel <strong>不需要公网 IP、不需要在路由器开端口、不暴露家庭 IP</strong>。只要 MacBook 能连上互联网，隧道就能自动恢复。
+        与传统的 DDNS + 端口转发方案不同，Cloudflare Tunnel <strong>不需要公网 IP、不需要在路由器开端口、不暴露家庭 IP</strong>。只要 ironmao 能连上互联网，隧道就能自动恢复。
       </p>
 
       <div class="tip">
-        💡 <strong>FlClash 代理</strong>：换网络后如果 FlClash 连不上节点（比如新的网络环境限制了代理），需要在 MacBook 本机手动调整 FlClash 设置。但这只影响 MacBook 访问境外网站（brew、npm 等），不影响你从外部 SSH 连接。
+        💡 <strong>FlClash 代理</strong>：换网络后如果 FlClash 连不上节点（比如新的网络环境限制了代理），需要在 ironmao 本机手动调整 FlClash 设置。但这只影响 ironmao 访问境外网站（brew、npm 等），不影响你从外部 SSH 连接。
       </div>
     </div>
   </div>
@@ -1359,7 +1366,7 @@ launchctl load ~/Library/LaunchAgents/com.example.myservice.plist</code></pre>
         <pre><code>mkdir -p ~/scripts
 cat > ~/scripts/healthcheck.sh << 'EOF'
 #!/bin/bash
-echo "=== MacBook Server Health Check ==="
+echo "=== ironmao Health Check ==="
 echo "Time: $(date)"
 echo "Uptime: $(uptime)"
 echo ""
@@ -1405,7 +1412,7 @@ git init && git add . && git commit -m "Initial backup $(date +%F)"
 echo "Backup done in ~/server-config-backup/"</code></pre>
       </div>
       <div class="tip">
-        💡 建议把这个备份目录推送到 GitHub 私有仓库。这样即使 MacBook 硬盘损坏也能恢复配置。
+        💡 建议把这个备份目录推送到 GitHub 私有仓库。这样即使 ironmao 硬盘损坏也能恢复配置。
       </div>
     </div>
   </div>
@@ -1463,7 +1470,7 @@ sudo brew services start fail2ban</code></pre>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">🔧 SSH 连不上</div>
-      <div class="step-desc">从外网通过 Cloudflare Tunnel 连不上 MacBook。</div>
+      <div class="step-desc">从外网通过 Cloudflare Tunnel 连不上 ironmao。</div>
       <ol>
         <li><strong>确认 cloudflared 在运行</strong>：
           <code class="inline-code">sudo launchctl list | grep cloudflared</code>（看 PID 是否非 0）</li>
@@ -1473,7 +1480,7 @@ sudo brew services start fail2ban</code></pre>
           <code class="inline-code">nslookup ssh.ironmao.win</code>（应该返回 Cloudflare 的 IP）</li>
         <li><strong>查看 cloudflared 日志</strong>：
           <code class="inline-code">sudo tail -f /var/log/cloudflared.log</code></li>
-        <li><strong>如果使用了 Access OTP</strong>：确保当前电脑也安装了 <code class="inline-code">cloudflared</code></li>
+        <li><strong>如果使用了 Access OTP</strong>：确保客户端也安装了 <code class="inline-code">cloudflared</code></li>
         <li><strong>检查密钥权限</strong>：<code class="inline-code">ls -la ~/.ssh/authorized_keys</code> 必须是 <code class="inline-code">-rw-------</code></li>
       </ol>
     </div>
@@ -1482,10 +1489,10 @@ sudo brew services start fail2ban</code></pre>
   <div class="step" data-step="tr-2">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">🔧 MacBook 睡着了/连不上</div>
+      <div class="step-title">🔧 ironmao 睡着了/连不上</div>
       <div class="step-desc">突然连不上，怀疑系统休眠了。</div>
       <ol>
-        <li>物理走到 MacBook 旁边（😂），打开盖子看看</li>
+        <li>物理走到 ironmao 旁边（😂），打开盖子看看</li>
         <li>检查 pmset：<code class="inline-code">pmset -g | grep sleep</code>（确认 disablesleep = 1）</li>
         <li>检查 caffeinate：<code class="inline-code">ps aux | grep caffeinate</code></li>
         <li>如果确实休眠了，重新执行 4.2 和 4.3</li>
@@ -1504,7 +1511,7 @@ sudo brew services start fail2ban</code></pre>
         <li><strong>查看服务状态</strong>：
           <code class="inline-code">sudo launchctl list | grep cloudflared</code></li>
         <li><strong>手动前台运行看日志</strong>：
-          <code class="inline-code">sudo cloudflared tunnel run macbook-server</code></li>
+          <code class="inline-code">sudo cloudflared tunnel run ironmao</code></li>
         <li><strong>常见错误</strong>：
           <ul>
             <li><code>ERR Couldn't start tunnel</code> → 检查 <code class="inline-code">credentials-file</code> 路径是否正确</li>
@@ -1522,7 +1529,7 @@ sudo brew services start fail2ban</code></pre>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">🔧 重启后 SSH/cloudflared 没启动</div>
-      <div class="step-desc">MacBook 意外重启后，远程连不上了。</div>
+      <div class="step-desc">ironmao 意外重启后，远程连不上了。</div>
       <ol>
         <li><strong>macOS SSH 服务默认开机自启</strong>（通过"远程登录"开关控制的），确认：
           <code class="inline-code">sudo systemsetup -getremotelogin</code> 返回 On</li>
@@ -1548,9 +1555,9 @@ sudo brew services start fail2ban</code></pre>
       <div class="step-title">从外网测试 SSH（用手机热点断开 Wi-Fi 测试）</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>ssh macbook
+        <pre><code>ssh ironmao
 # 或
-ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win</code></pre>
+ssh -i ~/.ssh/ironmao admin@ssh.ironmao.win</code></pre>
       </div>
     </div>
   </div>
@@ -1559,7 +1566,7 @@ ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win</code></pre>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">确认合盖 30 分钟后仍可 SSH 连接</div>
-      <div class="step-desc">合上 MacBook 盖子，等 30 分钟（或隔夜），再尝试 SSH 连接。</div>
+      <div class="step-desc">合上 ironmao 盖子，等 30 分钟（或隔夜），再尝试 SSH 连接。</div>
     </div>
   </div>
 
@@ -1567,7 +1574,7 @@ ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win</code></pre>
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
       <div class="step-title">重启测试</div>
-      <div class="step-desc">在 MacBook 上执行 <code class="inline-code">sudo shutdown -r now</code>，等 2 分钟后尝试 SSH 连接。确保云隧道和 SSH 都自动恢复了。</div>
+      <div class="step-desc">在 ironmao 上执行 <code class="inline-code">sudo shutdown -r now</code>，等 2 分钟后尝试 SSH 连接。确保云隧道和 SSH 都自动恢复了。</div>
     </div>
   </div>
 
@@ -1577,7 +1584,7 @@ ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win</code></pre>
       <div class="step-title">确认 CodeWhale 可用</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>ssh macbook
+        <pre><code>ssh ironmao
 codewhale
 # 应该看到交互界面</code></pre>
       </div>
@@ -1594,15 +1601,15 @@ codewhale
 ┌──────────────────────────────────────────────────────────────┐
 │                         互联网                                │
 │                                                               │
-│  你的电脑 ──SSH:22──▶ Cloudflare Edge ◀──Tunnel── 家里的 MacBook │
-│  (客户端)          ssh.ironmao.win         (服务器)       │
+│  客户端 ──SSH:22──▶ Cloudflare Edge ◀──Tunnel── 家里的 ironmao │
+│  (工作机)          ssh.ironmao.win         (服务器)       │
 │                                                               │
 │  Cloudflare 提供：                                             │
 │  • DDoS 防护（Free 套餐）        • 隐藏真实 IP                  │
 │  • 自动 SSL/TLS                 • OTP 验证（可选）             │
 └──────────────────────────────────────────────────────────────┘
 
-MacBook Air (Apple Silicon M1/M2)
+ironmao (MacBook Air / Apple Silicon M1/M2)
 ├── macOS 最新版（FileVault ❌）
 ├── 防火墙：启用 + 隐身模式
 ├── SSH：端口 2222，仅 ed25519 密钥认证，禁止密码
@@ -1628,7 +1635,7 @@ MacBook Air (Apple Silicon M1/M2)
   │
   └── VPN 中转站 (你的 VPS)
         │
-        └── Clash 订阅 → FlClash (MacBook 本地)
+        └── Clash 订阅 → FlClash (ironmao 本地)
               ├── HTTP:  127.0.0.1:7890
               ├── SOCKS5: 127.0.0.1:7891
               └── 终端工具通过环境变量指向本地端口
@@ -1640,7 +1647,7 @@ MacBook Air (Apple Silicon M1/M2)
 <p style="text-align:center; color:var(--muted); font-size:0.78rem;">
   v2.2 · 2026-06-07 · 知识阶梯：基础设施层 → 可支撑所有上层应用<br>
   依赖：<a href="../vpn-relay/VPN中转站完整部署手册.html" style="color:var(--accent)">VPN 中转站</a>（提供 Clash 订阅） + <a href="https://github.com/chen08209/FlClash/releases" target="_blank" style="color:var(--accent)">FlClash</a>（客户端）<br>
-  下一个目标：在 MacBook 上部署 <a href="../../04-applications/gridbot/" style="color:var(--accent)">GridBot</a>
+  下一个目标：在 ironmao 上部署 <a href="../../04-applications/gridbot/" style="color:var(--accent)">GridBot</a>
 </p>
 
 <script>
@@ -1666,7 +1673,7 @@ function updateProgress() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = JSON.parse(localStorage.getItem('macbook-server-checklist-v2') || '{}');
+  const saved = JSON.parse(localStorage.getItem('ironmao-checklist-v2') || '{}');
   document.querySelectorAll('.step input[type="checkbox"]').forEach((cb, i) => {
     if (saved['step-' + i]) cb.checked = true;
     cb.addEventListener('change', () => {
@@ -1674,7 +1681,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.step input[type="checkbox"]').forEach((c, j) => {
         s['step-' + j] = c.checked;
       });
-      localStorage.setItem('macbook-server-checklist-v2', JSON.stringify(s));
+      localStorage.setItem('ironmao-checklist-v2', JSON.stringify(s));
       updateProgress();
     });
   });
