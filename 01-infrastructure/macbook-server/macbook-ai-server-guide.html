@@ -315,7 +315,7 @@
       <a class="link-btn" href="https://dash.cloudflare.com/?to=/:account/domains/register" target="_blank">🔗 Cloudflare 域名注册直达</a>
       <ol>
         <li>打开上述链接 → 登录 Cloudflare 账号（没有就注册一个）</li>
-        <li>在搜索框输入你想要的域名，例如 <code class="inline-code">your-name.xyz</code></li>
+        <li>在搜索框输入你想要的域名，例如 <code class="inline-code">ironmao.win</code></li>
         <li>Cloudflare 会显示价格（.xyz 通常 $0.99-$10/年）</li>
         <li>点击 <strong>"Purchase"</strong> 购买</li>
         <li>填写注册信息（姓名、地址、邮箱），建议<strong>开启 WHOIS 隐私保护</strong>（免费）</li>
@@ -331,7 +331,7 @@
       </ol>
 
       <div class="tip">
-        💡 <strong>省钱建议</strong>：<code class="inline-code">.xyz</code> 首年只要 $0.99，<code class="inline-code">.top</code> 也很便宜。对于个人服务器完全够用。本文后续用 <code class="inline-code">your-domain.xyz</code> 作为占位符，请换成你自己的域名。
+        💡 <strong>省钱建议</strong>：<code class="inline-code">.xyz</code> 首年只要 $0.99，<code class="inline-code">.top</code> 也很便宜。对于个人服务器完全够用。你的域名是 <code class=\"inline-code\">ironmao.win</code>，本文已替换为实际域名。
       </div>
     </div>
   </div>
@@ -515,7 +515,7 @@ bob.ns.cloudflare.com</code></pre></div>
       <div class="step-desc">确保系统是最新版本，获取最新的安全补丁。</div>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>softwareupdate --install --all --restart</code></pre>
+        <pre><code>sudo softwareupdate --install --all --restart</code></pre>
       </div>
       <p style="font-size:0.8rem; color:var(--muted)">
         机器会自动重启。重启后回到桌面，继续下一步。
@@ -614,7 +614,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"</code></pre>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>git config --global user.name "MacBook Server"
-git config --global user.email "admin@your-domain.xyz"
+git config --global user.email "admin@ironmao.win"
 git config --global init.defaultBranch main</code></pre>
       </div>
     </div>
@@ -1013,7 +1013,7 @@ cloudflared tunnel list
         <pre><code>mkdir -p ~/.cloudflared
 nano ~/.cloudflared/config.yml</code></pre>
       </div>
-      <p style="font-size:0.83rem;">写入以下内容（<strong>替换 YOUR_TUNNEL_UUID、your-domain.xyz、以及用户名 admin</strong>）：</p>
+      <p style="font-size:0.83rem;">写入以下内容（<strong>替换 YOUR_TUNNEL_UUID、ironmao.win、以及用户名 admin</strong>）：</p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>tunnel: YOUR_TUNNEL_UUID
@@ -1021,11 +1021,11 @@ credentials-file: /Users/admin/.cloudflared/YOUR_TUNNEL_UUID.json
 
 ingress:
   # SSH 隧道（端口改为你在 sshd_config 中设置的 2222）
-  - hostname: ssh.your-domain.xyz
+  - hostname: ssh.ironmao.win
     service: ssh://localhost:2222
 
   # 如果有 web 服务，加上 HTTP 映射
-  # - hostname: app.your-domain.xyz
+  # - hostname: app.ironmao.win
   #   service: http://localhost:3000
 
   # 默认规则：拒绝所有未匹配的请求
@@ -1045,13 +1045,13 @@ ingress:
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 为每个 hostname 创建 DNS 记录
-cloudflared tunnel route dns macbook-server ssh.your-domain.xyz
+cloudflared tunnel route dns macbook-server ssh.ironmao.win
 
 # 查看 DNS 记录是否创建成功
 cloudflared tunnel route ip show</code></pre>
       </div>
       <p style="font-size:0.82rem; color:var(--muted)">
-        这条命令会自动在 Cloudflare DNS 中添加一条 CNAME 记录：<code class="inline-code">ssh.your-domain.xyz → &lt;tunnel-uuid&gt;.cfargotunnel.com</code>
+        这条命令会自动在 Cloudflare DNS 中添加一条 CNAME 记录：<code class="inline-code">ssh.ironmao.win → &lt;tunnel-uuid&gt;.cfargotunnel.com</code>
       </p>
     </div>
   </div>
@@ -1071,7 +1071,7 @@ cloudflared tunnel run macbook-server
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># 在你当前电脑上执行
-ssh -i ~/.ssh/macbook_server admin@ssh.your-domain.xyz -p 22</code></pre>
+ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win -p 22</code></pre>
       </div>
       <div class="info">
         📝 注意：通过 Cloudflare Tunnel 连接 SSH 时，端口用的是 <strong>22</strong>（Cloudflare 边缘节点端口），而不是我们改过的 2222。2222 只用于 MacBook 本地。
@@ -1119,7 +1119,7 @@ sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
         <li>打开上面链接 → 进入 <strong>Access</strong> → <strong>Applications</strong></li>
         <li>点击 <strong>"Add an application"</strong> → 选择 <strong>"Self-hosted"</strong></li>
         <li>Application name: <code class="inline-code">SSH Access</code></li>
-        <li>Subdomain: <code class="inline-code">ssh</code>，Domain: <code class="inline-code">your-domain.xyz</code></li>
+        <li>Subdomain: <code class="inline-code">ssh</code>，Domain: <code class="inline-code">ironmao.win</code></li>
         <li>点击 <strong>"Next"</strong></li>
         <li><strong>Add policy</strong>：
           <ul>
@@ -1134,13 +1134,41 @@ sudo cp ~/.cloudflared/YOUR_TUNNEL_UUID.json /etc/cloudflared/
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>Host macbook
-  HostName ssh.your-domain.xyz
+  HostName ssh.ironmao.win
   User admin
   Port 22
   IdentityFile ~/.ssh/macbook_server
   ProxyCommand cloudflared access ssh --hostname %h</code></pre>
       </div>
       <p style="font-size:0.83rem;">之后每次 SSH 连接，浏览器会打开 Cloudflare Access 页面，需要输入邮箱收到的 OTP 验证码才能建立连接。</p>
+    </div>
+  </div>
+
+  <div class="step" data-step="5-9">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.9 理解：为什么换宽带/搬家也不影响访问</div>
+      <div class="step-desc">Cloudflare Tunnel 的核心机制决定了它不依赖网络环境。</div>
+
+      <div class="info" style="margin-top:0.5rem;">
+        <strong>📡 核心原理（一句话）：</strong>隧道是 MacBook <strong>主动连接</strong> Cloudflare 的，不是外部连接 MacBook。
+      </div>
+
+      <table style="margin:0.8rem 0;">
+        <tr><th>场景</th><th>需要做什么</th><th>原因</th></tr>
+        <tr><td>换了宽带运营商</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 自动重连，域名不变</td></tr>
+        <tr><td>搬了家（新网络环境）</td><td style="color:var(--green)">不需要任何操作</td><td>同上。MacBook 插电联网即可</td></tr>
+        <tr><td>路由器换了新的</td><td style="color:var(--orange)">重新设置一下静态 IP（可选）</td><td>只影响局域网直连，不影响通过域名远程访问</td></tr>
+        <tr><td>断电/断网后恢复</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 作为系统 daemon 开机自启（步骤 5.7）</td></tr>
+      </table>
+
+      <p style="font-size:0.83rem; margin-top:0.5rem;">
+        与传统的 DDNS + 端口转发方案不同，Cloudflare Tunnel <strong>不需要公网 IP、不需要在路由器开端口、不暴露家庭 IP</strong>。只要 MacBook 能连上互联网，隧道就能自动恢复。
+      </p>
+
+      <div class="tip">
+        💡 <strong>FlClash 代理</strong>：换网络后如果 FlClash 连不上节点（比如新的网络环境限制了代理），需要在 MacBook 本机手动调整 FlClash 设置。但这只影响 MacBook 访问境外网站（brew、npm 等），不影响你从外部 SSH 连接。
+      </div>
     </div>
   </div>
 
@@ -1438,7 +1466,7 @@ sudo brew services start fail2ban</code></pre>
         <li><strong>确认 SSH 服务在监听 2222</strong>：
           <code class="inline-code">sudo lsof -i :2222</code>（应该看到 LISTEN）</li>
         <li><strong>确认 DNS 解析正常</strong>：
-          <code class="inline-code">nslookup ssh.your-domain.xyz</code>（应该返回 Cloudflare 的 IP）</li>
+          <code class="inline-code">nslookup ssh.ironmao.win</code>（应该返回 Cloudflare 的 IP）</li>
         <li><strong>查看 cloudflared 日志</strong>：
           <code class="inline-code">sudo tail -f /var/log/cloudflared.log</code></li>
         <li><strong>如果使用了 Access OTP</strong>：确保当前电脑也安装了 <code class="inline-code">cloudflared</code></li>
@@ -1518,7 +1546,7 @@ sudo brew services start fail2ban</code></pre>
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code>ssh macbook
 # 或
-ssh -i ~/.ssh/macbook_server admin@ssh.your-domain.xyz</code></pre>
+ssh -i ~/.ssh/macbook_server admin@ssh.ironmao.win</code></pre>
       </div>
     </div>
   </div>
@@ -1563,7 +1591,7 @@ codewhale
 │                         互联网                                │
 │                                                               │
 │  你的电脑 ──SSH:22──▶ Cloudflare Edge ◀──Tunnel── 家里的 MacBook │
-│  (客户端)          ssh.your-domain.xyz         (服务器)       │
+│  (客户端)          ssh.ironmao.win         (服务器)       │
 │                                                               │
 │  Cloudflare 提供：                                             │
 │  • DDoS 防护（Free 套餐）        • 隐藏真实 IP                  │
@@ -1588,7 +1616,7 @@ MacBook Air (Apple Silicon M1/M2)
 <pre style="font-size:0.78rem; line-height:1.8; background:var(--card); padding:1.2rem; border-radius:8px; border:1px solid var(--border);">
 互联网
   │
-  ├── Cloudflare Edge (ssh.your-domain.xyz:22)
+  ├── Cloudflare Edge (ssh.ironmao.win:22)
   │     │
   │     └── Cloudflare Tunnel (cloudflared)
   │           │
