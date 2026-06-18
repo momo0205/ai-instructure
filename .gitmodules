@@ -1,0 +1,6 @@
+[submodule "04-applications/investment-research/Mira"]
+	path = 04-applications/investment-research/Mira
+	url = https://github.com/byteseek/Mira.git
+[submodule "04-applications/investment-research/a-stock-data"]
+	path = 04-applications/investment-research/a-stock-data
+	url = https://github.com/simonlin1212/a-stock-data.git
