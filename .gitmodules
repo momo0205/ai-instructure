@@ -4,3 +4,15 @@
 [submodule "04-applications/investment-research/a-stock-data"]
 	path = 04-applications/investment-research/a-stock-data
 	url = https://github.com/simonlin1212/a-stock-data.git
+[submodule "superpowers"]
+	path = superpowers
+	url = https://github.com/momo0205/superpowers.git
+[submodule "03-research/claude-code-source"]
+	path = 03-research/claude-code-source
+	url = https://github.com/momo0205/claude-code-source-code.git
+[submodule "03-research/claude-code-analysis/claude-reviews-claude"]
+	path = 03-research/claude-code-analysis/claude-reviews-claude
+	url = https://github.com/momo0205/claude-reviews-claude
+[submodule "05-mobile/mira-flutter"]
+	path = 05-mobile/mira-flutter
+	url = https://github.com/momo0205/mira-flutter.git
