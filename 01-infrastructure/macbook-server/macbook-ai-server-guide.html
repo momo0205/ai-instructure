@@ -1123,25 +1123,44 @@ cloudflared tunnel run --protocol http2 ironmao
       <div class="step-title">5.7 在 Cloudflare Zero Trust 创建 SSH 应用（必须）</div>
       <div class="step-desc">在 ironmao 的浏览器上操作。这步不创建的话，客户端无法连接。</div>
       <a class="link-btn" href="https://one.dash.cloudflare.com/" target="_blank">🔗 Cloudflare Zero Trust Dashboard</a>
+
+      <div class="tip">
+        💡 <strong>首次进入 Zero Trust 的情况</strong><br>
+        如果看到计划选择页（Free / Standard / Enterprise），选择 <strong>Free</strong> 即可（永久免费，50 席位，个人够用）。<br>
+        之后可能会弹出 Cloudflare One 向导页，忽略它，直接看左侧菜单。
+      </div>
+
       <ol style="margin-top:0.6rem;">
-        <li>打开上面链接 → 左侧菜单 <strong>Access</strong> → <strong>Applications</strong></li>
+        <li>打开上面链接 → 左侧菜单 <strong>Zero Trust</strong>（可能在 Protect &amp; Connect 分组下）</li>
+        <li>进入 Zero Trust 面板后 → 左侧菜单 <strong>Access</strong> → <strong>Applications</strong></li>
         <li>点击 <strong>"Add an application"</strong> → 选择 <strong>"Self-hosted"</strong></li>
-        <li>填写：
+        <li>在配置页面填写：
           <ul>
-            <li>Application name: <code class="inline-code">SSH</code></li>
-            <li>Application domain: <code class="inline-code">ssh.ironmao.win</code>（选你的域名）</li>
-            <li>往下滚动 → <strong>Additional settings</strong> → 打开 <strong>SSH</strong> 开关</li>
+            <li><strong>Application name</strong>: <code class="inline-code">SSH</code></li>
+            <li><strong>Destinations</strong> 区域：
+              <ul>
+                <li>Subdomain: <code class="inline-code">ssh</code></li>
+                <li>Domain: 选 <code class="inline-code">ironmao.win</code></li>
+                <li>Path: 留空</li>
+                <li><strong>"Browser rendering"</strong>（SSH/RDP/VNC）开关 → <strong>打开</strong></li>
+              </ul>
+            </li>
+            <li><strong>Access policies</strong> 区域 → 添加策略：
+              <ul>
+                <li>Policy name: <code class="inline-code">ironmao</code></li>
+                <li>Action: <strong>Allow</strong></li>
+                <li>Include → <strong>Emails</strong> → 输入你的 Cloudflare 账号邮箱（如 <code class="inline-code">1093921174@qq.com</code>）</li>
+              </ul>
+            </li>
           </ul>
         </li>
-        <li>点击 <strong>"Next"</strong> → <strong>Add a policy</strong>：
-          <ul>
-            <li>Policy name: <code class="inline-code">ironmao</code></li>
-            <li>Action: <strong>Allow</strong></li>
-            <li>Include → <strong>Emails</strong> → 输入你的 Cloudflare 账号邮箱</li>
-          </ul>
-        </li>
-        <li>点击 <strong>"Next"</strong>（不勾选附加设置）→ <strong>"Add application"</strong></li>
+        <li>点击保存/提交按钮完成创建</li>
       </ol>
+      <div class="warn">
+        ⚠️ <strong>邮箱的作用</strong><br>
+        该邮箱是鉴权白名单——客户端 SSH 连接时，cloudflared 会自动弹出浏览器让你登录 Cloudflare 账号，<br>
+        只有邮箱在白名单内的用户才能通过验证并接入 ironmao。
+      </div>
     </div>
   </div>
 
@@ -1176,7 +1195,11 @@ Host ironmao
   ProxyCommand cloudflared access ssh --hostname %h
 
 # 以后只需：
-ssh ironmao</code></pre>
+ssh ironmao
+
+# 如果你收不到邮件 PIN（QQ 邮箱常见问题），改用 Service Token 认证：
+ProxyCommand cloudflared access ssh --hostname %h --service-token-id &lt;ID&gt; --service-token-secret &lt;SECRET&gt;
+# 详见 附录 A · TR-5</code></pre>
       </div>
 
       <p style="font-size:0.83rem;"><strong>方式 B：一条命令（临时测试）</strong></p>
@@ -1626,9 +1649,32 @@ sudo brew services start fail2ban</code></pre>
           <code class="inline-code">sudo systemsetup -getremotelogin</code> 返回 On</li>
         <li><strong>cloudflared 作为系统级 daemon 应该自启</strong>：
           确认 <code class="inline-code">/Library/LaunchDaemons/com.cloudflare.cloudflared.plist</code> 存在</li>
-        <li>如果系统更新后被禁用，重新执行 5.7</li>
+        <li>如果系统更新后被禁用，重新执行 5.4-5.7</li>
         <li><strong>FileVault</strong>：如果之前没听劝开启了 FileVault，重启后必须物理输入密码！</li>
       </ol>
+    </div>
+  </div>
+
+  <div class="step" data-step="tr-5">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">🔧 SSH 连接时收不到 One Time PIN 邮件</div>
+      <div class="step-desc">首次 ssh ironmao 弹出浏览器要求验证，但 QQ 邮箱收不到 Cloudflare 的 PIN 验证码。</div>
+      <div class="warn">
+        ⚠️ <strong>原因</strong>：Cloudflare 发往 QQ 邮箱（@qq.com）的 PIN 邮件经常被拦截或延迟严重。
+      </div>
+      <strong>解决方案：改用 Service Token 认证（无需邮件、无需浏览器弹窗）</strong>
+      <ol>
+        <li>进入 Cloudflare Zero Trust → <strong>Access controls</strong> → <strong>Service credentials</strong></li>
+        <li>创建 Service Token（如 <code class="inline-code">ironmao-ssh</code>），保存 Client ID 和 Client Secret</li>
+        <li>编辑 SSH 应用的 Access Policy，Include 里添加 <strong>Service Auth</strong>，选择刚创建的 Token</li>
+        <li><strong>建议删除 Emails 规则</strong>（否则 cloudflared 仍会尝试弹浏览器）</li>
+        <li>更新本地 <code class="inline-code">~/.ssh/config</code> 的 ProxyCommand，添加 Service Token 参数：<br>
+          <code class="inline-code">ProxyCommand cloudflared access ssh --hostname %h --service-token-id &lt;ID&gt; --service-token-secret &lt;SECRET&gt;</code></li>
+      </ol>
+      <div class="tip">
+        💡 Service Token 认证直接通过命令行完成，完全不需要浏览器交互，适合本地开发机场景。
+      </div>
     </div>
   </div>
 
