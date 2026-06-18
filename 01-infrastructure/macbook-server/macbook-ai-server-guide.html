@@ -1117,30 +1117,50 @@ cloudflared tunnel run --protocol http2 ironmao
     </div>
   </div>
 
-  <div class="step" data-step="5-7">
+   <div class="step" data-step="5-7">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">5.7 客户端配置 cloudflared + SSH 连接</div>
-      <div class="step-desc">在你的另一台电脑上完成以下配置。只要这台 ironmao 在运行 tunnel，你就可以从任何网络连进来。</div>
+      <div class="step-title">5.7 在 Cloudflare Zero Trust 创建 SSH 应用（必须）</div>
+      <div class="step-desc">在 ironmao 的浏览器上操作。这步不创建的话，客户端无法连接。</div>
+      <a class="link-btn" href="https://one.dash.cloudflare.com/" target="_blank">🔗 Cloudflare Zero Trust Dashboard</a>
+      <ol style="margin-top:0.6rem;">
+        <li>打开上面链接 → 左侧菜单 <strong>Access</strong> → <strong>Applications</strong></li>
+        <li>点击 <strong>"Add an application"</strong> → 选择 <strong>"Self-hosted"</strong></li>
+        <li>填写：
+          <ul>
+            <li>Application name: <code class="inline-code">SSH</code></li>
+            <li>Application domain: <code class="inline-code">ssh.ironmao.win</code>（选你的域名）</li>
+            <li>往下滚动 → <strong>Additional settings</strong> → 打开 <strong>SSH</strong> 开关</li>
+          </ul>
+        </li>
+        <li>点击 <strong>"Next"</strong> → <strong>Add a policy</strong>：
+          <ul>
+            <li>Policy name: <code class="inline-code">ironmao</code></li>
+            <li>Action: <strong>Allow</strong></li>
+            <li>Include → <strong>Emails</strong> → 输入你的 Cloudflare 账号邮箱</li>
+          </ul>
+        </li>
+        <li>点击 <strong>"Next"</strong>（不勾选附加设置）→ <strong>"Add application"</strong></li>
+      </ol>
+    </div>
+  </div>
 
-      <p><strong>① 安装 cloudflared（客户端上）</strong></p>
+  <div class="step" data-step="5-8">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.8 客户端配置 cloudflared + SSH 连接</div>
+      <div class="step-desc">在你的另一台电脑上完成。之后只要 ironmao tunnel 在运行，就可以从任何网络连进来。</div>
+
+      <p><strong>① 安装 cloudflared</strong></p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
         <pre><code># macOS
 brew install cloudflared
 
-# Linux
-# 下载 .deb/.rpm 从 https://github.com/cloudflare/cloudflared/releases</code></pre>
+# Linux: 从 https://github.com/cloudflare/cloudflared/releases 下载</code></pre>
       </div>
 
-      <p><strong>② 登录 Cloudflare（客户端上）</strong></p>
-      <div class="code-block">
-        <button class="copy-btn" onclick="copyCode(this)">复制</button>
-        <pre><code>cloudflared access login</code></pre>
-      </div>
-      <p style="font-size:0.82rem;">浏览器会自动打开，选择你的 Cloudflare 账号 → 授权。</p>
-
-      <p><strong>③ 配置 SSH（客户端上，二选一）</strong></p>
+      <p><strong>② 配置 SSH（二选一）</strong></p>
       <p style="font-size:0.83rem;"><strong>方式 A：写入 ~/.ssh/config（推荐，一劳永逸）</strong></p>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">复制</button>
@@ -1168,10 +1188,10 @@ ssh ironmao</code></pre>
     </div>
   </div>
 
-   <div class="step" data-step="5-8">
+   <div class="step" data-step="5-9">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">5.8 安装为系统服务（开机自启 + HTTP/2）</div>
+      <div class="step-title">5.9 安装为系统服务（开机自启 + HTTP/2）</div>
       <div class="warn">
         ⚠️ <code class="inline-code">sudo cloudflared service install</code> 默认用 QUIC 协议，在某些网络环境不稳定。安装后需要手动改为 HTTP/2。
       </div>
@@ -1212,35 +1232,26 @@ sudo launchctl list | grep cloudflared
     </div>
   </div>
 
-   <div class="step" data-step="5-9">
-    <input type="checkbox" onchange="updateProgress()">
-    <div class="step-content">
-      <div class="step-title">5.9 Cloudflare Access OTP 验证（可选）</div>
-      <div class="step-desc">为 SSH 隧道增加额外身份验证层。即使攻击者知道你的域名，也必须通过邮箱验证码才能建立连接。</div>
-      <a class="link-btn" href="https://one.dash.cloudflare.com/" target="_blank">🔗 Cloudflare Zero Trust Dashboard</a>
-      <ol>
-        <li>打开上面链接 → 进入 <strong>Access</strong> → <strong>Applications</strong></li>
-        <li>点击 <strong>"Add an application"</strong> → 选择 <strong>"Self-hosted"</strong></li>
-        <li>Application name: <code class="inline-code">SSH Access</code></li>
-        <li>Subdomain: <code class="inline-code">ssh</code>，Domain: <code class="inline-code">ironmao.win</code></li>
-        <li>点击 <strong>"Next"</strong></li>
-        <li><strong>Add policy</strong>：
-          <ul>
-            <li>Policy name: <code class="inline-code">Allow-My-Email</code></li>
-            <li>Action: <strong>Allow</strong></li>
-            <li>Include → Emails → 输入你的邮箱</li>
-          </ul>
-        </li>
-        <li>点击 <strong>"Next"</strong> → <strong>"Add application"</strong></li>
-      </ol>
-      <p style="font-size:0.83rem; margin-top:0.5rem;">如果你已经按 5.7 配好了 <code class="inline-code">~/.ssh/config</code>，不需要额外改动——OTP 会自动生效，每次 SSH 连接时会弹出浏览器让你输入邮箱验证码。</p>
-    </div>
-  </div>
-
    <div class="step" data-step="5-10">
     <input type="checkbox" onchange="updateProgress()">
     <div class="step-content">
-      <div class="step-title">5.10 理解：为什么换宽带/搬家也不影响访问</div>
+      <div class="step-title">5.10 Cloudflare Access OTP 验证（可选）</div>
+      <div class="step-desc">为 SSH 隧道增加二次验证。即使攻击者知道你的密码/密钥，也必须输入邮箱验证码才能建立连接。</div>
+      <a class="link-btn" href="https://one.dash.cloudflare.com/" target="_blank">🔗 Cloudflare Zero Trust Dashboard</a>
+      <ol>
+        <li>打开上面链接 → 左侧 <strong>Access</strong> → <strong>Applications</strong></li>
+        <li>找到你在 5.7 创建的 <strong>SSH</strong> 应用 → 点击进入</li>
+        <li>选择 <strong>Policies</strong> 标签 → 点击已有的 <strong>ironmao</strong> 策略</li>
+        <li>在 Include 中添加 <strong>One-time PIN</strong>（或保留 Emails + 同时勾选 OTP）</li>
+        <li>保存。之后每次 SSH 连接会弹出浏览器要求输入邮箱验证码</li>
+      </ol>
+    </div>
+  </div>
+
+   <div class="step" data-step="5-11">
+    <input type="checkbox" onchange="updateProgress()">
+    <div class="step-content">
+      <div class="step-title">5.11 理解：为什么换宽带/搬家也不影响访问</div>
       <div class="step-desc">Cloudflare Tunnel 的核心机制决定了它不依赖网络环境。</div>
 
       <div class="info" style="margin-top:0.5rem;">
@@ -1252,7 +1263,7 @@ sudo launchctl list | grep cloudflared
         <tr><td>换了宽带运营商</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 自动重连，域名不变</td></tr>
         <tr><td>搬了家（新网络环境）</td><td style="color:var(--green)">不需要任何操作</td><td>同上。ironmao 插电联网即可</td></tr>
         <tr><td>路由器换了新的</td><td style="color:var(--orange)">重新设置一下静态 IP（可选）</td><td>只影响局域网直连，不影响通过域名远程访问</td></tr>
-        <tr><td>断电/断网后恢复</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 作为系统 daemon 开机自启（步骤 5.7）</td></tr>
+        <tr><td>断电/断网后恢复</td><td style="color:var(--green)">不需要任何操作</td><td>cloudflared 作为系统 daemon 开机自启（步骤 5.9）</td></tr>
       </table>
 
       <p style="font-size:0.83rem; margin-top:0.5rem;">
