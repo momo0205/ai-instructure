@@ -1057,9 +1057,9 @@ ingress:
   - hostname: ssh.ironmao.win
     service: ssh://localhost:22
 
-  # 如果有 web 服务，加上 HTTP 映射
-  # - hostname: app.ironmao.win
-  #   service: http://localhost:3000
+  # Mira 投研 API（部署后取消注释）
+  # - hostname: mira.ironmao.win
+  #   service: http://localhost:8080
 
   # 默认规则：拒绝所有未匹配的请求
   - service: http_status:404</code></pre>
@@ -1784,7 +1784,7 @@ ironmao (MacBook Air / Apple Silicon M1/M2)
 <p style="text-align:center; color:var(--muted); font-size:0.78rem;">
   v2.2 · 2026-06-07 · 知识阶梯：基础设施层 → 可支撑所有上层应用<br>
   依赖：<a href="../vpn-relay/VPN中转站完整部署手册.html" style="color:var(--accent)">VPN 中转站</a>（提供 Clash 订阅） + <a href="https://github.com/chen08209/FlClash/releases" target="_blank" style="color:var(--accent)">FlClash</a>（客户端）<br>
-  下一个目标：在 ironmao 上部署 <a href="../../04-applications/gridbot/" style="color:var(--accent)">GridBot</a>
+  下一个目标：在 ironmao 上部署 <a href="../../04-applications/investment-research/" style="color:var(--accent)">Mira 投研</a>
 </p>
 
 <script>
