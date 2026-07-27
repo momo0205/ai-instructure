@@ -427,12 +427,12 @@ Access URL:  http://你的IP:2053/随机路径
 
   <h3>6.3 登录面板</h3>
   <ol>
-    <li>浏览器打开 <code class="inline">http://你的IP:2053</code>（注意是 <strong>http</strong> 不是 https）</li>
+    <li>浏览器打开 <code class="inline">https://你的IP:18080/xui-2026/panel/</code>（实际地址以安装时显示为准）</li>
     <li>输入安装时显示的用户名和密码</li>
     <li>仪表盘显示系统信息 → 安装成功！</li>
   </ol>
 
-  <div class="warn"><strong>打不开？</strong>确认输入的是 <code class="inline">http://</code> 不是 <code class="inline">https://</code>。如果还打不开，执行 <code class="inline">ufw status verbose</code> 检查 2053 端口是否是 ALLOW 状态。</div>
+  <div class="warn"><strong>打不开？</strong>确认地址格式正确。如果还打不开，执行 <code class="inline">ufw status verbose</code> 检查 18080 端口是否是 ALLOW 状态。</div>
 
   <h3>6.4 忘记密码怎么办</h3>
   <p>SSH 登录后执行以下命令重置（替换为你想要的用户名和密码）：</p>
@@ -440,6 +440,11 @@ Access URL:  http://你的IP:2053/随机路径
 rm /etc/x-ui/x-ui.db
 systemctl start x-ui</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
   <p>执行后用 <code class="inline">admin</code> / <code class="inline">admin</code> 登录，进去后立即改密码。</p>
+
+  <h3>6.5 查看面板实际访问地址</h3>
+  <p>如果忘记面板地址，SSH 登录后执行：</p>
+  <pre><code>ss -tlnp | grep x-ui</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>查看 x-ui 监听的端口，然后浏览器访问 <code class="inline">https://你的IP:端口/你的路径</code></p>
 </div>
 
 <!-- ============ 7 ============ -->
@@ -678,7 +683,7 @@ x-ui log          # 查看日志</code><button class="copy-btn" onclick="copyCod
     <li>echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf</li>
     <li>sysctl -p</li>
     <li>bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)</li>
-    <li>浏览器打开 http://你的IP:2053，登录</li>
+    <li>浏览器打开 https://你的IP:18080/xui-2026/panel/，登录</li>
     <li>添加入站：vless / 443 / Reality / Dest www.microsoft.com:443 / SNI www.microsoft.com / uTLS chrome / ShortId 点 + 生成</li>
     <li>左侧「客户端」→ 添加客户端 → Flow 选 xtls-rprx-vision → 关联入站 ColoCrossing-LA → 创建</li>
     <li>回到「入站」→ ⋮ → 导出链接 → 复制 vless:// 链接 → 导入各客户端</li>
