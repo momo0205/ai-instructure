@@ -584,9 +584,11 @@
       <tr><td><strong>传输 → 网络</strong></td><td><code class="inline">tcp</code></td><td></td></tr>
       <tr><td><strong>安全 → 类型</strong></td><td><code class="inline">reality</code></td><td><strong>关键！</strong></td></tr>
       <tr><td><strong>uTLS</strong></td><td><code class="inline">chrome</code></td><td>伪装成 Chrome 浏览器</td></tr>
-      <tr><td><strong>Dest</strong></td><td><code class="inline">www.microsoft.com:443</code></td><td>伪装目标</td></tr>
-      <tr><td><strong>SNI</strong></td><td><code class="inline">www.microsoft.com</code></td><td>同上</td></tr>
-      <tr><td><strong>ShortId</strong></td><td>点击 <code class="inline">+</code> 号自动生成</td><td></td></tr>
+      <tr><td><strong>Dest</strong></td><td><code class="inline">dl.google.com:443</code></td><td>Reality 伪装目标，避免使用容易触发证书长度问题的 Microsoft 站点</td></tr>
+      <tr><td><strong>Server Names</strong></td><td>只保留与 Dest 对应的域名，例如 <code class="inline">dl.google.com</code></td><td>客户端 SNI 必须来自该列表</td></tr>
+      <tr><td><strong>Min Client Ver</strong></td><td><code class="inline">0</code></td><td>兼容 Mihomo、Clash Meta、Shadowrocket 等非 Xray 客户端</td></tr>
+      <tr><td><strong>Spider X</strong></td><td>留空</td><td>客户端和服务端必须保持一致，留空时客户端也不要携带旧值</td></tr>
+      <tr><td><strong>ShortId</strong></td><td>点击 <code class="inline">+</code> 号自动生成</td><td>导出的客户端必须使用当前列表中的值</td></tr>
       <tr><td><strong>Flow</strong></td><td><code class="inline">xtls-rprx-vision</code></td><td>Vision 流控</td></tr>
     </tbody>
   </table>
@@ -703,6 +705,10 @@ wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" &
 
   <h3>9.2 常见故障排查</h3>
 
+  <div class="warn"><strong>升级兼容性</strong>部分 Xray-core 新版本会在 Reality 的 <code class="inline">Min Client Ver</code> 留空时隐式使用较高版本门槛，可能导致 Mihomo、Clash Meta、Shadowrocket 等客户端握手失败。为兼容非 Xray 客户端，建议显式填写 <code class="inline">0</code>，保存后重启 Xray。</div>
+  <div class="note"><strong>Reality 目标选择</strong>本次实测发现 <code class="inline">www.microsoft.com</code> 可能因不同 CDN 节点返回较大的 TLS Certificate 记录，触发 Reality 握手失败。优先使用证书响应稳定的目标，例如 <code class="inline">dl.google.com:443</code>，并让 Server Names 只保留 <code class="inline">dl.google.com</code>。</div>
+  <div class="danger-box"><strong>客户端参数必须与服务端完全一致</strong>客户端重新导入后，逐项核对服务器地址、端口、UUID、Flow、公钥、Short ID、SNI 和 Spider X。尤其是服务端清空 Spider X 后，客户端不能继续保留旧的 <code class="inline">spiderX</code>；该残留会导致 <code class="inline">REALITY authentication failed</code>、<code class="inline">handshake did not complete successfully</code>、<code class="inline">EOF</code> 或 timeout。</div>
+
   <h4>故障 1：节点突然连不上了</h4>
   <p><strong>排查步骤：</strong></p>
   <ol>
@@ -715,6 +721,22 @@ wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" &
     <li><strong>RackNerd</strong>：先换端口试试（如 8443），如果 IP 被封 → 花 $3 购买新 IP</li>
     <li><strong>搬瓦工</strong>：在 KiwiVM 面板切换到其他机房（免费换机房=免费换 IP）</li>
   </ul>
+
+  <h4>故障 1A：Reality 节点握手失败</h4>
+  <ol>
+    <li>确认当前运行的 Xray 入站端口：<code class="inline">ss -ltnp | grep 443</code></li>
+    <li>确认当前运行配置中只有目标入站，避免数据库端口与运行配置不一致</li>
+    <li>在客户端配置中核对 <code class="inline">server</code>、<code class="inline">port</code>、<code class="inline">uuid</code>、<code class="inline">flow</code>、<code class="inline">public-key</code>、<code class="inline">short-id</code>、<code class="inline">servername</code> 和 <code class="inline">spiderX</code></li>
+    <li>临时将 Reality 的 <code class="inline">Min Client Ver</code> 设为 <code class="inline">0</code>，保存并重启 Xray</li>
+    <li>不要只看网卡有流量；用 Xray error 日志区分 <code class="inline">authentication failed</code>、<code class="inline">server name mismatch</code> 和 <code class="inline">handshake did not complete successfully</code></li>
+    <li>如果客户端提示 timeout，但服务器日志只有无关扫描源，先确认客户端是否真正连接到当前入站</li>
+    <li>如果参数全部一致但仍握手失败，先将 Dest/SNI 从 Microsoft 更换为稳定目标，再重新导入客户端配置</li>
+  </ol>
+  <p><strong>查看日志：</strong></p>
+  <pre><code>tail -f /var/log/x-ui/error.log
+
+tail -f /var/log/x-ui/access.log</code><button class="copy-btn" onclick="copyCode(this)">复制</button></pre>
+  <p>测试时记录客户端准确时间和公网出口 IP，再按时间过滤服务器日志。不要把 <code class="inline">REALITY authentication failed</code> 直接判断为网络封锁，它也可能是客户端携带了旧的 Spider X、公钥、Short ID、SNI 或 UUID。</p>
 
   <h4>故障 2：速度很慢</h4>
   <ol>
@@ -794,7 +816,8 @@ x-ui uninstall    # 卸载面板</code><button class="copy-btn" onclick="copyCod
     <li>开启 BBR 加速（三条命令）</li>
     <li>安装 3X-UI 面板（一条 curl 命令）</li>
     <li>浏览器登录 http://你的IP:2053</li>
-    <li>添加入站：协议 vless | 端口 443 | 安全 reality | Dest microsoft.com:443</li>
+    <li>添加入站：协议 vless | 端口 443 | 安全 reality | Dest dl.google.com:443</li>
+    <li>Server Names 只保留 dl.google.com | Min Client Ver 0 | Spider X 留空</li>
     <li>uTLS chrome | Flow xtls-rprx-vision</li>
     <li>导出二维码/链接</li>
     <li>客户端导入：Windows→v2rayN / macOS→Clash Verge / iOS→Shadowrocket / Android→v2rayNG</li>
