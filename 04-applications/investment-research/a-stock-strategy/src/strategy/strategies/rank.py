@@ -19,7 +19,7 @@ class CrossSectionalRankStrategy:
         return (values - values.mean()) / std if std and np.isfinite(std) else values * 0.0
 
     def select(self, as_of: date, market: MarketState, universe: pd.DataFrame) -> Selection | None:
-        if universe.empty or not self.candidate_symbols:
+        if not market.triggered or universe.empty or not self.candidate_symbols:
             return None
         frame = universe.copy()
         frame["date"] = pd.to_datetime(frame["date"])
@@ -27,21 +27,26 @@ class CrossSectionalRankStrategy:
         records = []
         for symbol, hist in frame.groupby("symbol", sort=True):
             latest = hist.iloc[-1]
+            if latest["date"].date() != as_of:
+                continue
             if any(bool(latest.get(c, False)) for c in ("is_suspended", "limit_up", "limit_down")) or float(latest.get("volume", 0) or 0) < self.min_volume:
                 continue
-            close = pd.to_numeric(hist["close"], errors="coerce").dropna()
-            if len(close) <= max(self.momentum_window, self.reversal_window):
+            close = pd.to_numeric(hist["close"], errors="coerce")
+            volume = pd.to_numeric(hist.get("volume", pd.Series(index=hist.index, dtype=float)), errors="coerce")
+            required = max(self.momentum_window, self.reversal_window, self.volatility_window, self.volume_window) + 1
+            if len(close) < required or close.isna().any() or volume.isna().any():
                 continue
+            close = close.reset_index(drop=True)
             ret = close.pct_change().dropna()
             momentum = close.iloc[-1] / close.iloc[-1-self.momentum_window] - 1
             reversal = -(close.iloc[-1] / close.iloc[-1-self.reversal_window] - 1)
             volatility = ret.tail(self.volatility_window).std(ddof=0) if len(ret) > 1 else 0.0
-            volume = pd.to_numeric(hist.get("volume", pd.Series(dtype=float)), errors="coerce").dropna()
-            volume_change = volume.iloc[-1] / volume.iloc[-1-self.volume_window] - 1 if len(volume) > self.volume_window else 0.0
+            volume = volume.reset_index(drop=True)
+            volume_change = volume.iloc[-1] / volume.iloc[-1-self.volume_window] - 1
             records.append({"symbol": symbol, "momentum": momentum, "reversal": reversal, "volatility": volatility, "volume": volume_change})
         if not records:
             return None
-        scores = pd.DataFrame(records).dropna()
+        scores = pd.DataFrame(records)
         if scores.empty:
             return None
         score = sum(self.weights[k] * self._z(scores[k]) for k in self.weights)
