@@ -21,6 +21,12 @@
 
 `git diff --check` — passed
 
+## Review fix round 1
+
+Fixed sparse daily rows: open positions now retain their last known close for mark-to-market instead of being valued at zero; an explicit warning is emitted if no close has ever been observed. Added non-negative validation for all cost and slippage parameters and removed an unused import.
+
+Verification after the fix: `uv run --with pytest pytest tests/test_backtest.py -q` — 6 passed; `uv run --with pytest pytest -q` — 22 passed; `git diff --check` — passed.
+
 ## Notes
 
 `BacktestEngine` 在缺少指数行时将市场状态视为可触发，以便离线、单标的数据仍可运行；若存在 `index_symbol`，则按截至当日的指数收盘价计算触发状态。
