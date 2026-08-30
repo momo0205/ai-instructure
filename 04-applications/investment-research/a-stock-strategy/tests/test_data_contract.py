@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import pandas as pd
@@ -165,6 +166,31 @@ def test_validate_market_frame_rejects_non_finite_prices() -> None:
 
     with pytest.raises(ValueError, match="finite"):
         validate_market_frame(frame)
+
+
+def test_validate_market_frame_rejects_complex_prices_without_warnings() -> None:
+    frame = _frame(
+        [
+            {
+                "date": "2026-08-01",
+                "symbol": "588000.SH",
+                "open": 1 + 2j,
+                "high": 1.1,
+                "low": 0.9,
+                "close": 1.0,
+                "volume": 1000,
+                "amount": 1000,
+                "is_suspended": False,
+                "limit_up": False,
+                "limit_down": False,
+            }
+        ]
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="complex"):
+            validate_market_frame(frame)
 
 
 def test_load_config_parses_baseline_toml() -> None:
