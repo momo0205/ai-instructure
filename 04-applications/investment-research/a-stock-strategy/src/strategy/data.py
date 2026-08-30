@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+import numpy as np
 import pandas as pd
 
 
@@ -51,6 +52,8 @@ def validate_market_frame(frame: pd.DataFrame) -> None:
     parsed_dates = pd.to_datetime(frame["date"], errors="raise")
     if not parsed_dates.is_monotonic_increasing:
         raise ValueError("date column must be monotonic increasing")
+    if not parsed_dates.dt.normalize().equals(parsed_dates):
+        raise ValueError("date column contains intraday timestamps")
 
     duplicate_mask = frame.duplicated(subset=["date", "symbol"], keep=False)
     if duplicate_mask.any():
@@ -59,9 +62,11 @@ def validate_market_frame(frame: pd.DataFrame) -> None:
 
     for column in PRICE_COLUMNS:
         numeric_values = pd.to_numeric(frame[column], errors="coerce")
-        bad_rows = [int(index) for index in frame.index[numeric_values <= 0]]
+        finite_mask = np.isfinite(numeric_values.to_numpy(dtype="float64", copy=False))
+        invalid_mask = ~finite_mask | (numeric_values <= 0).to_numpy()
+        bad_rows = [int(index) for index in frame.index[invalid_mask]]
         if bad_rows:
-            raise ValueError(f"non-positive prices in {column} at rows: {bad_rows}")
+            raise ValueError(f"non-finite or non-positive prices in {column} at rows: {bad_rows}")
 
 
 class CsvMarketDataProvider:
@@ -78,4 +83,3 @@ class CsvMarketDataProvider:
         frame = _canonicalize_columns(frame)
         validate_market_frame(frame)
         return frame
-

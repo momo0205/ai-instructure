@@ -63,6 +63,12 @@ def _require_section(raw: dict[str, Any], section: str) -> dict[str, Any]:
     return value
 
 
+def _require_value(section: dict[str, Any], section_name: str, key: str) -> Any:
+    if key not in section or section[key] is None:
+        raise ValueError(f"missing required key [{section_name}].{key}")
+    return section[key]
+
+
 def load_config(path: str | Path) -> BacktestConfig:
     config_path = Path(path)
     with config_path.open("rb") as handle:
@@ -75,17 +81,17 @@ def load_config(path: str | Path) -> BacktestConfig:
     costs_raw = raw.get("costs", {})
 
     data = DataConfig(
-        source=str(data_raw["source"]),
-        path=str(data_raw["path"]),
+        source=str(_require_value(data_raw, "data", "source")),
+        path=str(_require_value(data_raw, "data", "path")),
         format=str(data_raw.get("format", "csv")),
         adjustment=str(data_raw.get("adjustment", "none")),
     )
     strategy = StrategyConfig(
-        name=str(strategy_raw["name"]),
+        name=str(_require_value(strategy_raw, "strategy", "name")),
         parameters=dict(strategy_raw.get("parameters", {})),
     )
     backtest = BacktestSettings(
-        initial_cash=float(backtest_raw["initial_cash"]),
+        initial_cash=float(_require_value(backtest_raw, "backtest", "initial_cash")),
         holding_period_days=int(backtest_raw.get("holding_period_days", 1)),
         commission_rate=float(backtest_raw.get("commission_rate", 0.0003)),
         stamp_duty_rate=float(backtest_raw.get("stamp_duty_rate", 0.001)),
@@ -106,6 +112,10 @@ def load_config(path: str | Path) -> BacktestConfig:
 
     metadata = dict(raw.get("metadata", {}))
     metadata.setdefault("config_path", str(config_path))
+    metadata.setdefault(
+        "data_path_resolved",
+        str((config_path.parent / Path(data.path)).resolve()),
+    )
 
     return BacktestConfig(
         data=data,
@@ -115,4 +125,3 @@ def load_config(path: str | Path) -> BacktestConfig:
         costs=costs,
         metadata=metadata,
     )
-

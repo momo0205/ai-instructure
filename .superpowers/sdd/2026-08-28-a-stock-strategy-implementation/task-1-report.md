@@ -25,9 +25,24 @@
   - `uv run --python 3.11 --with pytest --with pandas pytest -q`
   - Result: `5 passed in 0.53s`
 
+## Review Fix Round 1
+
+- Added regression tests for intraday timestamps, non-finite prices, resolved config path metadata, and explicit missing-key handling.
+- Tightened `validate_market_frame()` so `date` values must remain day-only and price columns must be finite positive numbers.
+- Changed `load_config()` to raise explicit `ValueError` messages for missing required keys and to store a resolved `data_path_resolved` in metadata while preserving the original relative `data.path` value.
+
+### Fix Verification
+
+- Focused verification after the fix:
+  - `PYTHONPATH=src uv run --python 3.11 --with pytest --with pandas pytest tests/test_data_contract.py -q`
+  - Result: `8 passed in 0.93s`
+- Full verification after the fix:
+  - `PYTHONPATH=src uv run --python 3.11 --with pytest --with pandas pytest -q`
+  - Result: `8 passed in 0.51s`
+
 ## Concerns
 
 - The project is declared for Python 3.11+, which matches the validated `uv` runtime used here, but the host system interpreter is older.
 - `uv` created a local `.venv` during verification; it was not committed.
 - This task only covers the data/config skeleton. Strategy, backtest, evaluation, reporting, and CLI layers are still pending in later tasks.
-
+- `uv.lock` and `__pycache__` directories are generated during verification and should remain untracked.
