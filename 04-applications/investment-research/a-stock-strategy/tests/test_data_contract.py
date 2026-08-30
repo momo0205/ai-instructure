@@ -193,6 +193,44 @@ def test_validate_market_frame_rejects_complex_prices_without_warnings() -> None
             validate_market_frame(frame)
 
 
+def test_validate_market_frame_rejects_complex_values_in_object_price_columns_without_warnings() -> None:
+    frame = _frame(
+        [
+            {
+                "date": "2026-08-01",
+                "symbol": "588000.SH",
+                "open": 1 + 2j,
+                "high": 1.1,
+                "low": 0.9,
+                "close": 1.0,
+                "volume": 1000,
+                "amount": 1000,
+                "is_suspended": False,
+                "limit_up": False,
+                "limit_down": False,
+            },
+            {
+                "date": "2026-08-02",
+                "symbol": "588000.SH",
+                "open": "2",
+                "high": 1.2,
+                "low": 0.9,
+                "close": 1.05,
+                "volume": 1000,
+                "amount": 1000,
+                "is_suspended": False,
+                "limit_up": False,
+                "limit_down": False,
+            },
+        ]
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="complex"):
+            validate_market_frame(frame)
+
+
 def test_load_config_parses_baseline_toml() -> None:
     config_path = Path("configs/baseline.toml")
 

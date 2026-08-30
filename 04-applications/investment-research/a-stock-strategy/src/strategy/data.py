@@ -44,6 +44,10 @@ def _canonicalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.loc[:, ordered_columns]
 
 
+def _complex_rows(values: pd.Series) -> list[int]:
+    return [int(index) for index, value in values.items() if np.iscomplexobj(value)]
+
+
 def validate_market_frame(frame: pd.DataFrame) -> None:
     missing_columns = [column for column in REQUIRED_MARKET_COLUMNS if column not in frame.columns]
     if missing_columns:
@@ -62,8 +66,8 @@ def validate_market_frame(frame: pd.DataFrame) -> None:
 
     for column in PRICE_COLUMNS:
         raw_values = frame[column]
-        if np.iscomplexobj(raw_values.to_numpy()):
-            complex_rows = [int(index) for index in raw_values.index]
+        complex_rows = _complex_rows(raw_values)
+        if complex_rows:
             raise ValueError(f"complex prices in {column} at rows: {complex_rows}")
 
         numeric_values = pd.to_numeric(raw_values, errors="coerce")

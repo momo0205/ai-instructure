@@ -54,6 +54,20 @@
   - `PYTHONPATH=src uv run --python 3.11 --with pytest --with pandas pytest -q`
   - Result: `9 passed in 0.83s`
 
+## Review Fix Round 3
+
+- Added a regression test for complex-valued prices embedded in mixed `object` price columns under warning-as-error mode.
+- Tightened `validate_market_frame()` to inspect raw price values before coercion and reject complex values in mixed/object columns without triggering coercion warnings.
+
+### Fix Verification
+
+- Focused verification after the fix:
+  - `PYTHONPATH=src uv run --python 3.11 --with pytest --with pandas pytest tests/test_data_contract.py -q`
+  - Result: `10 passed in 1.25s`
+- Full verification after the fix:
+  - `PYTHONPATH=src uv run --python 3.11 --with pytest --with pandas pytest -q`
+  - Result: `10 passed in 0.57s`
+
 ## Concerns
 
 - The project is declared for Python 3.11+, which matches the validated `uv` runtime used here, but the host system interpreter is older.
