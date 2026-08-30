@@ -27,6 +27,12 @@ Fixed sparse daily rows: open positions now retain their last known close for ma
 
 Verification after the fix: `uv run --with pytest pytest tests/test_backtest.py -q` — 6 passed; `uv run --with pytest pytest -q` — 22 passed; `git diff --check` — passed.
 
+## Review fix round 2
+
+Rejected non-finite cost/slippage parameters at construction. Non-finite open/close prices are now treated as unavailable: entries and exits do not execute on invalid opens, invalid closes do not poison mark-to-market, and an explicit warning is emitted while any valid carried-forward close remains usable.
+
+Verification: `uv run --with pytest pytest tests/test_backtest.py -q` — 9 passed; `uv run --with pytest pytest -q` — 25 passed; `git diff --check` — passed.
+
 ## Notes
 
 `BacktestEngine` 在缺少指数行时将市场状态视为可触发，以便离线、单标的数据仍可运行；若存在 `index_symbol`，则按截至当日的指数收盘价计算触发状态。
