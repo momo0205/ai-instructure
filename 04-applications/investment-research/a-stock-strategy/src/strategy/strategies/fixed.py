@@ -10,7 +10,7 @@ class FixedAssetStrategy:
     def select(self, as_of: date, market: MarketState, universe: pd.DataFrame) -> Selection | None:
         if not market.triggered or universe.empty or "symbol" not in universe or "date" not in universe:
             return None
-        rows = universe[(universe["symbol"] == self.symbol) & (pd.to_datetime(universe["date"]).dt.date <= as_of)]
+        rows = universe[(universe["symbol"] == self.symbol) & (pd.to_datetime(universe["date"]).dt.date == as_of)]
         if rows.empty:
             return None
         row = rows.sort_values("date").iloc[-1]
