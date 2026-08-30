@@ -1,6 +1,6 @@
 [data]
 source = "csv"
-path = "data/sample/market.csv"
+path = "../data/sample/market.csv"
 format = "csv"
 adjustment = "none"
 
@@ -32,4 +32,3 @@ slippage_bps = 2.0
 [metadata]
 source = "local-sample"
 adjustment_note = "unadjusted"
-
