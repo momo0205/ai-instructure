@@ -1,0 +1,35 @@
+[data]
+source = "csv"
+path = "data/sample/market.csv"
+format = "csv"
+adjustment = "none"
+
+[strategy]
+name = "fixed_asset"
+
+[strategy.parameters]
+symbol = "588000.SH"
+
+[backtest]
+initial_cash = 100000.0
+holding_period_days = 1
+commission_rate = 0.0003
+stamp_duty_rate = 0.001
+minimum_commission = 5.0
+slippage_bps = 2.0
+
+[market]
+index_symbol = "000001.SH"
+trigger_level = 4000.0
+trigger_return_threshold = 0.0
+
+[costs]
+commission_rate = 0.0003
+stamp_duty_rate = 0.001
+minimum_commission = 5.0
+slippage_bps = 2.0
+
+[metadata]
+source = "local-sample"
+adjustment_note = "unadjusted"
+
