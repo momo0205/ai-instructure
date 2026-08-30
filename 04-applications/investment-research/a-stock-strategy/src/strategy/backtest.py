@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-import math
 from typing import Any
 
 import pandas as pd
@@ -26,6 +25,8 @@ class BacktestEngine:
                  trigger_return_threshold: float = 0.0):
         if initial_cash < 0 or holding_period_days < 1:
             raise ValueError("initial_cash must be non-negative and holding_period_days must be positive")
+        if any(value < 0 for value in (commission_rate, stamp_duty_rate, minimum_commission, slippage_bps)):
+            raise ValueError("cost and slippage parameters must be non-negative")
         self.initial_cash = float(initial_cash)
         self.holding_period_days = int(holding_period_days)
         self.commission_rate = float(commission_rate)
@@ -72,7 +73,8 @@ class BacktestEngine:
                         cash -= notional + commission
                         position = {"symbol": symbol, "quantity": quantity, "entry_price": price,
                                     "signal_date": signal_day, "entry_date": day,
-                                    "entry_fees": commission}
+                                    "entry_fees": commission, "last_close": float(row["close"]),
+                                    "missing_price_warned": False}
                         exit_idx = day_index + self.holding_period_days
                         pending_exit_date = dates[exit_idx] if exit_idx < len(dates) else None
                     else:
@@ -98,7 +100,12 @@ class BacktestEngine:
             if position is not None:
                 row = self._row(today, position["symbol"])
                 if row is not None:
-                    mark = position["quantity"] * float(row["close"])
+                    position["last_close"] = float(row["close"])
+                if position["last_close"] is not None:
+                    mark = position["quantity"] * position["last_close"]
+                elif not position["missing_price_warned"]:
+                    warnings.append(f"cannot mark open position {position['symbol']}: no known close")
+                    position["missing_price_warned"] = True
             total = cash + mark
             peak = max(peak, total)
             equity.append(EquityPoint(day, cash, mark, total, (total / peak - 1) if peak else 0.0))

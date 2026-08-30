@@ -75,3 +75,20 @@ def test_cash_position_and_configurable_costs_are_accounted_for():
     assert trade.entry_price == 10.1 and abs(trade.exit_price - 11.88) < 1e-9
     assert trade.fees > 0 and trade.pnl > 0
     assert result.equity[-1].cash >= 0
+
+
+def test_sparse_daily_rows_keep_last_known_close_for_mark_to_market():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 2), "AAA", 11, 11),
+                 (date(2026, 1, 3), "BBB", 20, 20), (date(2026, 1, 4), "AAA", 12, 12))
+    result = BacktestEngine(initial_cash=1000, commission_rate=0, stamp_duty_rate=0,
+                            minimum_commission=0, slippage_bps=0).run(frame, AlwaysSelect())
+    position = result.equity[2]
+    assert position.position_value == result.trades[0].quantity * 11
+    assert position.equity == position.cash + position.position_value
+
+
+def test_cost_parameters_must_be_non_negative():
+    import pytest
+    for name in ("commission_rate", "stamp_duty_rate", "minimum_commission", "slippage_bps"):
+        with pytest.raises(ValueError, match="non-negative"):
+            BacktestEngine(initial_cash=100, **{name: -1})
