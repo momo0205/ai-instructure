@@ -61,7 +61,12 @@ def validate_market_frame(frame: pd.DataFrame) -> None:
         raise ValueError(f"duplicate date/symbol rows: {duplicate_rows}")
 
     for column in PRICE_COLUMNS:
-        numeric_values = pd.to_numeric(frame[column], errors="coerce")
+        raw_values = frame[column]
+        if np.iscomplexobj(raw_values.to_numpy()):
+            complex_rows = [int(index) for index in raw_values.index]
+            raise ValueError(f"complex prices in {column} at rows: {complex_rows}")
+
+        numeric_values = pd.to_numeric(raw_values, errors="coerce")
         finite_mask = np.isfinite(numeric_values.to_numpy(dtype="float64", copy=False))
         invalid_mask = ~finite_mask | (numeric_values <= 0).to_numpy()
         bad_rows = [int(index) for index in frame.index[invalid_mask]]
