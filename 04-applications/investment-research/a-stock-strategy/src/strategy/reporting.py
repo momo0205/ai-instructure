@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .backtest import BacktestResult
 from .evaluation import Metrics
+from .llm import BacktestReport, detached, get_llm_provider
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,8 @@ def _jsonable(value: Any) -> Any:
 
 
 def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Path,
-                 metadata: dict[str, Any] | None = None) -> ReportPaths:
+                 metadata: dict[str, Any] | None = None, *, llm_provider: Any | None = None,
+                 recommendation: Any | None = None) -> ReportPaths:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     trades_path, equity_path, summary_path, report_path = (out / n for n in ("trades.csv", "equity.csv", "summary.json", "report.png"))
@@ -65,7 +67,26 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
         for point in result.equity:
             writer.writerow({field: _jsonable(getattr(point, field)) for field in equity_fields})
 
+    provider = get_llm_provider() if llm_provider is None else llm_provider
+    provider_enabled = bool(getattr(provider, "enabled", llm_provider is not None))
+    llm_meta = {"enabled": provider_enabled,
+                "status": "enabled" if provider_enabled else "disabled",
+                "provider": getattr(provider, "name", provider.__class__.__name__),
+                "prompt_summary": "explain deterministic results without changing them",
+                "generated_at": datetime.now(timezone.utc).isoformat()}
+    if getattr(provider, "model", None):
+        llm_meta["model"] = provider.model
+    if recommendation is not None and provider_enabled:
+        explanation = provider.explain_recommendation(detached(recommendation))
+        if explanation:
+            llm_meta["recommendation"] = explanation
+    if provider_enabled:
+        detached_report = detached(BacktestReport(list(result.trades), list(result.equity), metrics, list(result.warnings)))
+        summary_text = provider.summarize_backtest(detached_report)
+        if summary_text:
+            llm_meta["summary"] = summary_text
     meta = dict(metadata or {})
+    meta.setdefault("llm", llm_meta)
     dates = [p.date for p in result.equity]
     meta.setdefault("data_range", {"start": min(dates).isoformat(), "end": max(dates).isoformat()} if dates else {"start": None, "end": None})
     meta.setdefault("source", meta.get("data_source", "unknown"))
