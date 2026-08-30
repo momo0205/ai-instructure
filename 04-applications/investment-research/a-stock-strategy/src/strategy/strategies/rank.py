@@ -21,6 +21,16 @@ class CrossSectionalRankStrategy:
     def select(self, as_of: date, market: MarketState, universe: pd.DataFrame) -> Selection | None:
         if not market.triggered or universe.empty or not self.candidate_symbols:
             return None
+        ranked = self.rank_candidates(as_of, market, universe)
+        if not ranked:
+            return None
+        top = ranked[0]
+        features = dict(top.get("features", {}))
+        return Selection(str(top["symbol"]), float(top["score"]), features, "highest standardized cross-sectional score")
+
+    def rank_candidates(self, as_of: date, market: MarketState, universe: pd.DataFrame) -> list[dict]:
+        if not market.triggered or universe.empty or not self.candidate_symbols:
+            return []
         frame = universe.copy()
         frame["date"] = pd.to_datetime(frame["date"])
         frame = frame[(frame["date"].dt.date <= as_of) & frame["symbol"].isin(self.candidate_symbols)].sort_values(["symbol", "date"])
@@ -45,11 +55,15 @@ class CrossSectionalRankStrategy:
             volume_change = volume.iloc[-1] / volume.iloc[-1-self.volume_window] - 1
             records.append({"symbol": symbol, "momentum": momentum, "reversal": reversal, "volatility": volatility, "volume": volume_change})
         if not records:
-            return None
+            return []
         scores = pd.DataFrame(records)
         if scores.empty:
-            return None
+            return []
         score = sum(self.weights[k] * self._z(scores[k]) for k in self.weights)
-        idx = score.idxmax(); row = scores.loc[idx]
-        features = {k: float(row[k]) for k in self.weights} | {"as_of": as_of.isoformat()}
-        return Selection(str(row["symbol"]), float(score.loc[idx]), features, "highest standardized cross-sectional score")
+        ranked = []
+        for idx in score.sort_values(ascending=False, kind="stable").index:
+            row = scores.loc[idx]
+            features = {k: float(row[k]) for k in self.weights} | {"as_of": as_of.isoformat()}
+            ranked.append({"symbol": str(row["symbol"]), "score": float(score.loc[idx]), "features": features,
+                           "reason": "highest standardized cross-sectional score"})
+        return ranked

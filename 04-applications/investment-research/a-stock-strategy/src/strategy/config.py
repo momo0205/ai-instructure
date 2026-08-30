@@ -112,10 +112,15 @@ def load_config(path: str | Path) -> BacktestConfig:
 
     metadata = dict(raw.get("metadata", {}))
     metadata.setdefault("config_path", str(config_path))
-    metadata.setdefault(
-        "data_path_resolved",
-        str((config_path.parent / Path(data.path)).resolve()),
-    )
+    # Relative paths are defined against the directory containing the config.
+    # Consumers may choose an explicit compatibility search path (the CLI does
+    # this for the historical baseline fixture) before constructing a provider.
+    raw_data_path = Path(data.path)
+    if raw_data_path.is_absolute():
+        resolved_data_path = raw_data_path.resolve()
+    else:
+        resolved_data_path = (config_path.parent / raw_data_path).resolve()
+    metadata["data_path_resolved"] = str(resolved_data_path)
 
     return BacktestConfig(
         data=data,

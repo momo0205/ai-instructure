@@ -237,7 +237,7 @@ def test_load_config_parses_baseline_toml() -> None:
     config = load_config(config_path)
 
     assert config.data.source == "csv"
-    assert config.data.path == "data/sample/market.csv"
+    assert config.data.path == "../data/sample/market.csv"
     assert config.metadata["data_path_resolved"].endswith("data/sample/market.csv")
     assert config.backtest.initial_cash == 100000.0
     assert config.strategy.name == "fixed_asset"
@@ -266,6 +266,21 @@ initial_cash = 100000.0
         config_path.unlink()
 
 
+def test_load_config_resolved_data_path_cannot_be_overridden_by_metadata(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('''
+[data]
+source = "csv"
+path = "market.csv"
+[strategy]
+name = "fixed_asset"
+[backtest]
+initial_cash = 100
+[metadata]
+data_path_resolved = "/tmp/wrong.csv"
+''')
+    config = load_config(config_path)
+    assert config.metadata["data_path_resolved"] == str((tmp_path / "market.csv").resolve())
 def test_csv_market_data_provider_loads_sample_market_data() -> None:
     provider = CsvMarketDataProvider(Path("data/sample/market.csv"))
 

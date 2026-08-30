@@ -9,6 +9,7 @@ description = "A-share strategy backtesting research toolkit"
 requires-python = ">=3.11"
 dependencies = [
   "pandas>=2.2",
+  "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]
