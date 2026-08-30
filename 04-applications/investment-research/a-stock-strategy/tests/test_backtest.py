@@ -92,3 +92,30 @@ def test_cost_parameters_must_be_non_negative():
     for name in ("commission_rate", "stamp_duty_rate", "minimum_commission", "slippage_bps"):
         with pytest.raises(ValueError, match="non-negative"):
             BacktestEngine(initial_cash=100, **{name: -1})
+
+
+def test_cost_parameters_must_be_finite():
+    import math
+    import pytest
+    for name in ("commission_rate", "stamp_duty_rate", "minimum_commission", "slippage_bps"):
+        with pytest.raises(ValueError, match="finite"):
+            BacktestEngine(initial_cash=100, **{name: math.nan})
+
+
+def test_non_finite_entry_prices_are_not_executed():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 2), "AAA", float("nan"), 11),
+                 (date(2026, 1, 3), "AAA", 12, 12))
+    result = BacktestEngine(initial_cash=1000, commission_rate=0, stamp_duty_rate=0,
+                            minimum_commission=0, slippage_bps=0).run(frame, AlwaysSelect())
+    assert not result.trades
+    assert any("entry not executed" in warning for warning in result.warnings)
+
+
+def test_non_finite_close_does_not_poison_mark_to_market():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 2), "AAA", 11, 11),
+                 (date(2026, 1, 3), "AAA", 12, float("nan")), (date(2026, 1, 4), "AAA", 13, 13))
+    result = BacktestEngine(initial_cash=1000, holding_period_days=2, commission_rate=0, stamp_duty_rate=0,
+                            minimum_commission=0, slippage_bps=0).run(frame, AlwaysSelect())
+    assert result.equity[2].position_value == result.trades[0].quantity * 11
+    assert all(pd.notna(point.equity) for point in result.equity)
+    assert any("mark" in warning for warning in result.warnings)

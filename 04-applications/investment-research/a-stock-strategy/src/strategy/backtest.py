@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import math
 from typing import Any
 
 import pandas as pd
@@ -25,7 +26,10 @@ class BacktestEngine:
                  trigger_return_threshold: float = 0.0):
         if initial_cash < 0 or holding_period_days < 1:
             raise ValueError("initial_cash must be non-negative and holding_period_days must be positive")
-        if any(value < 0 for value in (commission_rate, stamp_duty_rate, minimum_commission, slippage_bps)):
+        parameters = (commission_rate, stamp_duty_rate, minimum_commission, slippage_bps)
+        if any(not math.isfinite(float(value)) for value in parameters):
+            raise ValueError("cost and slippage parameters must be finite")
+        if any(value < 0 for value in parameters):
             raise ValueError("cost and slippage parameters must be non-negative")
         self.initial_cash = float(initial_cash)
         self.holding_period_days = int(holding_period_days)
@@ -62,7 +66,7 @@ class BacktestEngine:
                 _, symbol, signal_day = pending_entry
                 row = self._row(today, symbol)
                 pending_entry = None
-                if row is None or self._blocked_entry(row):
+                if row is None or self._blocked_entry(row) or not self._valid_prices(row, "open", "close"):
                     warnings.append(f"entry not executed for {symbol} on {day} (suspended or limit-up/down)")
                 else:
                     price = float(row["open"]) * (1 + self.slippage_bps / 10000)
@@ -82,7 +86,7 @@ class BacktestEngine:
 
             if position is not None and pending_exit_date is not None and day >= pending_exit_date:
                 row = self._row(today, position["symbol"])
-                if row is not None and not self._blocked_exit(row):
+                if row is not None and not self._blocked_exit(row) and self._valid_prices(row, "open"):
                     price = float(row["open"]) * (1 - self.slippage_bps / 10000)
                     notional = position["quantity"] * price
                     commission = self._commission(notional)
@@ -99,8 +103,11 @@ class BacktestEngine:
             mark = 0.0
             if position is not None:
                 row = self._row(today, position["symbol"])
-                if row is not None:
+                if row is not None and self._valid_prices(row, "close"):
                     position["last_close"] = float(row["close"])
+                elif row is not None and not position["missing_price_warned"]:
+                    warnings.append(f"cannot mark open position {position['symbol']}: non-finite close")
+                    position["missing_price_warned"] = True
                 if position["last_close"] is not None:
                     mark = position["quantity"] * position["last_close"]
                 elif not position["missing_price_warned"]:
@@ -151,6 +158,13 @@ class BacktestEngine:
     @staticmethod
     def _blocked_exit(row) -> bool:
         return bool(row.get("is_suspended", False) or row.get("limit_down", False))
+
+    @staticmethod
+    def _valid_prices(row, *columns: str) -> bool:
+        try:
+            return all(math.isfinite(float(row[column])) for column in columns)
+        except (TypeError, ValueError):
+            return False
 
     def _commission(self, notional: float) -> float:
         return max(self.minimum_commission, notional * self.commission_rate) if notional else 0.0
