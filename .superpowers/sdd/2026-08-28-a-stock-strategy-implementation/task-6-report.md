@@ -22,3 +22,24 @@ uv run pytest -q: 45 passed
 ## Concerns
 
 - The adapter uses Python's standard-library HTTP client and is intentionally not invoked by default; no live API call was made in tests.
+
+## Review Fix (2026-08-31)
+
+- Fixed `_jsonable` so it recursively serializes regular and `slots=True`
+  dataclasses, dates, mappings, and lists/tuples. This allows actual
+  `Trade`, `EquityPoint`, `Selection`, and `BacktestReport` values to be
+  encoded for an explicitly enabled provider.
+- Moved the standard-library `urllib.request` import into the completion
+  path, preserving lazy loading and no network activity for the default no-op
+  provider.
+- Made generated LLM metadata authoritative in `write_report`; caller
+  metadata can no longer suppress the provider's enabled status or identity.
+- Added regression coverage for nested domain dataclass serialization and
+  metadata precedence.
+
+### Review Fix Verification
+
+```text
+uv run pytest tests/test_llm.py -q: 5 passed
+uv run pytest -q: 47 passed
+```
