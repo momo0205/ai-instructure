@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Final
+from typing import Collection, Final
 
 import numpy as np
 import pandas as pd
@@ -48,7 +48,12 @@ def _complex_rows(values: pd.Series) -> list[int]:
     return [int(index) for index, value in values.items() if np.iscomplexobj(value)]
 
 
-def validate_market_frame(frame: pd.DataFrame, *, allow_nonfinite_prices: bool = False) -> None:
+def validate_market_frame(
+    frame: pd.DataFrame,
+    *,
+    allow_nonfinite_prices: bool = False,
+    allow_nonfinite_price_columns: Collection[str] | None = None,
+) -> None:
     missing_columns = [column for column in REQUIRED_MARKET_COLUMNS if column not in frame.columns]
     if missing_columns:
         raise ValueError(f"missing required columns: {', '.join(missing_columns)}")
@@ -72,10 +77,10 @@ def validate_market_frame(frame: pd.DataFrame, *, allow_nonfinite_prices: bool =
 
         numeric_values = pd.to_numeric(raw_values, errors="coerce")
         finite_mask = np.isfinite(numeric_values.to_numpy(dtype="float64", copy=False))
-        # Backtests may carry a missing close/open so execution can decide
-        # whether to skip that event; finite non-positive prices are always a
-        # contract violation. CSV ingestion keeps the strict default.
-        invalid_mask = ((~finite_mask) & (not allow_nonfinite_prices)) | (numeric_values <= 0).to_numpy()
+        # Backtests may carry a missing open/close so execution can decide
+        # whether to skip that event; high/low remain strict contract fields.
+        allowed = set(PRICE_COLUMNS) if allow_nonfinite_prices else set(allow_nonfinite_price_columns or ())
+        invalid_mask = ((~finite_mask) & (column not in allowed)) | (numeric_values <= 0).to_numpy()
         bad_rows = [int(index) for index in frame.index[invalid_mask]]
         if bad_rows:
             raise ValueError(f"non-finite or non-positive prices in {column} at rows: {bad_rows}")

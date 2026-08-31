@@ -81,6 +81,15 @@ def test_recommendation_rejects_nonfinite_index_close():
     assert any("invalid market index" in warning.lower() for warning in result.warnings)
 
 
+def test_recommendation_ignores_future_data_quality_errors():
+    from strategy.recommendation import recommend
+    malformed = _bars()
+    malformed["close"] = malformed["close"].astype(object)
+    malformed.loc[malformed["date"] == "2026-08-02", "close"] = "bad"
+    result = recommend(date(2026, 8, 1), malformed, FixedAssetStrategy())
+    assert not any("invalid close" in warning.lower() for warning in result.warnings)
+
+
 def test_recommendation_is_independent_of_input_order():
     from strategy.recommendation import recommend
     ordered = _bars()

@@ -67,3 +67,13 @@ def test_rank_excludes_zero_prior_volume_with_explicit_reason_and_finite_feature
     assert result.selected is None
     assert any(item["symbol"] == "AAA" and "volume" in item["reason"] for item in result.filtered)
     assert all(pd.notna(item.get("score", 0)) for item in result.rankings)
+
+
+def test_rank_rejects_unsafe_parameters():
+    import pytest
+    with pytest.raises(ValueError, match="windows"):
+        CrossSectionalRankStrategy(momentum_window=1.5)
+    with pytest.raises(ValueError, match="weights"):
+        CrossSectionalRankStrategy(weights={"momentum": float("nan")})
+    with pytest.raises(ValueError, match="unknown"):
+        CrossSectionalRankStrategy(weights={"unexpected": 1.0})

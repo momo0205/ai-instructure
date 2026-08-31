@@ -129,6 +129,19 @@ def test_non_finite_close_does_not_poison_mark_to_market():
     assert any("mark" in warning for warning in result.warnings)
 
 
+def test_non_numeric_entry_close_does_not_crash_or_poison_equity():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10),
+                 (date(2026, 1, 2), "AAA", 11, 11),
+                 (date(2026, 1, 3), "AAA", 12, 12))
+    frame["close"] = frame["close"].astype(object)
+    frame.loc[(frame["date"] == date(2026, 1, 2)) & (frame["symbol"] == "AAA"), "close"] = "bad"
+    result = BacktestEngine(initial_cash=1000, commission_rate=0, stamp_duty_rate=0,
+                            minimum_commission=0, slippage_bps=0).run(frame, AlwaysSelect())
+    assert result.trades
+    assert all(pd.notna(point.equity) for point in result.equity)
+    assert any("mark" in warning for warning in result.warnings)
+
+
 def test_market_state_fails_closed_when_configured_index_is_missing_or_invalid():
     engine = BacktestEngine(initial_cash=1000, index_symbol="INDEX")
     missing = bars((date(2026, 1, 1), "AAA", 10, 10))
@@ -137,6 +150,38 @@ def test_market_state_fails_closed_when_configured_index_is_missing_or_invalid()
     malformed = bars((date(2026, 1, 1), "INDEX", 4100, 4100),
                      (date(2026, 1, 2), "INDEX", 4100, float("nan")))
     assert engine._market_state(malformed, date(2026, 1, 2)).triggered is False
+
+
+def test_run_warns_when_configured_index_history_is_missing_or_invalid():
+    missing = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 2), "AAA", 11, 11))
+    missing_result = BacktestEngine(initial_cash=1000, index_symbol="INDEX").run(missing, AlwaysSelect())
+    assert any("missing market index INDEX" in warning for warning in missing_result.warnings)
+
+    malformed = bars((date(2026, 1, 1), "INDEX", 4100, 4100),
+                     (date(2026, 1, 1), "AAA", 10, 10),
+                     (date(2026, 1, 2), "INDEX", 4100, float("nan")),
+                     (date(2026, 1, 2), "AAA", 11, 11))
+    malformed_result = BacktestEngine(initial_cash=1000, index_symbol="INDEX").run(malformed, AlwaysSelect())
+    assert any("invalid market index INDEX close" in warning for warning in malformed_result.warnings)
+
+    stale_bad = bars((date(2026, 1, 1), "INDEX", 4100, float("nan")),
+                     (date(2026, 1, 1), "AAA", 10, 10),
+                     (date(2026, 1, 2), "INDEX", 4100, 4100),
+                     (date(2026, 1, 2), "AAA", 11, 11),
+                     (date(2026, 1, 3), "INDEX", 4000, 4000),
+                     (date(2026, 1, 3), "AAA", 12, 12))
+    stale_result = BacktestEngine(initial_cash=1000, index_symbol="INDEX").run(stale_bad, AlwaysSelect())
+    assert any("invalid market index INDEX close" in warning for warning in stale_result.warnings)
+    assert BacktestEngine(initial_cash=1000, index_symbol="INDEX")._market_state(
+        stale_bad, date(2026, 1, 3)
+    ).triggered is False
+
+
+def test_run_rejects_missing_full_market_contract_column():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10)).drop(columns=["high"])
+    import pytest
+    with pytest.raises(ValueError, match="missing required columns"):
+        BacktestEngine(initial_cash=1000).run(frame, AlwaysSelect())
 
 
 def test_run_rejects_duplicate_rows_before_strategy_execution():

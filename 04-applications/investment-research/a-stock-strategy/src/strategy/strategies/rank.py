@@ -8,17 +8,38 @@ class CrossSectionalRankStrategy:
     def __init__(self, candidate_symbols=None, momentum_window: int = 20, reversal_window: int = 3,
                  volatility_window: int = 20, volume_window: int = 5, weights=None, min_volume: float = 0.0):
         self.candidate_symbols = list(candidate_symbols or [])
-        self.momentum_window, self.reversal_window = int(momentum_window), int(reversal_window)
-        self.volatility_window, self.volume_window = int(volatility_window), int(volume_window)
-        self.weights = {"momentum": 1.0, "reversal": 0.0, "volatility": 0.0, "volume": 0.0} | dict(weights or {})
-        self.min_volume = float(min_volume)
-        if any(window < 1 for window in (self.momentum_window, self.reversal_window, self.volatility_window, self.volume_window)):
+        try:
+            windows = tuple(self._positive_int(value) for value in
+                            (momentum_window, reversal_window, volatility_window, volume_window))
+        except (TypeError, ValueError, OverflowError):
             raise ValueError("ranking windows must be positive")
+        self.momentum_window, self.reversal_window, self.volatility_window, self.volume_window = windows
+        base_weights = {"momentum": 1.0, "reversal": 0.0, "volatility": 0.0, "volume": 0.0}
+        supplied_weights = dict(weights or {})
+        unknown_weights = set(supplied_weights) - set(base_weights)
+        if unknown_weights:
+            raise ValueError(f"unknown ranking weights: {', '.join(sorted(map(str, unknown_weights)))}")
+        self.weights = base_weights | supplied_weights
+        try:
+            self.min_volume = float(min_volume)
+        except (TypeError, ValueError, OverflowError):
+            raise ValueError("min_volume must be finite and non-negative") from None
         if not np.isfinite(self.min_volume) or self.min_volume < 0:
             raise ValueError("min_volume must be finite and non-negative")
-        if any(not np.isfinite(float(self.weights.get(key, 0.0))) for key in ("momentum", "reversal", "volatility", "volume")):
+        try:
+            self.weights = {key: float(value) for key, value in self.weights.items()}
+        except (TypeError, ValueError, OverflowError):
+            raise ValueError("ranking weights must be finite") from None
+        if any(not np.isfinite(value) for value in self.weights.values()):
             raise ValueError("ranking weights must be finite")
         self.last_filter_reasons: list[dict[str, str]] = []
+
+    @staticmethod
+    def _positive_int(value) -> int:
+        numeric = float(value)
+        if not np.isfinite(numeric) or numeric < 1 or not numeric.is_integer():
+            raise ValueError
+        return int(numeric)
 
     @staticmethod
     def _z(values):

@@ -30,3 +30,27 @@
 - Offline CLI:
   `PYTHONPATH=src uv run --python 3.11 python -m strategy backtest --config configs/baseline.toml --output /tmp/a-stock-strategy-final-report`
   → exit code **0**, deterministic report artifacts generated.
+
+## Follow-up hardening wave (2026-08-31)
+
+- Backtests now emit one deduplicated warning for missing or invalid configured
+  index history on every affected point-in-time day, and fail closed if any
+  prior index close in that history is malformed.
+- `BacktestEngine.run()` requires the complete daily market contract (with a
+  narrow compatibility default for fixtures that omit all tradability flags),
+  while allowing only open/close missing values for execution-time handling.
+- Rank windows are integral positive values, ranking weights are known finite
+  fields, and all report JSON numeric serialization converts non-finite values
+  to `null` rather than emitting NaN/Infinity.
+- LLM provider discovery failures are isolated alongside provider call
+  failures, preserving deterministic report artifacts and recording an error
+  status/warning.
+- Recommendation quality scans are restricted to rows at or before `as_of`;
+  future malformed rows no longer affect historical output.
+
+Verification:
+
+- `PYTHONPATH=src pytest -q` → **62 passed**.
+- `git diff --check` → passed.
+- Offline backtest and recommend CLI commands under Python 3.11 → exit code
+  **0**; all expected report artifacts and JSON payloads validated.
