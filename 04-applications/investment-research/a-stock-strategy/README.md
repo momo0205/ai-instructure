@@ -102,7 +102,29 @@ python -m pip install -e '.[dev]'
 </dict></plist>
 ```
 
-加载/停止：`launchctl load ~/Library/LaunchAgents/com.example.astock-backtest.plist`、`launchctl unload ~/Library/LaunchAgents/com.example.astock-backtest.plist`。
+首次加载前先创建报告目录并校验 plist；macOS Ventura/Sonoma 推荐使用 bootstrap/bootout（旧版 `load/unload` 已逐步弃用）：
+
+```bash
+mkdir -p /path/to/a-stock-strategy/reports
+plutil -lint ~/Library/LaunchAgents/com.example.astock-backtest.plist
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backtest.plist
+launchctl kickstart -k "gui/$(id -u)/com.example.astock-backtest"
+```
+
+查看状态/日志：
+
+```bash
+launchctl print "gui/$(id -u)/com.example.astock-backtest"
+tail -f /path/to/a-stock-strategy/reports/launchd.out.log
+```
+
+停止并移除任务：
+
+```bash
+launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backtest.plist
+```
+
+如果任务已经加载，先执行 `bootout` 再重新 `bootstrap`；不要同时使用同一输出目录运行 cron 和 launchd，避免报告文件相互覆盖。
 
 ### Cron 替代方案
 
