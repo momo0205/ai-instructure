@@ -86,7 +86,9 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
         if summary_text:
             llm_meta["summary"] = summary_text
     meta = dict(metadata or {})
-    meta.setdefault("llm", llm_meta)
+    # Provider state and generated explanations are authoritative; callers
+    # cannot make an enabled provider appear disabled through metadata.
+    meta["llm"] = llm_meta
     dates = [p.date for p in result.equity]
     meta.setdefault("data_range", {"start": min(dates).isoformat(), "end": max(dates).isoformat()} if dates else {"start": None, "end": None})
     meta.setdefault("source", meta.get("data_source", "unknown"))

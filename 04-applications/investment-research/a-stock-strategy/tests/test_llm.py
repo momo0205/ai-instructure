@@ -4,8 +4,9 @@ from datetime import date
 import pandas as pd
 
 from strategy.backtest import BacktestEngine
+from strategy.domain import EquityPoint, Selection, Trade
 from strategy.evaluation import evaluate
-from strategy.llm import LLMProvider, NoopLLMProvider, get_llm_provider
+from strategy.llm import BacktestReport, LLMProvider, NoopLLMProvider, _jsonable, get_llm_provider
 from strategy.reporting import write_report
 from strategy.strategies.fixed import FixedAssetStrategy
 
@@ -57,3 +58,74 @@ def test_provider_output_cannot_mutate_metrics_or_trades(tmp_path):
     payload = json.loads((tmp_path / "summary.json").read_text())
     assert payload["metrics"]["trade_count"] == len(original_trades)
     assert payload["metadata"]["llm"]["summary"] == "summary"
+
+
+def test_jsonable_recursively_serializes_domain_dataclasses_and_nested_dates():
+    trade = Trade(date(2026, 8, 1), date(2026, 8, 2), None, "000001.SH", 10, 4_000, None)
+    point = EquityPoint(date(2026, 8, 2), 900, 100, 1_000, -0.02)
+    selection = Selection("000001.SH", 0.8, {"as_of": date(2026, 8, 2), "points": [point]})
+    report = BacktestReport([trade], [point], selection, ["warning"])
+
+    payload = _jsonable(report)
+
+    assert payload == {
+        "trades": [{
+            "signal_date": "2026-08-01",
+            "entry_date": "2026-08-02",
+            "exit_date": None,
+            "symbol": "000001.SH",
+            "quantity": 10,
+            "entry_price": 4000,
+            "exit_price": None,
+            "fees": 0.0,
+            "pnl": 0.0,
+            "exit_reason": "",
+        }],
+        "equity": [{
+            "date": "2026-08-02",
+            "cash": 900,
+            "position_value": 100,
+            "equity": 1000,
+            "drawdown": -0.02,
+        }],
+        "metrics": {
+            "symbol": "000001.SH",
+            "score": 0.8,
+            "features": {
+                "as_of": "2026-08-02",
+                "points": [{
+                    "date": "2026-08-02",
+                    "cash": 900,
+                    "position_value": 100,
+                    "equity": 1000,
+                    "drawdown": -0.02,
+                }],
+            },
+            "reason": "",
+        },
+        "warnings": ["warning"],
+    }
+    json.dumps(payload)
+
+
+def test_actual_llm_metadata_cannot_be_suppressed_by_caller_metadata(tmp_path):
+    result = BacktestEngine(1000, commission_rate=0, stamp_duty_rate=0, minimum_commission=0).run(_bars(), FixedAssetStrategy())
+    metrics = evaluate(result)
+
+    class Provider:
+        enabled = True
+        name = "test-provider"
+        model = "test-model"
+
+        def explain_recommendation(self, recommendation):
+            return ""
+
+        def summarize_backtest(self, report):
+            return ""
+
+    write_report(result, metrics, tmp_path, metadata={"llm": {"enabled": False, "status": "disabled"}}, llm_provider=Provider())
+
+    llm_metadata = json.loads((tmp_path / "summary.json").read_text())["metadata"]["llm"]
+    assert llm_metadata["enabled"] is True
+    assert llm_metadata["status"] == "enabled"
+    assert llm_metadata["provider"] == "test-provider"

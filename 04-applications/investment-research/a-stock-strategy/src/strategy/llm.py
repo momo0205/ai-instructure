@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
+from datetime import date
 from typing import Any, Protocol, runtime_checkable
-from urllib.request import Request, urlopen
 
 
 @runtime_checkable
@@ -31,7 +32,7 @@ class NoopLLMProvider:
         return ""
 
 
-@dataclass
+@dataclass(slots=True)
 class BacktestReport:
     """Detached input supplied to providers, so provider code cannot alter results."""
 
@@ -60,6 +61,8 @@ class OpenAICompatibleLLMProvider:
         return self._complete("Summarize these deterministic backtest results; do not alter any values.", report)
 
     def _complete(self, instruction: str, value: Any) -> str:
+        from urllib.request import Request, urlopen
+
         body = {"model": self.model, "messages": [
             {"role": "system", "content": instruction},
             {"role": "user", "content": json.dumps(_jsonable(value), ensure_ascii=False)},
@@ -84,11 +87,11 @@ def get_llm_provider(environ: dict[str, str] | None = None) -> LLMProvider:
 
 
 def _jsonable(value: Any) -> Any:
-    if hasattr(value, "isoformat"):
+    if isinstance(value, date):
         return value.isoformat()
-    if hasattr(value, "__dict__"):
-        return {key: _jsonable(item) for key, item in vars(value).items()}
-    if isinstance(value, dict):
+    if is_dataclass(value) and not isinstance(value, type):
+        return {field.name: _jsonable(getattr(value, field.name)) for field in fields(value)}
+    if isinstance(value, Mapping):
         return {str(key): _jsonable(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
