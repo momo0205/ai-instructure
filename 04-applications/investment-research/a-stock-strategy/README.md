@@ -11,6 +11,10 @@ uv sync --offline
 uv run --offline pytest -q
 ```
 
+`--offline` 只表示运行阶段不访问网络；首次部署仍需先在线执行一次 `uv sync`
+（或把 `uv.lock` 中的 wheel 预先放入 uv 缓存）。如果目标机器没有缓存依赖，直接执行
+`uv sync --offline` 会因无法下载 pandas 等包而失败。
+
 若没有 uv，也可以使用标准 venv（依赖仍需从已配置的本地镜像或网络安装）：
 
 ```bash
@@ -65,6 +69,25 @@ CSV 每行是一个交易日/代码组合，必需列为：
 
 日期使用交易所本地日历；四个价格必须为正且有限。价格的前复权/后复权口径必须在配置的 `adjustment` 中明确记录。布尔字段接受 `0/1`、`true/false` 等常见写法。示例数据见 `data/sample/market.csv`。
 
+## 接入 a-stock-data 真实行情
+
+`a-stock-data` 是上游行情调用说明与实现集合，不是本项目的回测依赖。研究环境可把它的百度 K 线调用（或自定义 mootdx 调用）注入
+`AStockDataProvider`；provider 会统一日期、六位证券代码和字段名，并按证券保存 CSV 缓存。这样网络、限流和数据源变更只影响适配层，回测仍可对缓存文件离线运行。
+
+```python
+from strategy import AStockDataProvider, BaiduKlineFetcher
+
+provider = AStockDataProvider(
+    BaiduKlineFetcher().fetch,
+    cache_dir="data/cache",
+    adjustment="none",  # 必须明确记录：none/前复权/后复权，不由程序猜测
+)
+bars = provider.load(["510688", "000001"], start="2020-01-01", refresh=True)
+```
+
+刷新需要服务器能访问上游网站，不需要 Tushare Token；回测时使用 `refresh=False` 命中本地缓存。若刷新失败但已有缓存，结果会带有
+`bars.attrs["warnings"]`，明确标记为 stale cache，避免把旧数据误认为最新数据。百度接口未提供可靠的停牌/涨跌停布尔字段时，适配层会填入保守默认值 `False`；严肃研究应另接交易状态数据源并补齐这些列。
+
 ## 可复现性与限制
 
 给定相同的 CSV、TOML、Python 版本和代码提交，策略、撮合、指标及 CSV/JSON 内容是确定性的；图表使用固定 Agg 后端。`generated_at` 是报告生成时刻，因此每次报告的时间戳会不同。系统不会在回测过程中隐式联网或补齐缺失行情，停牌、涨跌停和无下一交易日会保留警告。
@@ -102,7 +125,29 @@ python -m pip install -e '.[dev]'
 </dict></plist>
 ```
 
-加载/停止：`launchctl load ~/Library/LaunchAgents/com.example.astock-backtest.plist`、`launchctl unload ~/Library/LaunchAgents/com.example.astock-backtest.plist`。
+首次加载前先创建报告目录并校验 plist；macOS Ventura/Sonoma 推荐使用 bootstrap/bootout（旧版 `load/unload` 已逐步弃用）：
+
+```bash
+mkdir -p /path/to/a-stock-strategy/reports
+plutil -lint ~/Library/LaunchAgents/com.example.astock-backtest.plist
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backtest.plist
+launchctl kickstart -k "gui/$(id -u)/com.example.astock-backtest"
+```
+
+查看状态/日志：
+
+```bash
+launchctl print "gui/$(id -u)/com.example.astock-backtest"
+tail -f /path/to/a-stock-strategy/reports/launchd.out.log
+```
+
+停止并移除任务：
+
+```bash
+launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backtest.plist
+```
+
+如果任务已经加载，先执行 `bootout` 再重新 `bootstrap`；不要同时使用同一输出目录运行 cron 和 launchd，避免报告文件相互覆盖。
 
 ### Cron 替代方案
 
