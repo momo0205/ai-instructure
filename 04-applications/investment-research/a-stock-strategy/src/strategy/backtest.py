@@ -221,6 +221,10 @@ class BacktestEngine:
         missing = set(REQUIRED_MARKET_COLUMNS) - set(frame.columns)
         # A few legacy report fixtures omitted every tradability flag; keep
         # that narrow compatibility case while requiring all market values.
+        missing_flags = missing & set(BOOL_COLUMNS)
+        # Partial flags leave tradability unknown, so fail closed.
+        if missing_flags and missing_flags != set(BOOL_COLUMNS):
+            raise ValueError(f"market_data missing tradability columns: {', '.join(sorted(missing_flags))}")
         if missing and missing <= set(BOOL_COLUMNS):
             for column in BOOL_COLUMNS:
                 if column not in frame:
