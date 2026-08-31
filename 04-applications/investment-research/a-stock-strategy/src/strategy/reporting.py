@@ -76,15 +76,27 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
                 "generated_at": datetime.now(timezone.utc).isoformat()}
     if getattr(provider, "model", None):
         llm_meta["model"] = provider.model
+    llm_errors: list[str] = []
+    # LLM is an optional explanation boundary: network/provider failures are
+    # metadata warnings and never interrupt deterministic artifact creation.
     if recommendation is not None and provider_enabled:
-        explanation = provider.explain_recommendation(detached(recommendation))
-        if explanation:
-            llm_meta["recommendation"] = explanation
+        try:
+            explanation = provider.explain_recommendation(detached(recommendation))
+            if explanation:
+                llm_meta["recommendation"] = str(explanation)
+        except Exception as exc:
+            llm_errors.append(f"llm recommendation unavailable: {exc}")
     if provider_enabled:
-        detached_report = detached(BacktestReport(list(result.trades), list(result.equity), metrics, list(result.warnings)))
-        summary_text = provider.summarize_backtest(detached_report)
-        if summary_text:
-            llm_meta["summary"] = summary_text
+        try:
+            detached_report = detached(BacktestReport(list(result.trades), list(result.equity), metrics, list(result.warnings)))
+            summary_text = provider.summarize_backtest(detached_report)
+            if summary_text:
+                llm_meta["summary"] = str(summary_text)
+        except Exception as exc:
+            llm_errors.append(f"llm summary unavailable: {exc}")
+    if llm_errors:
+        llm_meta["status"] = "error"
+        llm_meta["error"] = "; ".join(llm_errors)
     meta = dict(metadata or {})
     # Provider state and generated explanations are authoritative; callers
     # cannot make an enabled provider appear disabled through metadata.
@@ -98,7 +110,7 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
     meta.setdefault("generated_at", datetime.now(timezone.utc).isoformat())
     meta.setdefault("range", meta["data_range"])
     chart_warning = _write_chart(result, report_path)
-    report_warnings = list(result.warnings) + ([chart_warning] if chart_warning else [])
+    report_warnings = list(result.warnings) + ([chart_warning] if chart_warning else []) + llm_errors
     caller_warnings = list(meta.get("warnings", []))
     report_warnings = caller_warnings + [warning for warning in report_warnings if warning not in caller_warnings]
     meta["warnings"] = report_warnings

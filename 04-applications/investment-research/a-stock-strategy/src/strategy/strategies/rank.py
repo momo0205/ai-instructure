@@ -12,6 +12,13 @@ class CrossSectionalRankStrategy:
         self.volatility_window, self.volume_window = int(volatility_window), int(volume_window)
         self.weights = {"momentum": 1.0, "reversal": 0.0, "volatility": 0.0, "volume": 0.0} | dict(weights or {})
         self.min_volume = float(min_volume)
+        if any(window < 1 for window in (self.momentum_window, self.reversal_window, self.volatility_window, self.volume_window)):
+            raise ValueError("ranking windows must be positive")
+        if not np.isfinite(self.min_volume) or self.min_volume < 0:
+            raise ValueError("min_volume must be finite and non-negative")
+        if any(not np.isfinite(float(self.weights.get(key, 0.0))) for key in ("momentum", "reversal", "volatility", "volume")):
+            raise ValueError("ranking weights must be finite")
+        self.last_filter_reasons: list[dict[str, str]] = []
 
     @staticmethod
     def _z(values):
@@ -29,6 +36,7 @@ class CrossSectionalRankStrategy:
         return Selection(str(top["symbol"]), float(top["score"]), features, "highest standardized cross-sectional score")
 
     def rank_candidates(self, as_of: date, market: MarketState, universe: pd.DataFrame) -> list[dict]:
+        self.last_filter_reasons = []
         if not market.triggered or universe.empty or not self.candidate_symbols:
             return []
         frame = universe.copy()
@@ -37,14 +45,32 @@ class CrossSectionalRankStrategy:
         records = []
         for symbol, hist in frame.groupby("symbol", sort=True):
             latest = hist.iloc[-1]
+            # Filters run before feature math; rejected symbols are retained as
+            # diagnostics by recommendation, never as NaN/inf-ranked rows.
             if latest["date"].date() != as_of:
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "no bar on as_of date"})
                 continue
-            if any(bool(latest.get(c, False)) for c in ("is_suspended", "limit_up", "limit_down")) or float(latest.get("volume", 0) or 0) < self.min_volume:
+            if any(bool(latest.get(c, False)) for c in ("is_suspended", "limit_up", "limit_down")):
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "suspended or limit-up/down"})
+                continue
+            try:
+                latest_volume = float(latest.get("volume", 0) or 0)
+            except (TypeError, ValueError, OverflowError):
+                latest_volume = float("nan")
+            if not np.isfinite(latest_volume) or latest_volume < self.min_volume:
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "invalid or below minimum latest volume"})
                 continue
             close = pd.to_numeric(hist["close"], errors="coerce")
             volume = pd.to_numeric(hist.get("volume", pd.Series(index=hist.index, dtype=float)), errors="coerce")
             required = max(self.momentum_window, self.reversal_window, self.volatility_window, self.volume_window) + 1
-            if len(close) < required or close.isna().any() or volume.isna().any():
+            if len(close) < required:
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "insufficient history"})
+                continue
+            if close.isna().any() or not np.isfinite(close.to_numpy(dtype=float)).all():
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "invalid close history"})
+                continue
+            if volume.isna().any() or not np.isfinite(volume.to_numpy(dtype=float)).all():
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "invalid volume history"})
                 continue
             close = close.reset_index(drop=True)
             ret = close.pct_change().dropna()
@@ -52,7 +78,15 @@ class CrossSectionalRankStrategy:
             reversal = -(close.iloc[-1] / close.iloc[-1-self.reversal_window] - 1)
             volatility = ret.tail(self.volatility_window).std(ddof=0) if len(ret) > 1 else 0.0
             volume = volume.reset_index(drop=True)
-            volume_change = volume.iloc[-1] / volume.iloc[-1-self.volume_window] - 1
+            prior_volume = float(volume.iloc[-1-self.volume_window])
+            if not np.isfinite(prior_volume) or prior_volume <= 0:
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "invalid prior volume for volume-change feature"})
+                continue
+            volume_change = float(volume.iloc[-1]) / prior_volume - 1
+            values = (momentum, reversal, volatility, volume_change)
+            if not all(np.isfinite(value) for value in values):
+                self.last_filter_reasons.append({"symbol": str(symbol), "reason": "non-finite ranking feature"})
+                continue
             records.append({"symbol": symbol, "momentum": momentum, "reversal": reversal, "volatility": volatility, "volume": volume_change})
         if not records:
             return []
@@ -60,6 +94,8 @@ class CrossSectionalRankStrategy:
         if scores.empty:
             return []
         score = sum(self.weights[k] * self._z(scores[k]) for k in self.weights)
+        if not np.isfinite(score.to_numpy(dtype=float)).all():
+            return []
         ranked = []
         for idx in score.sort_values(ascending=False, kind="stable").index:
             row = scores.loc[idx]

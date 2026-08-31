@@ -6,6 +6,7 @@ from strategy.domain import MarketState
 from strategy.signals import MarketTrigger
 from strategy.strategies.fixed import FixedAssetStrategy
 from strategy.strategies.rank import CrossSectionalRankStrategy
+from strategy.recommendation import recommend
 
 
 def _market(triggered=True):
@@ -50,3 +51,19 @@ def test_rank_uses_only_history_and_filters_untradable():
 def test_rank_empty_selection():
     frame = pd.DataFrame([{"date": date(2026,8,10), "symbol":"AAA", "close":1, "is_suspended":True, "limit_up":False, "limit_down":False}])
     assert CrossSectionalRankStrategy(candidate_symbols=["AAA"]).select(date(2026,8,10), _market(), frame) is None
+
+
+def test_rank_excludes_zero_prior_volume_with_explicit_reason_and_finite_features():
+    rows = []
+    for d, close, volume in [(date(2026, 8, 8), 10, 100), (date(2026, 8, 9), 11, 0),
+                             (date(2026, 8, 10), 12, 100)]:
+        rows.append({"date": d, "symbol": "AAA", "close": close, "volume": volume,
+                     "is_suspended": False, "limit_up": False, "limit_down": False})
+        rows.append({"date": d, "symbol": "000001.SH", "close": 4100 if d != date(2026, 8, 10) else 4000,
+                     "volume": 100, "is_suspended": False, "limit_up": False, "limit_down": False})
+    strategy = CrossSectionalRankStrategy(candidate_symbols=["AAA"], momentum_window=1,
+                                          reversal_window=1, volatility_window=1, volume_window=1)
+    result = recommend(date(2026, 8, 10), pd.DataFrame(rows), strategy)
+    assert result.selected is None
+    assert any(item["symbol"] == "AAA" and "volume" in item["reason"] for item in result.filtered)
+    assert all(pd.notna(item.get("score", 0)) for item in result.rankings)

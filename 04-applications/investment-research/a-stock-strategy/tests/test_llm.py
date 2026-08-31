@@ -129,3 +129,24 @@ def test_actual_llm_metadata_cannot_be_suppressed_by_caller_metadata(tmp_path):
     assert llm_metadata["enabled"] is True
     assert llm_metadata["status"] == "enabled"
     assert llm_metadata["provider"] == "test-provider"
+
+
+def test_failing_llm_provider_does_not_block_deterministic_report(tmp_path):
+    result = BacktestEngine(1000, commission_rate=0, stamp_duty_rate=0, minimum_commission=0).run(_bars(), FixedAssetStrategy())
+    metrics = evaluate(result)
+
+    class FailingProvider:
+        enabled = True
+        name = "failing-provider"
+
+        def explain_recommendation(self, recommendation):
+            raise OSError("network unavailable")
+
+        def summarize_backtest(self, report):
+            raise TypeError("cannot serialize provider payload")
+
+    paths = write_report(result, metrics, tmp_path, llm_provider=FailingProvider())
+    payload = json.loads(paths.summary.read_text())
+    assert payload["metrics"]["trade_count"] == metrics.trade_count
+    assert payload["metadata"]["llm"]["status"] == "error"
+    assert any("llm" in warning.lower() for warning in payload["warnings"])
