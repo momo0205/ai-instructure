@@ -11,6 +11,10 @@ uv sync --offline
 uv run --offline pytest -q
 ```
 
+`--offline` 只表示运行阶段不访问网络；首次部署仍需先在线执行一次 `uv sync`
+（或把 `uv.lock` 中的 wheel 预先放入 uv 缓存）。如果目标机器没有缓存依赖，直接执行
+`uv sync --offline` 会因无法下载 pandas 等包而失败。
+
 若没有 uv，也可以使用标准 venv（依赖仍需从已配置的本地镜像或网络安装）：
 
 ```bash
