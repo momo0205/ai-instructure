@@ -4,6 +4,8 @@ from __future__ import annotations
 import base64
 import csv
 import json
+import math
+from numbers import Real
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +39,9 @@ class ReportPaths:
 def _jsonable(value: Any) -> Any:
     if hasattr(value, "isoformat"):
         return value.isoformat()
+    if isinstance(value, Real) and not isinstance(value, bool):
+        numeric = float(value)
+        return numeric if math.isfinite(numeric) else None
     if is_dataclass(value):
         return {k: _jsonable(v) for k, v in asdict(value).items()}
     if isinstance(value, dict):
@@ -67,16 +72,28 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
         for point in result.equity:
             writer.writerow({field: _jsonable(getattr(point, field)) for field in equity_fields})
 
-    provider = get_llm_provider() if llm_provider is None else llm_provider
-    provider_enabled = bool(getattr(provider, "enabled", llm_provider is not None))
-    llm_meta = {"enabled": provider_enabled,
-                "status": "enabled" if provider_enabled else "disabled",
-                "provider": getattr(provider, "name", provider.__class__.__name__),
-                "prompt_summary": "explain deterministic results without changing them",
-                "generated_at": datetime.now(timezone.utc).isoformat()}
-    if getattr(provider, "model", None):
-        llm_meta["model"] = provider.model
     llm_errors: list[str] = []
+    provider = None
+    try:
+        provider = get_llm_provider() if llm_provider is None else llm_provider
+        provider_enabled = bool(getattr(provider, "enabled", llm_provider is not None))
+        provider_name = str(getattr(provider, "name", provider.__class__.__name__))
+        llm_meta = {"enabled": provider_enabled,
+                    "status": "enabled" if provider_enabled else "disabled",
+                    "provider": provider_name,
+                    "prompt_summary": "explain deterministic results without changing them",
+                    "generated_at": datetime.now(timezone.utc).isoformat()}
+        provider_model = getattr(provider, "model", None)
+        if provider_model:
+            llm_meta["model"] = str(provider_model)
+    except Exception as exc:
+        # Provider discovery/configuration is optional too: deterministic CSV,
+        # chart, and JSON artifacts must survive a broken integration boundary.
+        provider_enabled = False
+        llm_meta = {"enabled": False, "status": "error", "provider": "unavailable",
+                    "prompt_summary": "explain deterministic results without changing them",
+                    "generated_at": datetime.now(timezone.utc).isoformat()}
+        llm_errors.append(f"llm provider unavailable: {exc}")
     # LLM is an optional explanation boundary: network/provider failures are
     # metadata warnings and never interrupt deterministic artifact creation.
     if recommendation is not None and provider_enabled:

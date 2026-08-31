@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from typing import Any
 import math
+from numbers import Real
 import pandas as pd
 
 from .domain import MarketState, Selection
@@ -35,7 +36,7 @@ class Recommendation:
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         result["as_of"] = self.as_of.isoformat()
-        return result
+        return _json_safe(result)
 
 
 def recommend(as_of: date, data: pd.DataFrame, strategy: Any) -> Recommendation:
@@ -48,17 +49,28 @@ def recommend(as_of: date, data: pd.DataFrame, strategy: Any) -> Recommendation:
         return Recommendation(day, False, None, [], [], [f"missing required columns: {', '.join(sorted(missing))}"])
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.date
     frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
-    if frame["date"].isna().any(): warnings.append("data quality: invalid date values")
-    if pd.to_numeric(frame["close"], errors="coerce").isna().any(): warnings.append("data quality: invalid close prices")
     history = frame[frame["date"] <= day]
+    # Quality diagnostics are point-in-time: future rows must not influence an
+    # as-of recommendation or make a historical report appear unsafe.
+    if history["date"].isna().any(): warnings.append("data quality: invalid date values")
+    close_values = pd.to_numeric(history["close"], errors="coerce")
+    if close_values.isna().any() or not _finite_values(close_values):
+        warnings.append("data quality: invalid close prices")
     index_symbol = getattr(strategy, "index_symbol", "000001.SH")
-    market = _market_state(history, day, index_symbol, getattr(strategy, "trigger_level", 4000.0), getattr(strategy, "trigger_return_threshold", 0.0))
+    try:
+        trigger_level = float(getattr(strategy, "trigger_level", 4000.0))
+        threshold = float(getattr(strategy, "trigger_return_threshold", 0.0))
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("market trigger parameters must be finite") from None
+    if not math.isfinite(trigger_level) or not math.isfinite(threshold):
+        raise ValueError("market trigger parameters must be finite")
+    market = _market_state(history, day, index_symbol, trigger_level, threshold)
     index_rows = history[history["symbol"] == index_symbol]
     if index_rows.empty:
         warnings.append(f"data quality: missing market index {index_symbol}")
     else:
         index_values = pd.to_numeric(index_rows["close"], errors="coerce")
-        if index_values.isna().any() or (~index_values.map(math.isfinite)).any():
+        if index_values.isna().any() or not _finite_values(index_values):
             warnings.append(f"data quality: invalid market index {index_symbol} close")
     if not market.triggered:
         warnings.append("market event not triggered")
@@ -101,7 +113,28 @@ def _market_state(frame: pd.DataFrame, day: date, index_symbol: str, trigger_lev
         latest = float(index.iloc[-1]["close"]); previous = float(index.iloc[-2]["close"]) if len(index) > 1 else latest
     except (TypeError, ValueError, OverflowError):
         return MarketState(day, 0.0, 0.0, False)
-    if not pd.notna(latest) or not pd.notna(previous) or not math.isfinite(latest) or not math.isfinite(previous):
+    if (not pd.notna(latest) or not pd.notna(previous) or not math.isfinite(latest)
+            or not math.isfinite(previous) or latest <= 0 or previous <= 0):
         return MarketState(day, 0.0, 0.0, False)
-    ret = latest / previous - 1 if previous else 0.0
+    ret = latest / previous - 1
+    if not math.isfinite(ret):
+        return MarketState(day, 0.0, 0.0, False)
     return MarketState(day, latest, ret, latest >= trigger_level and ret < threshold)
+
+
+def _finite_values(values: pd.Series) -> bool:
+    try:
+        return bool(values.notna().all() and values.map(float).map(math.isfinite).all())
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, Real) and not isinstance(value, bool):
+        numeric = float(value)
+        return numeric if math.isfinite(numeric) else None
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value

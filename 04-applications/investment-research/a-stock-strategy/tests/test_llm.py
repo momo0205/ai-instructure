@@ -150,3 +150,18 @@ def test_failing_llm_provider_does_not_block_deterministic_report(tmp_path):
     assert payload["metrics"]["trade_count"] == metrics.trade_count
     assert payload["metadata"]["llm"]["status"] == "error"
     assert any("llm" in warning.lower() for warning in payload["warnings"])
+
+
+def test_failing_llm_provider_factory_does_not_block_report(tmp_path, monkeypatch):
+    result = BacktestEngine(1000, commission_rate=0, stamp_duty_rate=0, minimum_commission=0).run(_bars(), FixedAssetStrategy())
+    metrics = evaluate(result)
+
+    def fail_factory():
+        raise OSError("provider unavailable")
+
+    monkeypatch.setattr("strategy.reporting.get_llm_provider", fail_factory)
+    paths = write_report(result, metrics, tmp_path)
+    payload = json.loads(paths.summary.read_text())
+    assert payload["metrics"]["trade_count"] == metrics.trade_count
+    assert payload["metadata"]["llm"]["status"] == "error"
+    assert any("llm provider unavailable" in warning for warning in payload["warnings"])
