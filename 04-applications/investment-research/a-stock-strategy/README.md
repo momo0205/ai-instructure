@@ -69,6 +69,25 @@ CSV 每行是一个交易日/代码组合，必需列为：
 
 日期使用交易所本地日历；四个价格必须为正且有限。价格的前复权/后复权口径必须在配置的 `adjustment` 中明确记录。布尔字段接受 `0/1`、`true/false` 等常见写法。示例数据见 `data/sample/market.csv`。
 
+## 接入 a-stock-data 真实行情
+
+`a-stock-data` 是上游行情调用说明与实现集合，不是本项目的回测依赖。研究环境可把它的百度 K 线调用（或自定义 mootdx 调用）注入
+`AStockDataProvider`；provider 会统一日期、六位证券代码和字段名，并按证券保存 CSV 缓存。这样网络、限流和数据源变更只影响适配层，回测仍可对缓存文件离线运行。
+
+```python
+from strategy import AStockDataProvider, BaiduKlineFetcher
+
+provider = AStockDataProvider(
+    BaiduKlineFetcher().fetch,
+    cache_dir="data/cache",
+    adjustment="none",  # 必须明确记录：none/前复权/后复权，不由程序猜测
+)
+bars = provider.load(["510688", "000001"], start="2020-01-01", refresh=True)
+```
+
+刷新需要服务器能访问上游网站，不需要 Tushare Token；回测时使用 `refresh=False` 命中本地缓存。若刷新失败但已有缓存，结果会带有
+`bars.attrs["warnings"]`，明确标记为 stale cache，避免把旧数据误认为最新数据。百度接口未提供可靠的停牌/涨跌停布尔字段时，适配层会填入保守默认值 `False`；严肃研究应另接交易状态数据源并补齐这些列。
+
 ## 可复现性与限制
 
 给定相同的 CSV、TOML、Python 版本和代码提交，策略、撮合、指标及 CSV/JSON 内容是确定性的；图表使用固定 Agg 后端。`generated_at` 是报告生成时刻，因此每次报告的时间戳会不同。系统不会在回测过程中隐式联网或补齐缺失行情，停牌、涨跌停和无下一交易日会保留警告。
