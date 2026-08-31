@@ -32,3 +32,9 @@ slippage_bps = 2.0
 [metadata]
 source = "local-sample"
 adjustment_note = "unadjusted"
+# Reproducibility markers: the baseline is deterministic and intentionally offline.
+offline = true
+timezone = "Asia/Shanghai"
+random_seed = 0
+benchmark_symbol = "588000.SH"
+llm_enabled = false
