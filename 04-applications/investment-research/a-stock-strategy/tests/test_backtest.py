@@ -102,6 +102,14 @@ def test_cost_parameters_must_be_finite():
             BacktestEngine(initial_cash=100, **{name: math.nan})
 
 
+def test_initial_cash_and_trigger_parameters_must_be_finite():
+    import pytest
+    with pytest.raises(ValueError, match="non-negative"):
+        BacktestEngine(initial_cash=float("nan"))
+    with pytest.raises(ValueError, match="finite"):
+        BacktestEngine(initial_cash=100, trigger_level=float("inf"))
+
+
 def test_non_finite_entry_prices_are_not_executed():
     frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 2), "AAA", float("nan"), 11),
                  (date(2026, 1, 3), "AAA", 12, 12))
@@ -119,3 +127,36 @@ def test_non_finite_close_does_not_poison_mark_to_market():
     assert result.equity[2].position_value == result.trades[0].quantity * 11
     assert all(pd.notna(point.equity) for point in result.equity)
     assert any("mark" in warning for warning in result.warnings)
+
+
+def test_market_state_fails_closed_when_configured_index_is_missing_or_invalid():
+    engine = BacktestEngine(initial_cash=1000, index_symbol="INDEX")
+    missing = bars((date(2026, 1, 1), "AAA", 10, 10))
+    assert engine._market_state(missing, date(2026, 1, 1)).triggered is False
+
+    malformed = bars((date(2026, 1, 1), "INDEX", 4100, 4100),
+                     (date(2026, 1, 2), "INDEX", 4100, float("nan")))
+    assert engine._market_state(malformed, date(2026, 1, 2)).triggered is False
+
+
+def test_run_rejects_duplicate_rows_before_strategy_execution():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 1), "AAA", 10, 10))
+    import pytest
+    with pytest.raises(ValueError, match="duplicate date/symbol"):
+        BacktestEngine(initial_cash=1000).run(frame, AlwaysSelect())
+
+
+def test_entry_does_not_use_same_day_close_as_future_data():
+    frame = bars((date(2026, 1, 1), "AAA", 10, 10),
+                 (date(2026, 1, 2), "AAA", 11, float("nan")),
+                 (date(2026, 1, 3), "AAA", 12, 12))
+    result = BacktestEngine(initial_cash=1000, commission_rate=0, stamp_duty_rate=0,
+                            minimum_commission=0, slippage_bps=0).run(frame, AlwaysSelect())
+    assert result.trades and result.trades[0].entry_date == date(2026, 1, 2)
+
+
+def test_engine_rejects_non_positive_prices_at_entry():
+    frame = bars((date(2026, 1, 1), "AAA", 0, 10), (date(2026, 1, 2), "AAA", 11, 11))
+    import pytest
+    with pytest.raises(ValueError, match="non-finite or non-positive prices"):
+        BacktestEngine(initial_cash=1000).run(frame, AlwaysSelect())

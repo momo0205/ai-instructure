@@ -79,12 +79,13 @@ def recommend(as_of: date, data: pd.DataFrame, strategy: Any) -> Recommendation:
     rankings: list[dict[str, Any]] = []
     if hasattr(strategy, "rank_candidates"):
         rankings = [dict(item) for item in strategy.rank_candidates(day, market, history)]
+        explicit_filters = {item["symbol"]: item["reason"] for item in getattr(strategy, "last_filter_reasons", [])}
         ranked_symbols = {item.get("symbol") for item in rankings}
         for symbol in symbols:
             if symbol not in ranked_symbols and not any(item.get("symbol") == symbol for item in filtered):
                 rows = history[history["symbol"] == symbol]
                 if not rows.empty and rows.iloc[-1]["date"] == day:
-                    filtered.append({"symbol": symbol, "reason": "insufficient history or invalid features"})
+                    filtered.append({"symbol": symbol, "reason": explicit_filters.get(symbol, "insufficient history or invalid features")})
     selected = strategy.select(day, market, history)
     if selected is not None and not any(item.get("symbol") == selected.symbol for item in rankings):
         rankings = [{"rank": 1, "symbol": selected.symbol, "score": selected.score, "features": selected.features, "reason": selected.reason}] + rankings

@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from .data import BOOL_COLUMNS, validate_market_frame
 from .domain import EquityPoint, MarketState, Trade
 
 
@@ -24,7 +25,7 @@ class BacktestEngine:
                  minimum_commission: float = 5.0, slippage_bps: float = 2.0,
                  index_symbol: str = "000001.SH", trigger_level: float = 4000.0,
                  trigger_return_threshold: float = 0.0):
-        if initial_cash < 0 or holding_period_days < 1:
+        if not math.isfinite(float(initial_cash)) or initial_cash < 0 or holding_period_days < 1:
             raise ValueError("initial_cash must be non-negative and holding_period_days must be positive")
         parameters = (commission_rate, stamp_duty_rate, minimum_commission, slippage_bps)
         if any(not math.isfinite(float(value)) for value in parameters):
@@ -38,15 +39,21 @@ class BacktestEngine:
         self.minimum_commission = float(minimum_commission)
         self.slippage_bps = float(slippage_bps)
         self.index_symbol = index_symbol
+        if not math.isfinite(float(trigger_level)) or not math.isfinite(float(trigger_return_threshold)):
+            raise ValueError("market trigger parameters must be finite")
         self.trigger_level = float(trigger_level)
         self.trigger_return_threshold = float(trigger_return_threshold)
 
     def run(self, market_data: pd.DataFrame, strategy: Any) -> BacktestResult:
+        # Validate before sorting or simulating so callers cannot bypass the
+        # daily/duplicate/positive-price data contract.
+        frame = self._validation_frame(market_data)
         required = {"date", "symbol", "open", "close"}
-        missing = required - set(market_data.columns)
+        missing = required - set(frame.columns)
         if missing:
             raise ValueError(f"market_data missing columns: {', '.join(sorted(missing))}")
-        frame = market_data.copy()
+        validate_market_frame(frame, allow_nonfinite_prices=True)
+        frame = frame.copy()
         frame["date"] = pd.to_datetime(frame["date"]).dt.date
         frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
         dates = list(frame["date"].drop_duplicates())
@@ -66,7 +73,9 @@ class BacktestEngine:
                 _, symbol, signal_day = pending_entry
                 row = self._row(today, symbol)
                 pending_entry = None
-                if row is None or self._blocked_entry(row) or not self._valid_prices(row, "open", "close"):
+                # The close is not known at next-open execution; only the open
+                # and tradability flags can gate entry (future-data cutoff).
+                if row is None or self._blocked_entry(row) or not self._valid_prices(row, "open"):
                     warnings.append(f"entry not executed for {symbol} on {day} (suspended or limit-up/down)")
                 else:
                     price = float(row["open"]) * (1 + self.slippage_bps / 10000)
@@ -138,13 +147,50 @@ class BacktestEngine:
     def _market_state(self, frame: pd.DataFrame, day: date) -> MarketState:
         index = frame[(frame["symbol"] == self.index_symbol) & (frame["date"] <= day)].sort_values("date")
         if index.empty:
-            return MarketState(day, 0.0, 0.0, True)
+            return MarketState(day, 0.0, 0.0, False)
         latest = index.iloc[-1]
         previous = index.iloc[-2] if len(index) > 1 else latest
-        previous_close = float(previous["close"])
-        ret = float(latest["close"]) / previous_close - 1 if previous_close else 0.0
-        return MarketState(day, float(latest["close"]), ret,
-                           float(latest["close"]) >= self.trigger_level and ret < self.trigger_return_threshold)
+        try:
+            latest_close = float(latest["close"])
+            previous_close = float(previous["close"])
+            if not (math.isfinite(latest_close) and math.isfinite(previous_close)):
+                return MarketState(day, 0.0, 0.0, False)
+            if latest_close <= 0 or previous_close <= 0:
+                return MarketState(day, 0.0, 0.0, False)
+            ret = latest_close / previous_close - 1
+            if not math.isfinite(ret):
+                return MarketState(day, 0.0, 0.0, False)
+        except (TypeError, ValueError, OverflowError, ZeroDivisionError):
+            return MarketState(day, 0.0, 0.0, False)
+        return MarketState(day, latest_close, ret,
+                           latest_close >= self.trigger_level and ret < self.trigger_return_threshold)
+
+    @staticmethod
+    def _validation_frame(market_data: pd.DataFrame) -> pd.DataFrame:
+        """Add harmless defaults for optional columns used by the matcher.
+
+        The shared validator remains authoritative; defaults only keep the
+        engine compatible with small research fixtures that omit flags/volume.
+        """
+        frame = market_data.copy()
+        if not isinstance(frame, pd.DataFrame):
+            raise TypeError("market_data must be a pandas DataFrame")
+        missing = {"date", "symbol", "open", "close"} - set(frame.columns)
+        if missing:
+            return frame
+        if "high" not in frame:
+            frame["high"] = pd.concat([pd.to_numeric(frame["open"], errors="coerce"),
+                                        pd.to_numeric(frame["close"], errors="coerce")], axis=1).max(axis=1)
+        if "low" not in frame:
+            frame["low"] = pd.concat([pd.to_numeric(frame["open"], errors="coerce"),
+                                       pd.to_numeric(frame["close"], errors="coerce")], axis=1).min(axis=1)
+        for column in ("volume", "amount"):
+            if column not in frame:
+                frame[column] = 0.0
+        for column in BOOL_COLUMNS:
+            if column not in frame:
+                frame[column] = False
+        return frame
 
     @staticmethod
     def _row(day_frame: pd.DataFrame, symbol: str):
@@ -167,6 +213,8 @@ class BacktestEngine:
             return False
 
     def _commission(self, notional: float) -> float:
+        # Apply exchange-style percentage commission with the configured floor
+        # so every reported trade includes explicit, reproducible costs.
         return max(self.minimum_commission, notional * self.commission_rate) if notional else 0.0
 
     def _quantity(self, cash: float, price: float) -> float:
