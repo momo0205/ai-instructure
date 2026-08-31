@@ -184,6 +184,15 @@ def test_run_rejects_missing_full_market_contract_column():
         BacktestEngine(initial_cash=1000).run(frame, AlwaysSelect())
 
 
+def test_run_rejects_partially_missing_tradability_flags():
+    import pytest
+
+    for missing_flags in (("is_suspended",), ("is_suspended", "limit_up")):
+        frame = bars((date(2026, 1, 1), "AAA", 10, 10)).drop(columns=list(missing_flags))
+        with pytest.raises(ValueError, match="missing tradability columns"):
+            BacktestEngine(initial_cash=1000).run(frame, AlwaysSelect())
+
+
 def test_run_rejects_duplicate_rows_before_strategy_execution():
     frame = bars((date(2026, 1, 1), "AAA", 10, 10), (date(2026, 1, 1), "AAA", 10, 10))
     import pytest
