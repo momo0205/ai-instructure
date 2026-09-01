@@ -1,0 +1,39 @@
+[data]
+source = "a-stock-data/baidu"
+path = "../data/real_baidu/market.csv"
+format = "csv"
+adjustment = "none"
+
+[strategy]
+name = "fixed_asset"
+
+[strategy.parameters]
+symbol = "588000"
+
+[backtest]
+initial_cash = 100000.0
+holding_period_days = 1
+commission_rate = 0.0003
+stamp_duty_rate = 0.001
+minimum_commission = 5.0
+slippage_bps = 2.0
+
+[market]
+index_symbol = "000001"
+trigger_level = 4000.0
+trigger_return_threshold = 0.0
+
+[costs]
+commission_rate = 0.0003
+stamp_duty_rate = 0.001
+minimum_commission = 5.0
+slippage_bps = 2.0
+
+[metadata]
+source = "a-stock-data/baidu"
+adjustment_note = "unadjusted daily bars; trading-status flags unavailable from this source"
+offline = false
+timezone = "Asia/Shanghai"
+random_seed = 0
+benchmark_symbol = "588000"
+llm_enabled = false
