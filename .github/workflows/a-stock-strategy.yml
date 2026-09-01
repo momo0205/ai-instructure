@@ -1,0 +1,59 @@
+name: A-stock strategy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "04-applications/investment-research/a-stock-strategy/**"
+      - ".github/workflows/a-stock-strategy.yml"
+  pull_request:
+    paths:
+      - "04-applications/investment-research/a-stock-strategy/**"
+      - ".github/workflows/a-stock-strategy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a-stock-strategy-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: 04-applications/investment-research/a-stock-strategy
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: 04-applications/investment-research/a-stock-strategy/uv.lock
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen --python 3.12 --extra dev
+
+      - name: Run tests
+        run: uv run --frozen --extra dev pytest -q
+
+      - name: Run sample backtest
+        run: >-
+          uv run --frozen python -m strategy backtest
+          --config configs/baseline.toml
+          --output reports/ci
+
+      - name: Upload sample report
+        uses: actions/upload-artifact@v4
+        with:
+          name: a-stock-strategy-sample-report
+          path: 04-applications/investment-research/a-stock-strategy/reports/ci/
+          if-no-files-found: error
+          retention-days: 14
