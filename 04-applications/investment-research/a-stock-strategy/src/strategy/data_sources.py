@@ -36,9 +36,10 @@ def _symbol(value: object) -> str:
 def normalize_daily_bars(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
     """把 mootdx/百度常见字段映射到项目的统一日线契约。
 
-    上游通常没有停牌/涨跌停布尔列；这里默认 ``False``，因为“未知”不能在回测
-    中悄悄当成可交易。调用方如需要严格处理这些字段，应在刷新前补齐专门的交易
-    状态数据。复权口径也不在价格列中猜测，必须由 provider 的 ``adjustment`` 元数据记录。
+    上游通常没有停牌/涨跌停布尔列；为兼容统一 CSV 契约暂时填入 ``False``。
+    这个值只表示“数据源未报告限制”，并不能证明证券真实可交易；严肃回测应先
+    补齐专门的交易状态数据。复权口径也不从价格列猜测，必须由 provider 的
+    ``adjustment`` 元数据记录。
     """
     if not isinstance(frame, pd.DataFrame) or frame.empty:
         raise ValueError(f"empty daily bars for {symbol}")
@@ -55,8 +56,8 @@ def normalize_daily_bars(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
         if column not in result:
             raise ValueError(f"upstream daily bars missing {column}")
         result[column] = pd.to_numeric(result[column], errors="coerce")
-    # The source adapters do not claim a trading-status feed; explicit false is the
-    # conservative default for schema compatibility, documented above.
+    # 数据源没有交易状态字段时，这些 False 只是契约兼容值，不是可交易性证明。
+    # 保留明确注释，避免后续维护者误把“未知”理解为“确认未停牌/未涨跌停”。
     for column in ("is_suspended", "limit_up", "limit_down"):
         if column not in result:
             result[column] = False
@@ -126,7 +127,7 @@ class AStockDataProvider:
 
 
 class BaiduKlineFetcher:
-    """百度股市通日线 adapter；依赖 requests，仅在主动刷新时联网。"""
+    """百度股市通日线 adapter；使用 Python 标准库，仅在主动刷新时联网。"""
 
     url = "https://finance.pae.baidu.com/selfselect/getstockquotation"
 
@@ -146,7 +147,13 @@ class BaiduKlineFetcher:
         }
         request = Request(self.url + "?" + urlencode(params), headers={"User-Agent": "Mozilla/5.0"})
         with urlopen(request, timeout=self.timeout) as response:
-            market = json.loads(response.read().decode("utf-8")).get("Result", {}).get("newMarketData", {})
+            payload = json.loads(response.read().decode("utf-8"))
+        result = payload.get("Result", {})
+        # 百度对有效代码返回字典，对无数据/不支持的代码返回空列表。先检查响应类型，
+        # 将上游形态差异转换为稳定、可诊断的 provider 异常。
+        if not isinstance(result, dict):
+            raise ValueError(f"Baidu returned no daily bars for {_symbol(symbol)}")
+        market = result.get("newMarketData", {})
         keys = market.get("keys", [])
         raw_rows = market.get("marketData", "")
         rows = [row.split(",") for row in raw_rows.split(";") if row.strip()]

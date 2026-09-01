@@ -85,3 +85,23 @@ def test_baidu_fetcher_parses_keyed_rows(monkeypatch):
     frame = BaiduKlineFetcher().fetch("000001", None, None)
     assert frame.iloc[0]["time"] == "2026-08-03"
     assert frame.iloc[0]["close"] == 1.1
+
+
+def test_baidu_fetcher_reports_empty_result_as_source_error(monkeypatch):
+    """无行情代码应得到可诊断的数据源错误，而不是泄漏内部 AttributeError。"""
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            import json
+            return json.dumps({"ResultCode": 0, "Result": []}).encode()
+
+    monkeypatch.setattr("strategy.data_sources.urlopen", lambda *args, **kwargs: Response())
+
+    with pytest.raises(ValueError, match="no daily bars for 510688"):
+        BaiduKlineFetcher().fetch("510688", None, None)
