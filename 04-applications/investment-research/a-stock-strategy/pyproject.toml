@@ -16,6 +16,9 @@ dependencies = [
 dev = [
   "pytest>=8.0",
 ]
+live = [
+  "mootdx>=0.11.7,<0.12",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

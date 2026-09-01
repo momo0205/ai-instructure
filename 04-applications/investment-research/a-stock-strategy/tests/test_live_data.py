@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from strategy.data import CsvMarketDataProvider
-from strategy.data_sources import AStockDataProvider, BaiduKlineFetcher
+from strategy.data_sources import AStockDataProvider, BaiduKlineFetcher, MootdxIndexFetcher
 
 
 def _bars() -> pd.DataFrame:
@@ -131,3 +131,22 @@ def test_baidu_fetcher_reports_empty_result_as_source_error(monkeypatch):
 
     with pytest.raises(ValueError, match="no daily bars for 510688"):
         BaiduKlineFetcher().fetch("510688", None, None)
+
+
+def test_mootdx_index_fetcher_uses_index_endpoint_and_normalizes():
+    calls = []
+
+    class FakeClient:
+        def index(self, **kwargs):
+            calls.append(kwargs)
+            return pd.DataFrame({
+                "datetime": ["2026-08-03", "2026-08-04"],
+                "open": [4005, 3990], "high": [4010, 4000], "low": [3980, 3970],
+                "close": [3990, 3980], "vol": [100, 110], "amount": [1, 1],
+            })
+
+    frame = MootdxIndexFetcher(FakeClient(), page_size=800).fetch("000001", None, None)
+
+    assert calls[0]["symbol"] == "000001"
+    assert frame["symbol"].tolist() == ["000001", "000001"]
+    assert frame["close"].tolist() == [3990, 3980]

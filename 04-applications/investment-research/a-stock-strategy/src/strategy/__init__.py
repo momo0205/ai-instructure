@@ -8,7 +8,13 @@ from .config import (
     load_config,
 )
 from .data import CsvMarketDataProvider, REQUIRED_MARKET_COLUMNS, validate_market_frame
-from .data_sources import AStockDataProvider, BaiduKlineFetcher, normalize_daily_bars
+from .data_sources import (
+    AStockDataProvider,
+    BaiduKlineFetcher,
+    MootdxBarFetcher,
+    MootdxIndexFetcher,
+    normalize_daily_bars,
+)
 from .domain import EquityPoint, MarketState, Selection, Trade
 from .evaluation import Metrics, evaluate
 
@@ -17,6 +23,8 @@ __all__ = [
     "BacktestSettings",
     "AStockDataProvider",
     "BaiduKlineFetcher",
+    "MootdxBarFetcher",
+    "MootdxIndexFetcher",
     "CostConfig",
     "CsvMarketDataProvider",
     "DataConfig",
