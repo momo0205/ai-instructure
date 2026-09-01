@@ -145,7 +145,17 @@ class BaiduKlineFetcher:
             "group": "quotation_kline_ab", "finClientType": "pc", "code": _symbol(symbol),
             "start_time": start or "", "ktype": "1",
         }
-        request = Request(self.url + "?" + urlencode(params), headers={"User-Agent": "Mozilla/5.0"})
+        request = Request(
+            self.url + "?" + urlencode(params),
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                # 百度网页端会校验这些浏览器来源头；缺失时真实请求可能返回 403。
+                "Accept": "application/vnd.finance-web.v1+json",
+                "Accept-Language": "zh-CN,zh;q=0.9",
+                "Origin": "https://gushitong.baidu.com",
+                "Referer": "https://gushitong.baidu.com/",
+            },
+        )
         with urlopen(request, timeout=self.timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
         result = payload.get("Result", {})
