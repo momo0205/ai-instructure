@@ -176,4 +176,71 @@ class BaiduKlineFetcher:
         return frame
 
 
-__all__ = ["AStockDataProvider", "BaiduKlineFetcher", "DailyBarFetcher", "normalize_daily_bars"]
+class _MootdxFetcher:
+    """mootdx 共享实现：分页拉取通达信日线并按日期截取。"""
+
+    def __init__(self, client=None, *, page_size: int = 800):
+        self.client = client
+        self.page_size = page_size
+
+    def _client(self):
+        if self.client is None:
+            try:
+                from mootdx.quotes import Quotes
+            except ImportError as error:
+                raise RuntimeError("mootdx is required for live index history; install project dependencies") from error
+            self.client = Quotes.factory(market="std", heartbeat=True)
+        return self.client
+
+    def _fetch_pages(self, method_name: str, symbol: str) -> pd.DataFrame:
+        client = self._client()
+        pages: list[pd.DataFrame] = []
+        # 通达信单页最多 800 根；从最新页向历史页翻页，直到返回空页。
+        for start in range(0, 25 * self.page_size, self.page_size):
+            page = getattr(client, method_name)(symbol=_symbol(symbol), frequency=9,
+                                                 start=start, offset=self.page_size)
+            if page is None or len(page) == 0:
+                break
+            pages.append(page)
+            if len(page) < self.page_size:
+                break
+        if not pages:
+            raise ValueError(f"mootdx returned no daily bars for {_symbol(symbol)}")
+        return pd.concat(pages, ignore_index=True)
+
+    def _fetch(self, symbol: str, start: str | None, end: str | None, method_name: str) -> pd.DataFrame:
+        frame = self._fetch_pages(method_name, symbol)
+        frame = normalize_daily_bars(frame, symbol)
+        if start is not None:
+            frame = frame[frame["date"] >= pd.Timestamp(start)]
+        if end is not None:
+            frame = frame[frame["date"] <= pd.Timestamp(end)]
+        if frame.empty:
+            raise ValueError(f"mootdx returned no daily bars for {_symbol(symbol)} in requested range")
+        return frame
+
+
+class MootdxIndexFetcher(_MootdxFetcher):
+    """使用 ``client.index`` 获取指数历史日线；000001 才会被识别为上证指数。"""
+
+    def __call__(self, symbol: str, start: str | None, end: str | None) -> pd.DataFrame:
+        return self.fetch(symbol, start, end)
+
+    def fetch(self, symbol: str, start: str | None, end: str | None) -> pd.DataFrame:
+        return self._fetch(symbol, start, end, "index")
+
+
+class MootdxBarFetcher(_MootdxFetcher):
+    """使用 ``client.bars`` 获取股票或 ETF 历史日线。"""
+
+    def __call__(self, symbol: str, start: str | None, end: str | None) -> pd.DataFrame:
+        return self.fetch(symbol, start, end)
+
+    def fetch(self, symbol: str, start: str | None, end: str | None) -> pd.DataFrame:
+        return self._fetch(symbol, start, end, "bars")
+
+
+__all__ = [
+    "AStockDataProvider", "BaiduKlineFetcher", "DailyBarFetcher",
+    "MootdxBarFetcher", "MootdxIndexFetcher", "normalize_daily_bars",
+]

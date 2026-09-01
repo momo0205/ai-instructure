@@ -74,6 +74,14 @@ CSV 每行是一个交易日/代码组合，必需列为：
 `a-stock-data` 是上游行情调用说明与实现集合，不是本项目的回测依赖。研究环境可把它的百度 K 线调用（或自定义 mootdx 调用）注入
 `AStockDataProvider`；provider 会统一日期、六位证券代码和字段名，并按证券保存 CSV 缓存。这样网络、限流和数据源变更只影响适配层，回测仍可对缓存文件离线运行。
 
+使用 mootdx 获取指数历史日线前，安装可选实时数据依赖：
+
+```bash
+uv sync --extra live
+```
+
+`MootdxIndexFetcher` 使用 `client.index`，`MootdxBarFetcher` 使用 `client.bars`；两者都需要服务器能够访问通达信 TCP 行情端口。
+
 ```python
 from strategy import AStockDataProvider, BaiduKlineFetcher
 
