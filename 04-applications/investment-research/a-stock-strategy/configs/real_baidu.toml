@@ -1,6 +1,6 @@
 [data]
-source = "a-stock-data/baidu"
-path = "../data/real_baidu/market.csv"
+source = "a-stock-data/mootdx"
+path = "../data/real_mootdx/market.csv"
 format = "csv"
 adjustment = "none"
 
@@ -30,7 +30,7 @@ minimum_commission = 5.0
 slippage_bps = 2.0
 
 [metadata]
-source = "a-stock-data/baidu"
+source = "a-stock-data/mootdx"
 adjustment_note = "unadjusted daily bars; trading-status flags unavailable from this source"
 offline = false
 timezone = "Asia/Shanghai"
