@@ -82,11 +82,11 @@ provider = AStockDataProvider(
     cache_dir="data/cache",
     adjustment="none",  # 必须明确记录：none/前复权/后复权，不由程序猜测
 )
-bars = provider.load(["510688", "000001"], start="2020-01-01", refresh=True)
+bars = provider.load(["588000", "000001"], start="2020-01-01", refresh=True)
 ```
 
 刷新需要服务器能访问上游网站，不需要 Tushare Token；回测时使用 `refresh=False` 命中本地缓存。若刷新失败但已有缓存，结果会带有
-`bars.attrs["warnings"]`，明确标记为 stale cache，避免把旧数据误认为最新数据。百度接口未提供可靠的停牌/涨跌停布尔字段时，适配层会填入保守默认值 `False`；严肃研究应另接交易状态数据源并补齐这些列。
+`bars.attrs["warnings"]`，明确标记为 stale cache，避免把旧数据误认为最新数据。百度接口未提供可靠的停牌/涨跌停布尔字段时，适配层会为满足 CSV 契约暂填 `False`；这不是可交易性证明，严肃研究应另接交易状态数据源并补齐这些列。
 
 ## 可复现性与限制
 
