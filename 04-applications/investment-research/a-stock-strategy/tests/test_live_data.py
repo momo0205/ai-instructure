@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from strategy.data import CsvMarketDataProvider
 from strategy.data_sources import AStockDataProvider, BaiduKlineFetcher
 
 
@@ -62,7 +63,21 @@ def test_provider_rejects_malformed_upstream_prices():
         AStockDataProvider(lambda *_: bad).load(["000001"])
 
 
+def test_csv_provider_preserves_leading_zero_in_symbol(tmp_path):
+    path = tmp_path / "market.csv"
+    frame = _bars().rename(columns={"time": "date"}).assign(
+        symbol="000001", is_suspended=False, limit_up=False, limit_down=False
+    )
+    frame.to_csv(path, index=False)
+
+    loaded = CsvMarketDataProvider(path).load()
+
+    assert loaded["symbol"].tolist() == ["000001", "000001"]
+
+
 def test_baidu_fetcher_parses_keyed_rows(monkeypatch):
+    seen = {}
+
     class Response:
         def __enter__(self):
             return self
@@ -81,10 +96,21 @@ def test_baidu_fetcher_parses_keyed_rows(monkeypatch):
                 }
             }).encode()
 
-    monkeypatch.setattr("strategy.data_sources.urlopen", lambda *args, **kwargs: Response())
+    def fake_urlopen(request, **kwargs):
+        seen["accept"] = request.get_header("Accept")
+        seen["origin"] = request.get_header("Origin")
+        seen["referer"] = request.get_header("Referer")
+        return Response()
+
+    monkeypatch.setattr("strategy.data_sources.urlopen", fake_urlopen)
     frame = BaiduKlineFetcher().fetch("000001", None, None)
     assert frame.iloc[0]["time"] == "2026-08-03"
     assert frame.iloc[0]["close"] == 1.1
+    assert seen == {
+        "accept": "application/vnd.finance-web.v1+json",
+        "origin": "https://gushitong.baidu.com",
+        "referer": "https://gushitong.baidu.com/",
+    }
 
 
 def test_baidu_fetcher_reports_empty_result_as_source_error(monkeypatch):

@@ -94,7 +94,13 @@ class CsvMarketDataProvider:
         if not self.path.exists():
             raise FileNotFoundError(self.path)
 
-        frame = pd.read_csv(self.path, converters={column: _parse_bool for column in BOOL_COLUMNS})
+        # symbol 必须按字符串读取；否则 pandas 会把 000001 推断成整数 1，
+        # 丢失交易所代码的前导零，进而无法与策略/指数配置匹配。
+        frame = pd.read_csv(
+            self.path,
+            dtype={"symbol": "string"},
+            converters={column: _parse_bool for column in BOOL_COLUMNS},
+        )
         frame["date"] = pd.to_datetime(frame["date"], errors="raise")
         frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
         frame = _canonicalize_columns(frame)
