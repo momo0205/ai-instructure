@@ -1,0 +1,40 @@
+# Replace these two CSVs with verified historical data. Missing inputs fail.
+[data]
+source = "user-verified-index-and-etf-daily"
+path = "../data/real/market.csv"
+adjustment = "none"
+
+[strategy]
+name = "fixed_asset"
+[strategy.parameters]
+symbol = "588000.SH"
+candidate_symbols = ["588000.SH", "510300.SH", "159915.SZ"]
+momentum_window = 20
+reversal_window = 3
+volatility_window = 20
+volume_window = 5
+weights = { momentum = 0.0, reversal = 1.0, volatility = -0.25, volume = 0.0 }
+
+[backtest]
+initial_cash = 100000.0
+holding_period_days = 1
+lot_size = 100
+
+[market]
+index_symbol = "000001.SH"
+min_declining_count = 4000
+trigger_return_threshold = -0.01
+breadth_path = "../data/real/breadth.csv"
+
+[costs]
+commission_rate = 0.0003
+stamp_duty_rate = 0.0
+minimum_commission = 5.0
+slippage_bps = 2.0
+
+[metadata]
+source = "user-verified-index-and-etf-daily"
+sample = false
+offline = true
+llm_enabled = false
+warnings = ["Verify exchange coverage, suspended listings, ETF distributions and tradability flags before interpreting returns.", "Daily close signals are entered at the next open, not at the signal-day close."]

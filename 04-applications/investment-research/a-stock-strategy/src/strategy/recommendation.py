@@ -9,6 +9,7 @@ from numbers import Real
 import pandas as pd
 
 from .domain import MarketState, Selection
+from .signals import market_state
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,10 @@ def recommend(as_of: date, data: pd.DataFrame, strategy: Any) -> Recommendation:
         raise ValueError("market trigger parameters must be finite") from None
     if not math.isfinite(trigger_level) or not math.isfinite(threshold):
         raise ValueError("market trigger parameters must be finite")
-    market = _market_state(history, day, index_symbol, trigger_level, threshold)
+    market, market_warning = market_state(history, day, index_symbol, trigger_level, threshold,
+                                         getattr(strategy, "min_declining_count", None))
+    if market_warning:
+        warnings.append(market_warning)
     index_rows = history[history["symbol"] == index_symbol]
     if index_rows.empty:
         warnings.append(f"data quality: missing market index {index_symbol}")
@@ -104,22 +108,6 @@ def recommend(as_of: date, data: pd.DataFrame, strategy: Any) -> Recommendation:
     rankings.sort(key=lambda item: (-float(item.get("score", 0)), str(item.get("symbol", ""))))
     for index, item in enumerate(rankings, 1): item["rank"] = index
     return Recommendation(day, market.triggered, selected, rankings, filtered, warnings)
-
-
-def _market_state(frame: pd.DataFrame, day: date, index_symbol: str, trigger_level: float, threshold: float) -> MarketState:
-    index = frame[(frame["symbol"] == index_symbol) & (frame["date"] <= day)].sort_values("date")
-    if index.empty: return MarketState(day, 0.0, 0.0, False)
-    try:
-        latest = float(index.iloc[-1]["close"]); previous = float(index.iloc[-2]["close"]) if len(index) > 1 else latest
-    except (TypeError, ValueError, OverflowError):
-        return MarketState(day, 0.0, 0.0, False)
-    if (not pd.notna(latest) or not pd.notna(previous) or not math.isfinite(latest)
-            or not math.isfinite(previous) or latest <= 0 or previous <= 0):
-        return MarketState(day, 0.0, 0.0, False)
-    ret = latest / previous - 1
-    if not math.isfinite(ret):
-        return MarketState(day, 0.0, 0.0, False)
-    return MarketState(day, latest, ret, latest >= trigger_level and ret < threshold)
 
 
 def _finite_values(values: pd.Series) -> bool:

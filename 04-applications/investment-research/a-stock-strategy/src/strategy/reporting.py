@@ -126,7 +126,7 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
     meta.setdefault("costs", {})
     meta.setdefault("generated_at", datetime.now(timezone.utc).isoformat())
     meta.setdefault("range", meta["data_range"])
-    chart_warning = _write_chart(result, report_path)
+    chart_warning = _write_chart(result, report_path, sample=bool(meta.get("sample", False)))
     report_warnings = list(result.warnings) + ([chart_warning] if chart_warning else []) + llm_errors
     caller_warnings = list(meta.get("warnings", []))
     report_warnings = caller_warnings + [warning for warning in report_warnings if warning not in caller_warnings]
@@ -141,13 +141,18 @@ def write_report(result: BacktestResult, metrics: Metrics, output_dir: str | Pat
     return ReportPaths(trades_path, equity_path, summary_path, report_path)
 
 
-def _write_chart(result: BacktestResult, path: Path) -> str | None:
+def _write_chart(result: BacktestResult, path: Path, *, sample: bool = False) -> str | None:
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=False)
+        import matplotlib.dates as mdates
         days = [point.date for point in result.equity]
+        multiple_years = len({day.year for day in days}) > 1
+        fig, axes = plt.subplots(3 if multiple_years else 2, 1,
+                                 figsize=(9, 8 if multiple_years else 6), sharex=False)
+        if sample:
+            fig.suptitle("SYNTHETIC DATA - software demonstration only", fontsize=12)
         axes[0].plot(days, [point.equity for point in result.equity], color="#2563eb")
         axes[0].set_ylabel("Equity")
         axes[1].fill_between(days, [point.drawdown for point in result.equity], 0, color="#dc2626", alpha=.3)
@@ -160,8 +165,10 @@ def _write_chart(result: BacktestResult, path: Path) -> str | None:
             returns = [values[-1] / values[0] - 1 if values[0] else 0 for values in (years[y] for y in labels)]
             axes[2].bar([str(y) for y in labels], returns, color="#16a34a")
             axes[2].set_ylabel("Yearly return")
-        else:
-            axes[2].set_visible(False)
+        for axis in axes[:2]:
+            locator = mdates.AutoDateLocator(minticks=3, maxticks=6)
+            axis.xaxis.set_major_locator(locator)
+            axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
         axes[0].grid(alpha=.2); axes[1].grid(alpha=.2)
         fig.tight_layout(); fig.savefig(path, dpi=120); plt.close(fig)
         return None

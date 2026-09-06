@@ -25,6 +25,7 @@ class StrategyConfig:
 class BacktestSettings:
     initial_cash: float
     holding_period_days: int = 1
+    lot_size: int = 0
     commission_rate: float = 0.0003
     stamp_duty_rate: float = 0.001
     minimum_commission: float = 5.0
@@ -33,6 +34,8 @@ class BacktestSettings:
 
 @dataclass(frozen=True, slots=True)
 class MarketConfig:
+    min_declining_count: int | None = None
+    breadth_path: str | None = None
     index_symbol: str = "000001.SH"
     trigger_level: float = 4000.0
     trigger_return_threshold: float = 0.0
@@ -93,12 +96,15 @@ def load_config(path: str | Path) -> BacktestConfig:
     backtest = BacktestSettings(
         initial_cash=float(_require_value(backtest_raw, "backtest", "initial_cash")),
         holding_period_days=int(backtest_raw.get("holding_period_days", 1)),
+        lot_size=backtest_raw.get("lot_size", 0),
         commission_rate=float(backtest_raw.get("commission_rate", 0.0003)),
         stamp_duty_rate=float(backtest_raw.get("stamp_duty_rate", 0.001)),
         minimum_commission=float(backtest_raw.get("minimum_commission", 5.0)),
         slippage_bps=float(backtest_raw.get("slippage_bps", 2.0)),
     )
     market = MarketConfig(
+        min_declining_count=market_raw.get("min_declining_count"),
+        breadth_path=market_raw.get("breadth_path"),
         index_symbol=str(market_raw.get("index_symbol", "000001.SH")),
         trigger_level=float(market_raw.get("trigger_level", 4000.0)),
         trigger_return_threshold=float(market_raw.get("trigger_return_threshold", 0.0)),

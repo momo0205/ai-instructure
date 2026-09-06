@@ -1,7 +1,7 @@
 """Deterministic, daily-bar backtesting and exchange-style order matching."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from datetime import date
 import math
 from typing import Any
@@ -10,6 +10,7 @@ import pandas as pd
 
 from .data import BOOL_COLUMNS, REQUIRED_MARKET_COLUMNS, validate_market_frame
 from .domain import EquityPoint, MarketState, Trade
+from .signals import market_state, MarketTrigger
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +18,7 @@ class BacktestResult:
     trades: list[Trade]
     equity: list[EquityPoint]
     warnings: list[str]
+    events: list[dict] = field(default_factory=list)
 
 
 class BacktestEngine:
@@ -24,7 +26,7 @@ class BacktestEngine:
                  commission_rate: float = 0.0003, stamp_duty_rate: float = 0.001,
                  minimum_commission: float = 5.0, slippage_bps: float = 2.0,
                  index_symbol: str = "000001.SH", trigger_level: float = 4000.0,
-                 trigger_return_threshold: float = 0.0):
+                 trigger_return_threshold: float = 0.0, min_declining_count=None, lot_size: int = 0):
         try:
             cash_value = float(initial_cash)
             period_value = float(holding_period_days)
@@ -45,6 +47,10 @@ class BacktestEngine:
         self.holding_period_days = int(period_value)
         self.commission_rate, self.stamp_duty_rate, self.minimum_commission, self.slippage_bps = parameters
         self.index_symbol = index_symbol
+        self.min_declining_count = MarketTrigger(min_declining_count=min_declining_count).min_declining_count
+        if not math.isfinite(float(lot_size)) or float(lot_size) < 0 or not float(lot_size).is_integer():
+            raise ValueError("lot_size must be a non-negative integer")
+        self.lot_size = int(lot_size)
         try:
             trigger_values = (float(trigger_level), float(trigger_return_threshold))
         except (TypeError, ValueError, OverflowError):
@@ -71,6 +77,7 @@ class BacktestEngine:
         pending_entry: tuple[date, str, date] | None = None
         pending_exit_date: date | None = None
         trades: list[Trade] = []
+        events = []
         warnings: list[str] = []
         warning_set: set[str] = set()
         equity: list[EquityPoint] = []
@@ -79,6 +86,7 @@ class BacktestEngine:
         for day_index, day in enumerate(dates):
             today = frame[frame["date"] == day]
             market, market_warning = self._market_state_with_warning(frame, day)
+            events.append(asdict(market) | {"warning": market_warning})
             if market_warning and market_warning not in warning_set:
                 warnings.append(market_warning)
                 warning_set.add(market_warning)
@@ -157,48 +165,14 @@ class BacktestEngine:
 
         if position is not None:
             warnings.append(f"incomplete trade: open position {position['symbol']} has no executable exit")
-        return BacktestResult(trades, equity, warnings)
+        return BacktestResult(trades, equity, warnings, events)
 
     def _market_state(self, frame: pd.DataFrame, day: date) -> MarketState:
-        index = frame[(frame["symbol"] == self.index_symbol) & (frame["date"] <= day)].sort_values("date")
-        if index.empty:
-            return MarketState(day, 0.0, 0.0, False)
-        try:
-            history_closes = [float(value) for value in index["close"]]
-            if not all(math.isfinite(value) and value > 0 for value in history_closes):
-                return MarketState(day, 0.0, 0.0, False)
-        except (TypeError, ValueError, OverflowError):
-            return MarketState(day, 0.0, 0.0, False)
-        latest = index.iloc[-1]
-        previous = index.iloc[-2] if len(index) > 1 else latest
-        try:
-            latest_close = float(latest["close"])
-            previous_close = float(previous["close"])
-            if not (math.isfinite(latest_close) and math.isfinite(previous_close)):
-                return MarketState(day, 0.0, 0.0, False)
-            if latest_close <= 0 or previous_close <= 0:
-                return MarketState(day, 0.0, 0.0, False)
-            ret = latest_close / previous_close - 1
-            if not math.isfinite(ret):
-                return MarketState(day, 0.0, 0.0, False)
-        except (TypeError, ValueError, OverflowError, ZeroDivisionError):
-            return MarketState(day, 0.0, 0.0, False)
-        return MarketState(day, latest_close, ret,
-                           latest_close >= self.trigger_level and ret < self.trigger_return_threshold)
+        return self._market_state_with_warning(frame, day)[0]
 
-    def _market_state_with_warning(self, frame: pd.DataFrame, day: date) -> tuple[MarketState, str | None]:
-        """Return the fail-closed trigger and a user-visible data-quality reason."""
-        history = frame[(frame["symbol"] == self.index_symbol) & (frame["date"] <= day)].sort_values("date")
-        if history.empty:
-            return MarketState(day, 0.0, 0.0, False), f"data quality: missing market index {self.index_symbol}"
-        values = history["close"].tolist()
-        try:
-            valid = all(math.isfinite(float(value)) and float(value) > 0 for value in values)
-        except (TypeError, ValueError, OverflowError):
-            valid = False
-        if not valid:
-            return MarketState(day, 0.0, 0.0, False), f"data quality: invalid market index {self.index_symbol} close"
-        return self._market_state(frame, day), None
+    def _market_state_with_warning(self, frame, day):
+        return market_state(frame, day, self.index_symbol, self.trigger_level,
+                            self.trigger_return_threshold, self.min_declining_count)
 
     @staticmethod
     def _validation_frame(market_data: pd.DataFrame) -> pd.DataFrame:
@@ -260,4 +234,7 @@ class BacktestEngine:
     def _quantity(self, cash: float, price: float) -> float:
         if price <= 0 or cash <= self.minimum_commission:
             return 0.0
+        if self.lot_size:
+            affordable = min(cash / (1 + self.commission_rate), cash - self.minimum_commission) / price
+            return max(0, math.floor(affordable / self.lot_size)) * self.lot_size
         return max(0.0, (cash - self.minimum_commission) / (price * (1 + self.commission_rate)))
