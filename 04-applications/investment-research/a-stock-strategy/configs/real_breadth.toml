@@ -1,8 +1,8 @@
-# Replace these two CSVs with verified historical data. Missing inputs fail.
+# 2024-2025 market bars downloaded from Tencent's qfq history endpoint.
 [data]
-source = "user-verified-index-and-etf-daily"
+source = "tencent-qfq-index-and-etf-daily"
 path = "../data/real/market.csv"
-adjustment = "none"
+adjustment = "qfq"
 
 [strategy]
 name = "fixed_asset"
@@ -33,8 +33,8 @@ minimum_commission = 5.0
 slippage_bps = 2.0
 
 [metadata]
-source = "user-verified-index-and-etf-daily"
+source = "tushare-daily-breadth-plus-tencent-qfq-market"
 sample = false
 offline = true
 llm_enabled = false
-warnings = ["Verify exchange coverage, suspended listings, ETF distributions and tradability flags before interpreting returns.", "Daily close signals are entered at the next open, not at the signal-day close."]
+warnings = ["Tushare breadth is aggregated from daily rows and has not been independently certified as a complete historical listing universe.", "Tencent history does not provide suspension or limit flags here; the CSV compatibility flags are unknown defaults.", "Daily close signals are entered at the next open, not at the signal-day close."]
