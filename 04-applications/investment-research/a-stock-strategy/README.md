@@ -1,5 +1,19 @@
 # A 股日线策略回测
 
+## 当前最小版本（2026-09-06）
+
+**请从 [MVP 使用说明](MVP.md) 开始。** 正确策略是“全市场下跌家数 ≥4000，且上证指数当日收益 ≤-1%”。新版入口为 `configs/mvp.toml`（合成演示）和 `configs/real_breadth.toml`（真实数据模板）。
+
+```bash
+.venv/bin/python -m strategy compare --config configs/mvp.toml --output reports/mvp
+```
+
+打开 `reports/mvp/index.html` 查看固定科创50ETF与候选ETF动态评分比较；同时生成逐笔成交、每日净值、每日触发审计和指标。**示例数据只用于验证软件，当前尚未得到可信的真实历史策略收益。**
+
+下方旧版文档和 `baseline.toml`/`real_baidu.toml` 仅用于兼容旧实验：其“指数点位 ≥4000”是对需求的误解。旧 `data/real_baidu/000001.csv` 为十几元的股票行情，并非上证指数，不可用于该策略验证。真实数据来源与局限见 [数据源调查](docs/data-source-review.md)。
+
+---
+
 这是一个仅使用本地 CSV 的研究/模拟工具，用同一套事件驱动引擎运行固定科创 50 ETF 与动态横截面选股策略。核心计算、推荐和四类报告都不需要网络、券商账户或大模型 API Key。输出仅用于研究与软件测试，不构成投资建议、收益承诺或买卖指令。
 
 ## 安装

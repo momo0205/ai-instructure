@@ -11,6 +11,7 @@ class MarketState:
     index_level: float
     index_return_1d: float
     triggered: bool
+    declining_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
