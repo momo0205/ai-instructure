@@ -21,7 +21,7 @@ import pandas as pd
 
 _COLUMNS = ['date', 'declining_count', 'total_count', 'source', 'sh_count', 'sz_count', 'bj_count']
 _REQUIRED = ['trade_date', 'ts_code', 'pct_chg']
-_CODES = re.compile(r'(?:(?:600|601|603|605|688|689)\d{3}\.SH|(?:000|001|002|003|300|301)\d{3}\.SZ|(?:[48]\d{5}|920\d{3})\.BJ)')
+_CODES = re.compile(r'(?:(?:600|601|603|605|688|689)\d{3}\.SH|(?:000|001|002|003|300|301|302)\d{3}\.SZ|(?:[48]\d{5}|920\d{3})\.BJ)')
 _COVERAGE_NOTE = '最低样本数仅拦截明显不完整名单，不证明全市场完整；需核验各交易所、退市历史与停牌口径。'
 
 

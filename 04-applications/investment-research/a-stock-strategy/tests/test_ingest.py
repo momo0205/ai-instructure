@@ -26,6 +26,12 @@ def test_breadth_counts_three_markets_and_only_negative_returns():
     assert row.source == 'tushare.daily'
 
 
+def test_breadth_accepts_tushare_historical_302_code():
+    build, _ = api()
+    row = build(daily([['20240206', '302132.SZ', -1]]), 'tushare.daily', min_daily_records=1).iloc[0]
+    assert row.declining_count == 1
+
+
 @pytest.mark.parametrize('code', ['510300.SH', '000001.SH', '900001.SH', '200001.SZ', '600000.SZ', '920001.SH', '123456.BJ'])
 def test_breadth_rejects_non_a_share_and_mismatched_codes(code):
     build, _ = api()

@@ -4,7 +4,9 @@ import pandas as pd
 import pytest
 
 from strategy.data import CsvMarketDataProvider
-from strategy.data_sources import AStockDataProvider, BaiduKlineFetcher, MootdxIndexFetcher
+from strategy.data_sources import (
+    AStockDataProvider, BaiduKlineFetcher, MootdxIndexFetcher, create_mootdx_client,
+)
 
 
 def _bars() -> pd.DataFrame:
@@ -150,3 +152,49 @@ def test_mootdx_index_fetcher_uses_index_endpoint_and_normalizes():
     assert calls[0]["symbol"] == "000001"
     assert frame["symbol"].tolist() == ["000001", "000001"]
     assert frame["close"].tolist() == [3990, 3980]
+
+
+def test_mootdx_client_skips_reachable_server_that_returns_empty_data():
+    made = []
+
+    class Client:
+        def __init__(self, valid):
+            self.valid = valid
+
+        def bars(self, **_kwargs):
+            return _bars().head(1) if self.valid else pd.DataFrame()
+
+    def factory(**kwargs):
+        made.append(kwargs)
+        return Client(kwargs.get("server") == ("good", 7709))
+
+    client = create_mootdx_client(
+        quotes_factory=factory,
+        servers=(("empty", 7709), ("good", 7709)),
+        probe=lambda *_args: True,
+    )
+
+    assert client.valid
+    assert [call["server"] for call in made] == [("empty", 7709), ("good", 7709)]
+
+
+def test_mootdx_client_uses_library_fallbacks_after_server_candidates_fail():
+    calls = []
+
+    class Client:
+        def __init__(self, valid):
+            self.valid = valid
+
+        def bars(self, **_kwargs):
+            return _bars().head(1) if self.valid else pd.DataFrame()
+
+    def factory(**kwargs):
+        calls.append(kwargs)
+        return Client(kwargs.get("bestip") is True)
+
+    client = create_mootdx_client(
+        quotes_factory=factory, servers=(("down", 7709),), probe=lambda *_args: False,
+    )
+
+    assert client.valid
+    assert calls == [{"market": "std", "bestip": True}]
