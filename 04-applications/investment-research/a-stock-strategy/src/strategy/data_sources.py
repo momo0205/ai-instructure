@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import socket
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import urlencode
@@ -15,6 +16,63 @@ from urllib.request import Request, urlopen
 
 import pandas as pd
 from .data import REQUIRED_MARKET_COLUMNS, validate_market_frame
+
+
+# Candidate list and validation flow adapted from a-stock-data v3.8.0 (Apache-2.0):
+# https://github.com/simonlin1212/a-stock-data
+TDX_SERVERS = (
+    ("119.97.185.59", 7709), ("124.70.133.119", 7709),
+    ("116.205.183.150", 7709), ("123.60.73.44", 7709),
+    ("116.205.163.254", 7709), ("121.36.225.169", 7709),
+    ("123.60.70.228", 7709), ("124.71.9.153", 7709),
+    ("110.41.147.114", 7709), ("124.71.187.122", 7709),
+)
+
+
+def _probe_tdx(ip: str, port: int, timeout: float = 2.0) -> bool:
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def _valid_tdx_client(client, market: str) -> bool:
+    if market != "std":
+        return True
+    try:
+        frame = client.bars(symbol="000001", frequency=9, offset=1)
+        return frame is not None and not frame.empty
+    except Exception:
+        return False
+
+
+def create_mootdx_client(*, market: str = "std", quotes_factory=None,
+                         servers=TDX_SERVERS, probe=_probe_tdx):
+    """Choose a mootdx endpoint by fetching a real bar, not by TCP reachability alone."""
+    if quotes_factory is None:
+        try:
+            from mootdx.quotes import Quotes
+        except ImportError as error:
+            raise RuntimeError("mootdx is required; install the project's live dependencies") from error
+        quotes_factory = Quotes.factory
+    for server in servers:
+        if not probe(*server):
+            continue
+        try:
+            client = quotes_factory(market=market, server=server)
+            if _valid_tdx_client(client, market):
+                return client
+        except Exception:
+            continue
+    for kwargs in ({"bestip": True}, {}):
+        try:
+            client = quotes_factory(market=market, **kwargs)
+            if _valid_tdx_client(client, market):
+                return client
+        except Exception:
+            continue
+    raise RuntimeError("all mootdx endpoints failed a real market-data request")
 
 
 class DailyBarFetcher(Protocol):
@@ -185,11 +243,7 @@ class _MootdxFetcher:
 
     def _client(self):
         if self.client is None:
-            try:
-                from mootdx.quotes import Quotes
-            except ImportError as error:
-                raise RuntimeError("mootdx is required for live index history; install project dependencies") from error
-            self.client = Quotes.factory(market="std", heartbeat=True)
+            self.client = create_mootdx_client()
         return self.client
 
     def _fetch_pages(self, method_name: str, symbol: str) -> pd.DataFrame:
@@ -242,5 +296,6 @@ class MootdxBarFetcher(_MootdxFetcher):
 
 __all__ = [
     "AStockDataProvider", "BaiduKlineFetcher", "DailyBarFetcher",
-    "MootdxBarFetcher", "MootdxIndexFetcher", "normalize_daily_bars",
+    "MootdxBarFetcher", "MootdxIndexFetcher", "create_mootdx_client",
+    "normalize_daily_bars",
 ]
