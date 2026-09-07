@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
+<main>
+<div class="heading"><div><p class="eyebrow">STRATEGY LAB / 策略实验</p><h1>让每一个想法，接受数据检验。</h1><p class="muted">选择策略、调整参数，保留每一次实验的依据与结果。</p></div><a href="#history" class="secondary">查看任务历史 ↓</a></div>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<div class="workspace">
+<section class="panel setup"><div class="section-title"><h2>新建回测</h2><span class="tag">日频 · 单持仓</span></div>
+<form id="run-form">
+<label>策略<select id="strategy" required></select></label><p id="strategy-description" class="hint"></p>
+<div id="strategy-parameters" class="fields"></div>
+<hr><label>历史数据集<select id="dataset" required></select></label><p id="dataset-info" class="hint"></p>
+<div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
+<div class="two"><label>初始资金（元）<input id="initial_cash" type="number" value="100000" min="1000" step="1000" required></label><label>持有交易日<input id="holding_period_days" type="number" value="1" min="1" max="252" step="1" required></label></div>
+<details open><summary>市场触发条件</summary><div class="two"><label>最少下跌家数<input id="min_declining_count" type="number" value="4000" min="0" step="1" required></label><label>指数日收益 ≤（%）<input id="trigger_return_threshold" type="number" value="-1" step="0.1" required></label></div></details>
+<details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。ETF 以 100 份为单位，持有期结束后开盘卖出。</p></details>
+<button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
+</form></section>
+<div class="results-column"><section class="panel" id="history"><div class="section-title"><h2>任务历史</h2><button type="button" id="refresh" class="quiet">刷新</button></div><p class="hint">勾选已完成任务查看指标对比；点击任务查看详情。</p><div id="jobs" class="job-list"><p class="muted">正在加载…</p></div><div id="comparison" hidden></div></section>
+<section class="panel" id="detail"><div class="empty"><div class="empty-icon">↗</div><h2>等待第一份研究结果</h2><p>执行回测后，这里会展示净值、回撤和逐笔交易。</p><p class="hint">亏损、零交易和运行失败会分别显示。</p></div></section></div>
+</div><footer>研究结果取决于数据覆盖与执行假设。每次实验均保留对应的参数、版本及数据说明。</footer>
+</main>
+</body></html>

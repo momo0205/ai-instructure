@@ -59,7 +59,7 @@ class BacktestEngine:
             raise ValueError("market trigger parameters must be finite")
         self.trigger_level, self.trigger_return_threshold = trigger_values
 
-    def run(self, market_data: pd.DataFrame, strategy: Any) -> BacktestResult:
+    def run(self, market_data: pd.DataFrame, strategy: Any, *, start: date | None = None, end: date | None = None) -> BacktestResult:
         # Validate before sorting or simulating so callers cannot bypass the
         # daily/duplicate/positive-price data contract.
         frame = self._validation_frame(market_data)
@@ -71,7 +71,9 @@ class BacktestEngine:
         frame = frame.copy()
         frame["date"] = pd.to_datetime(frame["date"]).dt.date
         frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
-        dates = list(frame["date"].drop_duplicates())
+        # 起始日前的数据保留给指标预热，但不产生交易、信号或净值。
+        dates = [day for day in frame["date"].drop_duplicates()
+                 if (start is None or day >= start) and (end is None or day <= end)]
         cash = self.initial_cash
         position: dict[str, Any] | None = None
         pending_entry: tuple[date, str, date] | None = None

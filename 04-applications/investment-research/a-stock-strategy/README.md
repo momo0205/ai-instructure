@@ -8,7 +8,30 @@
 .venv/bin/python -m strategy compare --config configs/mvp.toml --output reports/mvp
 ```
 
-打开 `reports/mvp/index.html` 查看固定科创50ETF与候选ETF动态评分比较；同时生成逐笔成交、每日净值、每日触发审计和指标。**示例数据只用于验证软件，当前尚未得到可信的真实历史策略收益。**
+打开 `reports/mvp/index.html` 查看固定科创50ETF与候选ETF动态评分比较；同时生成逐笔成交、每日净值、每日触发审计和指标。示例数据只用于验证软件。
+
+## 浏览器工作台
+
+在项目目录启动本机服务：
+
+```bash
+.venv/bin/python -m strategy serve
+```
+
+访问 `http://127.0.0.1:8765`。页面支持选择现有策略、按策略定义生成参数表单、执行回测、保存任务历史、查看净值/回撤/交易/触发记录、复制参数重跑及多任务指标对比。服务只监听本机回环地址；任务使用 SQLite 和独立目录保存在 `reports/workbench/`，关闭浏览器不会终止任务。
+
+新增同类策略时，在 `src/strategy/registry.py` 注册名称、版本、参数定义和构造器。参数定义既供页面生成表单，也供后端统一校验。当前执行模型是日频、100 份整数手、单持仓和固定持有期；组合持仓、盘中撮合及用户上传 Python 策略不在第一版范围内。
+
+从腾讯下载上证指数与 ETF 日线：
+
+```bash
+.venv/bin/python -m strategy download-market \
+  --start 2024-01-01 --end 2025-12-31 \
+  --symbols 588000.SH 510300.SH 159915.SZ \
+  --adjustment none --output data/real
+```
+
+命令会自动加入 `000001.SH`，按年度保存原始响应，并要求行情日期与已有 `breadth.csv` 完全一致后才发布 `market.csv`。`none` 是实际开盘价近似，但尚未计入 ETF 分红现金流；`qfq` 适合连续收益研究，但不是历史实际成交价。任务会冻结行情、广度、清单、请求和 Python 源码哈希，避免排队期间的数据刷新改变结果。
 
 下方旧版文档和 `baseline.toml`/`real_baidu.toml` 仅用于兼容旧实验：其“指数点位 ≥4000”是对需求的误解。旧 `data/real_baidu/000001.csv` 为十几元的股票行情，并非上证指数，不可用于该策略验证。真实数据来源与局限见 [数据源调查](docs/data-source-review.md)。
 
@@ -179,4 +202,4 @@ launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backt
 0 18 * * 1-5 /path/to/a-stock-strategy/.venv/bin/python -m strategy backtest --config /path/to/a-stock-strategy/configs/baseline.toml --output /path/to/a-stock-strategy/reports >> /path/to/a-stock-strategy/reports/cron.log 2>&1
 ```
 
-下一阶段可在不改变核心接口的前提下增加 FastAPI 只读查询层；如启用，应默认绑定 `127.0.0.1`、放在认证反向代理后，并继续禁止任何交易执行端点。
+如果将工作台部署到其他机器或开放局域网访问，需要另加身份认证和 HTTPS；当前服务只适合本机单人使用。
