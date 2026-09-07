@@ -171,7 +171,9 @@ def download_tushare_daily(start, end, output_dir, token=None, requester=None, *
                 'coverage_note': _COVERAGE_NOTE, 'raw_dir': str(raw_dir.resolve()), 'raw_sha256': hashes}
     breadth_path, manifest_path = output / 'breadth.csv', output / 'manifest.json'
     manifest_temp = output / 'manifest.json.tmp'
-    manifest_temp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
     _write_csv(breadth, breadth_path)
+    # 消费端据此拒绝下载中断留下的数据与旧清单组合。
+    manifest['breadth_sha256'] = hashlib.sha256(breadth_path.read_bytes()).hexdigest()
+    manifest_temp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
     manifest_temp.replace(manifest_path)
     return {'breadth': breadth_path, 'manifest': manifest_path, 'raw_dir': raw_dir}

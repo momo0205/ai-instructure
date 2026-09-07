@@ -1,0 +1,117 @@
+/* 页面只负责输入与展示。策略定义和参数校验的最终依据来自服务器目录。 */
+'use strict';
+const $ = id => document.getElementById(id);
+const state = {strategies: [], datasets: [], jobs: [], selected: null, compared: new Set(), busy: false};
+const statuses = {queued:'排队中',running:'运行中',succeeded:'已完成',failed:'失败',cancelled:'已取消',interrupted:'已中断'};
+const fmt = n => n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2});
+const pct = n => n == null ? '—' : `${fmt(Number(n)*100)}%`;
+function el(tag, text, cls) { const n=document.createElement(tag); if(text!=null)n.textContent=text; if(cls)n.className=cls; return n; }
+function notice(text) {$('notice').textContent=text;$('notice').hidden=!text;}
+async function api(path, body) {
+  const response=await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const result=await response.json(); if(!response.ok)throw new Error(result.error||'请求失败'); return result;
+}
+function strategyName(id) {return state.strategies.find(s=>s.id===id)?.name||id;}
+function strategyFields(values={}) {
+  const spec=state.strategies.find(s=>s.id===$('strategy').value); const container=$('strategy-parameters');container.replaceChildren();
+  if(!spec)return; $('strategy-description').textContent=spec.description;
+  for(const field of spec.parameters) {
+    const label=el('label',field.label||field.name); const value=values[field.name]??field.default;
+    let input;
+    if(field.type==='object') {input=el('textarea');input.value=JSON.stringify(value,null,2);}
+    else if(field.options) {input=el('select');for(const option of field.options) input.append(new Option(option,option));input.value=value;}
+    else {input=el('input');input.type=['integer','number','float','int'].includes(field.type)?'number':'text';
+      input.value=Array.isArray(value)?value.join(', '):value??'';
+      if(field.min!=null)input.min=field.min;if(field.max!=null)input.max=field.max;
+      input.step=field.step??(['integer','int'].includes(field.type)?1:'any');}
+    input.dataset.parameter=field.name;input.dataset.type=field.type;input.required=true;label.append(input);container.append(label);
+    if(field.description)container.append(el('p',field.description,'hint'));
+  }
+}
+function datasetFields(reset=true) {
+  const d=state.datasets.find(x=>x.id===$('dataset').value);if(!d)return;
+  $('dataset-info').textContent=`${d.sample?'样例数据 · 不代表真实市场':'真实历史数据'} · ${d.start} — ${d.end} · ${d.adjustment||'未声明复权'}\n行情：${d.market_source||'未知'}；广度：${(d.source||[]).join('、')||'未知'}\n${(d.symbols||[]).join(' / ')} ${(d.warnings||[]).join('；')}`;
+  for(const key of ['start','end']) {$(key).min=d.start;$(key).max=d.end;if(reset)$(key).value=d[key];}
+}
+function requestFromForm() {
+  const parameters={};for(const input of $('strategy-parameters').querySelectorAll('[data-parameter]')) {
+    const type=input.dataset.type;let value=input.value;
+    if(['integer','number','float','int'].includes(type))value=Number(value);
+    else if(type==='array'||type==='string_array')value=value.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean);
+    else if(type==='object') {try {value=JSON.parse(value);}catch {throw new Error('评分权重必须填写合法 JSON 对象');}}
+    parameters[input.dataset.parameter]=value;
+  }
+  const request={strategy_id:$('strategy').value,parameters,dataset_id:$('dataset').value,start:$('start').value,end:$('end').value};
+  for(const key of ['initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps'])request[key]=Number($(key).value);
+  // 页面用百分数，后端用小数；只在边界转换一次，避免 1% 与 0.01% 混淆。
+  request.trigger_return_threshold/=100;request.commission_rate/=100;return request;
+}
+function copyRequest(request) {
+  $('strategy').value=request.strategy_id;strategyFields(request.parameters);$('dataset').value=request.dataset_id;datasetFields(false);
+  for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
+  for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
+  notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
+}
+function renderJobs() {
+  const box=$('jobs');box.replaceChildren();if(!state.jobs.length){box.append(el('p','还没有任务。从左侧开始第一次回测。','muted'));return;}
+  for(const job of state.jobs) {
+    const row=el('div',null,'job');const check=el('input');check.type='checkbox';check.checked=state.compared.has(job.id);check.disabled=job.status!=='succeeded';check.setAttribute('aria-label',`对比 ${job.id}`);
+    check.onchange=()=>{check.checked?state.compared.add(job.id):state.compared.delete(job.id);renderComparison().catch(e=>notice(e.message));};row.append(check);
+    const button=el('button');button.type='button';button.append(el('span',strategyName(job.request?.strategy_id),'job-title'));
+    button.append(el('span',`${job.request?.start||''} → ${job.request?.end||''} · ${job.id.slice(0,8)}`,'job-meta'));
+    button.onclick=()=>showJob(job.id).catch(e=>notice(e.message));row.append(button,el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(row);
+  }
+}
+function table(headers, rows) {
+  const wrap=el('div',null,'scroll'),t=el('table'),head=el('thead'),tr=el('tr');headers.forEach(h=>tr.append(el('th',h)));head.append(tr);t.append(head);
+  const body=el('tbody');for(const row of rows){const r=el('tr');row.forEach(v=>r.append(el('td',v??'—')));body.append(r);}t.append(body);wrap.append(t);return wrap;
+}
+function chart(points, key, title, percent=false) {
+  const section=el('div');section.append(el('div',title,'chart-title'));if(!points.length){section.append(el('p','暂无曲线数据','hint'));return section;}
+  const ns='http://www.w3.org/2000/svg';const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 760 205');svg.classList.add('chart');svg.setAttribute('role','img');svg.setAttribute('aria-label',title);
+  const values=points.map(p=>Number(p[key]));let low=Math.min(...values),high=Math.max(...values);if(low===high){low-=1;high+=1;}
+  const x=i=>70+i/Math.max(1,points.length-1)*670,y=v=>165-(v-low)/(high-low)*145;
+  function node(tag,attrs,text){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);return n;}
+  for(let i=0;i<4;i++){const v=low+(high-low)*i/3;node('line',{x1:70,x2:740,y1:y(v),y2:y(v)});node('text',{x:62,y:y(v)+4,'text-anchor':'end'},percent?pct(v):fmt(v));}
+  node('polyline',{points:values.map((v,i)=>`${x(i)},${y(v)}`).join(' '),fill:'none',stroke:percent?'#b78657':'#16776b','stroke-width':2.2});
+  node('text',{x:70,y:193},String(points[0].date));node('text',{x:740,y:193,'text-anchor':'end'},String(points.at(-1).date));section.append(svg);return section;
+}
+function download(result, id) {
+  const a=el('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));a.download=`backtest-${id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function showJob(id) {
+  state.selected=id;const job=await api(`/api/jobs/${id}`);if(state.selected!==id)return;
+  const box=$('detail');box.replaceChildren();const title=el('div',null,'section-title');title.append(el('h2',strategyName(job.request?.strategy_id)),el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(title);
+  const actions=el('div',null,'actions');const copy=el('button','复制参数重跑');copy.onclick=()=>copyRequest(job.request);actions.append(copy);
+  if(['queued','running'].includes(job.status)){const cancel=el('button','取消任务');cancel.onclick=async()=>{try{await api(`/api/jobs/${id}/cancel`,{});await refresh();await showJob(id);}catch(e){notice(e.message);}};actions.append(cancel);}
+  box.append(actions);
+  if(job.status!=='succeeded') {box.append(el('p',job.error||(['running','queued'].includes(job.status)?'后台处理中，可关闭页面后再回来查看。':'此任务未产生回测结果。'),'hint'));return;}
+  const r=job.result;if(!r){box.append(el('p','结果文件不可用','warnings'));return;}
+  const exportButton=el('button','导出结果 JSON');exportButton.onclick=()=>download(r,id);actions.append(exportButton);
+  const metrics=el('div',null,'metrics');for(const [label,key,isPct] of [['累计收益','cumulative_return',true],['最大回撤','max_drawdown',true],['胜率','win_rate',true],['交易次数','trade_count',false]]){
+    const card=el('div',null,'metric');card.append(el('small',label),el('strong',isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
+  if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));box.append(warnings);}
+  if(!r.trades?.length)box.append(el('p','本次没有完成交易。请检查触发条件、数据预热和期末未平仓说明。','warnings'));
+  box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
+  box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
+  box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','费用','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),fmt(t.pnl)])));
+  const events=el('details');events.append(el('summary','每日触发记录'));events.append(table(['日期','下跌家数','指数日收益','触发'],(r.events||[]).map(e=>[e.as_of,e.declining_count,pct(e.index_return_1d),e.triggered?'是':'否'])));box.append(events);
+  const audit=el('details');audit.append(el('summary','参数、版本与数据依据'),el('pre',JSON.stringify({request:job.request,metadata:r.metadata},null,2)));box.append(audit);
+}
+async function renderComparison() {
+  const target=$('comparison');target.hidden=state.compared.size===0;if(target.hidden)return;
+  const jobs=await Promise.all([...state.compared].map(id=>api(`/api/jobs/${id}`)));target.replaceChildren(el('h3','已选任务对比','compare-title'),el('p','不同区间、数据版本或预热情况会影响可比性，请结合各任务说明阅读。','hint'));
+  target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),pct(m.win_rate),m.trade_count];})));
+}
+async function refresh() {state.jobs=await api('/api/jobs');renderJobs();}
+$('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>datasetFields();$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
+$('run-form').onsubmit=async event=>{event.preventDefault();notice('');$('submit').disabled=true;try{const job=await api('/api/jobs',requestFromForm());await refresh();await showJob(job.id);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{$('submit').disabled=false;}};
+async function init() {
+  [state.strategies,state.datasets]=await Promise.all([api('/api/strategies'),api('/api/datasets')]);
+  state.strategies.forEach(s=>$('strategy').append(new Option(s.name,s.id)));state.datasets.forEach(d=>$('dataset').append(new Option(d.name,d.id)));
+  strategyFields();datasetFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
+  await refresh();
+  // 串行轮询，避免长任务或慢磁盘时叠加请求。只自动更新尚未结束的详情。
+  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&['running','queued'].includes(j.status));await refresh();if(pending)await showJob(state.selected);}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
+}
+init().catch(e=>notice(e.message));

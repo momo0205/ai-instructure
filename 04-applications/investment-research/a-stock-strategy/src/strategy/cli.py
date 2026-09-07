@@ -19,10 +19,11 @@ from .strategies.rank import CrossSectionalRankStrategy
 
 
 def _strategy(config):
+    from .registry import build_strategy
     params = config.strategy.parameters
-    if config.strategy.name == "fixed_asset": strategy = FixedAssetStrategy(params.get("symbol", "588000.SH"))
+    if config.strategy.name == "fixed_asset": strategy = build_strategy('fixed_asset', {'symbol':params.get('symbol','588000.SH')})
     elif config.strategy.name in {"cross_sectional_rank", "rank"}:
-        strategy = CrossSectionalRankStrategy(**{key: value for key, value in params.items() if key != "symbol"})
+        strategy = build_strategy('cross_sectional_rank', {key: value for key, value in params.items() if key != "symbol"})
     else: raise ValueError(f"unknown strategy: {config.strategy.name}")
     # Recommendation uses the same point-in-time market trigger as backtest.
     strategy.index_symbol = config.market.index_symbol
@@ -83,6 +84,15 @@ def _metadata(config):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="strategy", description="Offline A-share strategy research tool")
     sub = parser.add_subparsers(dest="command", required=True)
+    web = sub.add_parser('serve', help='Start the local browser workbench')
+    web.add_argument('--port', type=int, default=8765)
+    web.add_argument('--project-root', default=str(Path(__file__).resolve().parents[2]))
+    market_download = sub.add_parser('download-market', help='Download Tencent index and ETF daily bars')
+    market_download.add_argument('--start', required=True)
+    market_download.add_argument('--end', required=True)
+    market_download.add_argument('--output', default='data/real')
+    market_download.add_argument('--symbols', nargs='+')
+    market_download.add_argument('--adjustment', choices=['none','qfq'], default='none')
     back = sub.add_parser("backtest"); back.add_argument("--config", required=True); back.add_argument("--output", default="reports")
     rec = sub.add_parser("recommend"); rec.add_argument("--config", required=True); rec.add_argument("--as-of", required=True)
     comp = sub.add_parser("compare"); comp.add_argument("--config", required=True); comp.add_argument("--output", default="reports/mvp")
@@ -96,6 +106,14 @@ def main(argv=None) -> int:
     ingest.add_argument("--output", default="data/real/breadth.csv")
     args = parser.parse_args(argv)
     try:
+        if args.command == 'serve':
+            from .web import serve
+            serve(Path(args.project_root), args.port)
+            return 0
+        if args.command == 'download-market':
+            from .market_download import download_market
+            print(json.dumps(download_market(args.start,args.end,args.output,args.symbols,args.adjustment)))
+            return 0
         if args.command == "download-breadth":
             from .ingest import download_tushare_daily
             paths = download_tushare_daily(args.start, args.end, args.output)
