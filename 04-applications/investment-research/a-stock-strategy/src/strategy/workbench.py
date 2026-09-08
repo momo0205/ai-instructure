@@ -2,6 +2,8 @@
 from pathlib import Path
 from datetime import date
 from dataclasses import asdict
+from .fees import STOCK_SUPPORTED_FROM
+from .tradability import TRADABILITY_VERSION
 import hashlib
 import json
 import math
@@ -51,6 +53,8 @@ def datasets(project_root):
         market_manifest = json.loads(market_manifest_path.read_text()) if market_manifest_path.is_file() else {}
         market_source = market_manifest.get('source', config.get('data',{}).get('source','unknown'))
         warnings = list(market_manifest.get('warnings', provenance.get('warnings',['数据质量未经独立验证'])))
+        # 旧快照保留原文及哈希；展示时注明历史能力说明，避免与当前目录矛盾。
+        warnings = [w.replace('仅三只已验证 ETF 支持回测。', '此版本创建时仅开放 ETF；当前支持范围以标的目录为准。') for w in warnings]
         if name=='mvp_sample':
             warnings.insert(0,'合成样例，不代表真实市场表现')
         result.append(dict(id=name,name='真实市场数据' if name=='real' else '合成样例',start=index_calendar.min().date().isoformat(),end=index_calendar.max().date().isoformat(),symbols=sorted(market.symbol.unique().tolist()),source=sorted(breadth.source.unique().tolist()),market_source=market_source,adjustment=market_manifest.get('adjustment',config.get('data',{}).get('adjustment','unknown')),sample=name=='mvp_sample',warnings=warnings))
@@ -98,7 +102,7 @@ def validate_request(root, request):
         raise ValueError('parameters require unique available tradable symbols')
     supported = {item['symbol'] for item in dataset['instruments'] if item['backtest_supported']}
     if any(symbol not in supported for symbol in symbols):
-        raise ValueError('该证券暂不支持回测：当前交易模型只验证了三只境内 ETF')
+        raise ValueError('该证券暂不支持回测：需为已验证 ETF 或已识别的普通沪深主板股票')
     if 'weights' in params:
         weights = params['weights']
         keys = {'momentum','reversal','volatility','volume'}
@@ -117,6 +121,8 @@ def validate_request(root, request):
             raise ValueError(f'invalid {key} date') from None
     if not dataset['start'] <= value['start'] <= value['end'] <= dataset['end']:
         raise ValueError('date range outside dataset coverage')
+    if any(item['symbol'] in symbols and item['kind']=='stock' for item in dataset['instruments']) and value['start'] < STOCK_SUPPORTED_FROM.isoformat():
+        raise ValueError('股票费用规则仅支持 2022-07-01 起的回测，请调整开始日期')
     market = CsvMarketDataProvider(Path(root)/'data'/value['dataset_id']/'market.csv').load()
     selected = market[market.date.between(pd.Timestamp(value['start']),pd.Timestamp(value['end']))]
     index_dates = set(selected.loc[selected.symbol=='000001.SH','date'])
@@ -158,6 +164,16 @@ def execute(root, request, output_dir):
     market = market[market.symbol.isin(['000001.SH',*symbols])].copy()
     market = attach_breadth(market,breadth,'000001.SH')
     warnings = list(dataset['warnings'])
+    instrument_types = {item['symbol']:item['kind'] for item in dataset['instruments'] if item['symbol'] in symbols}
+    has_stocks = 'stock' in instrument_types.values()
+    if has_stocks:
+        warnings += [
+            '股票日频近似研究：停牌、涨跌停及历史 ST/退市状态可能未知；False 仅按可成交假设处理，不代表已验证。',
+            '按开盘价加减滑点、全额成交估算；不模拟排队、部分成交或流动性容量。已知停牌阻断交易，买入涨停取消、卖出跌停顺延。',
+            '股票买入按100股整手，至少下一交易日卖出；佣金含交易规费，另加双边过户费及卖出印花税。',
+            '前复权价不是实际成交价，股票数量、最低佣金及税费金额均为近似；未独立模拟分红、送转和配股现金流。' if dataset['adjustment']=='qfq' else
+            '未复权行情未独立模拟分红、送转、配股和持股数量变化，跨除权期间的收益可能失真。',
+        ]
     if request['strategy_id']=='cross_sectional_rank':
         needed = max(request['parameters'][k] for k in ('momentum_window','reversal_window','volatility_window','volume_window'))
         for symbol in request['parameters']['candidate_symbols']:
@@ -165,10 +181,16 @@ def execute(root, request, output_dir):
             if count<needed:
                 warnings.append(f'warmup insufficient: {symbol} has {count}/{needed} prior sessions；早期信号可能无法选股')
     engine_keys = ('initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps')
-    engine = BacktestEngine(lot_size=100,stamp_duty_rate=0.0,**{k:request[k] for k in engine_keys})
+    engine = BacktestEngine(lot_size=100,stamp_duty_rate=0.0,instrument_types=instrument_types,**{k:request[k] for k in engine_keys})
     result = engine.run(market,build_strategy(request['strategy_id'],request['parameters']),start=date.fromisoformat(request['start']),end=date.fromisoformat(request['end']))
     metadata = dict(dataset_id=request['dataset_id'],hashes=hashes,strategy_version=next(s['version'] for s in catalog() if s['id']==request['strategy_id']),breadth_source=sorted(breadth.source.unique().tolist()),market_source=dataset['market_source'],adjustment=dataset['adjustment'],sample=request['dataset_id']=='mvp_sample',code_provenance='Python source captured for audit; running service uses modules loaded at startup',timing='close signal; next session open execution',stamp_duty_rate=engine.stamp_duty_rate,lot_size=engine.lot_size)
-    payload = dict(metrics=asdict(evaluate(result)),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,warnings=warnings+result.warnings,metadata=metadata,request=request)
+    metadata.update(execution_mode='approximate',instrument_types=instrument_types,
+                    trading_rules_version='cn-mainboard-daily-v1',
+                    stamp_duty_rate=None if has_stocks else 0.0,
+                    cost_policy=engine.fee_rules.metadata(),
+                    tradability_rules_version=TRADABILITY_VERSION,
+                    tradability='input flags only; unknown flags assumed executable; no auction order-book evidence')
+    payload = dict(metrics=asdict(evaluate(result)),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
     payload = json.loads(json.dumps(payload,default=str,ensure_ascii=False,allow_nan=False))
     (output/'result.json').write_text(json.dumps(payload,ensure_ascii=False,allow_nan=False))
     return payload

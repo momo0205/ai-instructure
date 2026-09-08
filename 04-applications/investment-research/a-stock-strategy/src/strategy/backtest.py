@@ -10,7 +10,9 @@ import pandas as pd
 
 from .data import BOOL_COLUMNS, REQUIRED_MARKET_COLUMNS, validate_market_frame
 from .domain import EquityPoint, MarketState, Trade
+from .fees import FeeRules
 from .signals import market_state, MarketTrigger
+from .tradability import DailyBarStatusProvider, StatusProvider, execution_block
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +21,7 @@ class BacktestResult:
     equity: list[EquityPoint]
     warnings: list[str]
     events: list[dict] = field(default_factory=list)
+    execution_events: list[dict] = field(default_factory=list)
 
 
 class BacktestEngine:
@@ -26,7 +29,13 @@ class BacktestEngine:
                  commission_rate: float = 0.0003, stamp_duty_rate: float = 0.001,
                  minimum_commission: float = 5.0, slippage_bps: float = 2.0,
                  index_symbol: str = "000001.SH", trigger_level: float = 4000.0,
-                 trigger_return_threshold: float = 0.0, min_declining_count=None, lot_size: int = 0):
+                 trigger_return_threshold: float = 0.0, min_declining_count=None, lot_size: int = 0,
+                 instrument_types: dict[str, str] | None = None,
+                 status_provider: StatusProvider | None = None):
+        self.status_provider = status_provider or DailyBarStatusProvider()
+        if instrument_types is not None and any(kind not in {"stock", "etf"} for kind in instrument_types.values()):
+            raise ValueError("instrument_types values must be stock or etf")
+        self.instrument_types = None if instrument_types is None else dict(instrument_types)
         try:
             cash_value = float(initial_cash)
             period_value = float(holding_period_days)
@@ -46,6 +55,7 @@ class BacktestEngine:
         self.initial_cash = cash_value
         self.holding_period_days = int(period_value)
         self.commission_rate, self.stamp_duty_rate, self.minimum_commission, self.slippage_bps = parameters
+        self.fee_rules = FeeRules(self.commission_rate, self.minimum_commission, self.stamp_duty_rate)
         self.index_symbol = index_symbol
         self.min_declining_count = MarketTrigger(min_declining_count=min_declining_count).min_declining_count
         if not math.isfinite(float(lot_size)) or float(lot_size) < 0 or not float(lot_size).is_integer():
@@ -80,6 +90,7 @@ class BacktestEngine:
         pending_exit_date: date | None = None
         trades: list[Trade] = []
         events = []
+        execution_events = []
         warnings: list[str] = []
         warning_set: set[str] = set()
         equity: list[EquityPoint] = []
@@ -95,44 +106,61 @@ class BacktestEngine:
             # Orders are matched at today's open before today's close signal.
             if pending_entry is not None and pending_entry[0] == day:
                 _, symbol, signal_day = pending_entry
+                kind = self._instrument_type(symbol, day)
                 row = self._row(today, symbol)
                 pending_entry = None
                 # The close is not known at next-open execution; only the open
                 # and tradability flags can gate entry (future-data cutoff).
-                if row is None or self._blocked_entry(row) or not self._valid_prices(row, "open"):
-                    warnings.append(f"entry not executed for {symbol} on {day} (suspended or limit-up/down)")
+                reason = self._execution_block(row, "buy", kind)
+                if reason:
+                    warnings.append(f"entry not executed for {symbol} on {day} ({reason})")
+                    execution_events.append(self._execution_event(day, symbol, "buy", "cancelled", reason))
                 else:
                     price = float(row["open"]) * (1 + self.slippage_bps / 10000)
-                    quantity = self._quantity(cash, price)
+                    quantity = self.fee_rules.quantity(cash, price, day, kind, self.lot_size)
                     if quantity > 0:
                         notional = quantity * price
-                        commission = self._commission(notional)
-                        cash -= notional + commission
+                        entry_costs = self.fee_rules.calculate(notional, day, kind, "buy")
+                        commission, transfer = entry_costs.commission, entry_costs.transfer_fee
+                        cash -= notional + commission + transfer
+                        execution_events.append(self._execution_event(day, symbol, "buy", "filled", "",
+                            price, quantity, commission, 0.0, transfer))
                         initial_close = None
                         if self._valid_prices(row, "close"):
                             initial_close = float(row["close"])
                         position = {"symbol": symbol, "quantity": quantity, "entry_price": price,
                                     "signal_date": signal_day, "entry_date": day,
-                                    "entry_fees": commission, "last_close": initial_close,
+                                    "entry_fees": commission + transfer, "entry_commission": commission,
+                                    "entry_transfer": transfer, "last_close": initial_close,
                                     "missing_price_warned": False}
                         exit_idx = day_index + self.holding_period_days
                         pending_exit_date = dates[exit_idx] if exit_idx < len(dates) else None
                     else:
                         warnings.append(f"entry not executed for {symbol} on {day} (insufficient cash)")
+                        execution_events.append(self._execution_event(day, symbol, "buy", "cancelled", "insufficient_cash"))
 
             if position is not None and pending_exit_date is not None and day >= pending_exit_date:
                 row = self._row(today, position["symbol"])
-                if row is not None and not self._blocked_exit(row) and self._valid_prices(row, "open"):
+                kind = self._instrument_type(position["symbol"], day)
+                reason = self._execution_block(row, "sell", kind)
+                if reason:
+                    warnings.append(f"exit deferred for {position['symbol']} on {day} ({reason})")
+                    execution_events.append(self._execution_event(day, position["symbol"], "sell", "deferred",
+                        reason, quantity=position["quantity"]))
+                else:
                     price = float(row["open"]) * (1 - self.slippage_bps / 10000)
                     notional = position["quantity"] * price
-                    commission = self._commission(notional)
-                    tax = notional * self.stamp_duty_rate
-                    cash += notional - commission - tax
-                    fees = position["entry_fees"] + commission + tax
+                    exit_costs = self.fee_rules.calculate(notional, day, kind, "sell")
+                    commission, tax, transfer = exit_costs.commission, exit_costs.stamp_duty, exit_costs.transfer_fee
+                    cash += notional - commission - tax - transfer
+                    fees = position["entry_fees"] + commission + tax + transfer
+                    execution_events.append(self._execution_event(day, position["symbol"], "sell", "filled", "",
+                        price, position["quantity"], commission, tax, transfer))
                     gross = (price - position["entry_price"]) * position["quantity"]
                     trades.append(Trade(position["signal_date"], position["entry_date"], day,
                                         position["symbol"], position["quantity"], position["entry_price"],
-                                        price, fees, gross - fees, "holding period"))
+                                        price, fees, gross - fees, "holding period",
+                                        position["entry_commission"] + commission, tax, position["entry_transfer"] + transfer))
                     position = None
                     pending_exit_date = None
 
@@ -141,8 +169,8 @@ class BacktestEngine:
                 row = self._row(today, position["symbol"])
                 if row is not None and self._valid_prices(row, "close"):
                     position["last_close"] = float(row["close"])
-                elif row is not None and not position["missing_price_warned"]:
-                    warnings.append(f"cannot mark open position {position['symbol']}: non-finite close")
+                elif (row is not None or self.instrument_types is not None) and not position["missing_price_warned"]:
+                    warnings.append(f"cannot mark open position {position['symbol']}: missing or non-finite close")
                     position["missing_price_warned"] = True
                 if position["last_close"] is not None:
                     mark = position["quantity"] * position["last_close"]
@@ -158,16 +186,18 @@ class BacktestEngine:
                 universe = frame[frame["date"] <= day].copy()
                 selection = strategy.select(day, market, universe)
                 if selection is not None:
+                    self._instrument_type(selection.symbol, day)
                     pending_entry = (dates[day_index + 1], selection.symbol, day)
             elif position is None and pending_entry is None and day_index == len(dates) - 1:
                 # A final-day signal cannot be executed within the supplied data.
                 selection = strategy.select(day, market, frame[frame["date"] <= day].copy())
                 if selection is not None:
+                    self._instrument_type(selection.symbol, day)
                     warnings.append(f"incomplete trade: signal on {day} has no next trading day")
 
         if position is not None:
             warnings.append(f"incomplete trade: open position {position['symbol']} has no executable exit")
-        return BacktestResult(trades, equity, warnings, events)
+        return BacktestResult(trades, equity, warnings, events, execution_events)
 
     def _market_state(self, frame: pd.DataFrame, day: date) -> MarketState:
         return self._market_state_with_warning(frame, day)[0]
@@ -229,14 +259,28 @@ class BacktestEngine:
             return False
 
     def _commission(self, notional: float) -> float:
-        # Apply exchange-style percentage commission with the configured floor
-        # so every reported trade includes explicit, reproducible costs.
-        return max(self.minimum_commission, notional * self.commission_rate) if notional else 0.0
+        """旧入口只做代理，费用定义集中于 FeeRules。"""
+        return self.fee_rules.commission(notional)
 
     def _quantity(self, cash: float, price: float) -> float:
-        if price <= 0 or cash <= self.minimum_commission:
-            return 0.0
-        if self.lot_size:
-            affordable = min(cash / (1 + self.commission_rate), cash - self.minimum_commission) / price
-            return max(0, math.floor(affordable / self.lot_size)) * self.lot_size
-        return max(0.0, (cash - self.minimum_commission) / (price * (1 + self.commission_rate)))
+        """兼容旧调用；未分类证券的预算委托费用模块，不含日期规则。"""
+        return self.fee_rules.quantity(cash, price, date.min, None, self.lot_size)
+
+    def _instrument_type(self, symbol: str, day: date) -> str | None:
+        if self.instrument_types is None:
+            return None
+        if symbol not in self.instrument_types:
+            raise ValueError(f"unknown instrument type for selected symbol: {symbol}")
+        kind = self.instrument_types[symbol]
+        self.fee_rules.validate_instrument(kind, day)
+        return kind
+
+    def _execution_block(self, row, side: str, kind: str | None) -> str:
+        return execution_block(self.status_provider.read(row), side, kind)
+
+    @staticmethod
+    def _execution_event(day, symbol, side, status, reason, price=None, quantity=0.0,
+                         commission=0.0, stamp_duty=0.0, transfer_fee=0.0):
+        return dict(date=day, symbol=symbol, side=side, status=status, reason=reason,
+                    price=price, quantity=quantity, commission=commission,
+                    stamp_duty=stamp_duty, transfer_fee=transfer_fee)

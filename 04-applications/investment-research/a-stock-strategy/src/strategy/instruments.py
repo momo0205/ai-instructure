@@ -1,7 +1,7 @@
 """证券目录及独立行情准备队列；已发布版本只读，回测不触发网络。
 
-可下载不等于可回测。只有已验证的境内 ETF 使用当前交易费用模型，
-股票与其他基金保留行情供研究，直到相应交易规则得到实现和验证。
+可下载不等于可回测。已验证的境内 ETF 和已识别普通主板股票使用对应费用模型，
+其他证券保留行情供研究；股票当前仅支持日频近似成交。
 """
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -19,6 +19,7 @@ from uuid import uuid4
 
 import pandas as pd
 from .market_download import download_market
+from .fees import STOCK_SUPPORTED_FROM
 
 VERIFIED_ETFS = {'588000.SH':'科创50ETF', '510300.SH':'沪深300ETF', '159915.SZ':'创业板ETF'}
 
@@ -54,10 +55,18 @@ def resolve_instrument(symbol):
 def describe(symbol, metadata=None):
     metadata = metadata or {}
     kind = 'etf' if symbol in VERIFIED_ETFS else 'index' if symbol == '000001.SH' else metadata.get('kind', 'stock' if re.fullmatch(r'(?:[036]\d{5})\.(?:SZ|SH)', symbol) else 'unknown')
-    supported = symbol in VERIFIED_ETFS
+    # 代码范围和已识别元数据同时满足才开放股票。当前名称不能替代历史 ST 状态。
+    stock_name = metadata.get('name', '')
+    mainboard = bool(re.fullmatch(r'(?:(?:000|001|002|003)\d{3}\.SZ|(?:600|601|603|605)\d{3}\.SH)',symbol))
+    stock_supported = (mainboard and kind == 'stock' and metadata.get('kind') == 'stock'
+                       and isinstance(stock_name,str) and bool(stock_name.strip())
+                       and 'ST' not in stock_name.upper() and '退' not in stock_name)
+    supported = symbol in VERIFIED_ETFS or stock_supported
     return dict(symbol=symbol, name=VERIFIED_ETFS.get(symbol, '上证指数' if symbol=='000001.SH' else metadata.get('name', symbol)),
-                kind=kind, backtest_supported=supported,
-                reason='' if supported else '当前仅支持已验证的三只境内 ETF 回测；该证券仅提供行情')
+                kind=kind, backtest_supported=supported, execution_mode='approximate',
+                backtest_start=STOCK_SUPPORTED_FROM.isoformat() if stock_supported else None,
+                reason='普通主板股票：日频近似回测，历史交易状态未完整验证' if stock_supported else
+                    '' if supported else '尚未支持该证券的交易规则或未识别完整元数据；仅提供行情')
 
 
 def instrument_catalog(root):
@@ -176,7 +185,7 @@ class DownloadManager:
                         symbols=sorted(merged.symbol.unique().tolist()), rows=len(merged),
                         symbol_sources={symbol: downloaded_manifest if symbol==request['symbol'] else {'dataset':'real','market_sha256':hashes['market.csv']} for symbol in merged.symbol.unique()},
                         warnings=list(old_manifest.get('warnings', []))+['新增证券只覆盖下载区间；同代码旧行情整段移除，避免前复权基准拼接。',
-                            '仅三只已验证 ETF 支持回测。基线与新增行情分别保留来源；历史基线量额单位可能未经验证，成交量因子结果须谨慎解读。'])
+                            '支持范围由当前交易规则目录决定。基线与新增行情分别保留来源；历史基线量额单位可能未经验证，成交量因子结果须谨慎解读。'])
         # 混合版本不能把某一次下载的量额单位冒充为整个数据集的统一声明。
         manifest.pop('volume_unit', None)
         manifest.pop('amount_unit', None)

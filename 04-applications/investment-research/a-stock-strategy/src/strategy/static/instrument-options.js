@@ -12,6 +12,8 @@ const InstrumentChoices = {
       const item = available.find(candidate => candidate.symbol === symbol);
       if (!item) return null;
       if (item.start > start) start = item.start;
+      // 行情可能早于已实现的费用规则，二者都必须覆盖回测区间。
+      if (item.backtest_start > start) start = item.backtest_start;
       if (item.end < end) end = item.end;
     }
     return start <= end ? {start, end} : null;

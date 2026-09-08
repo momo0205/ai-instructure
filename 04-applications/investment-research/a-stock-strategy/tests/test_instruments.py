@@ -69,7 +69,7 @@ def test_download_publishes_version_without_mutating_base(tmp_path):
         assert 'raw_dir' not in manifest and 'raw_sha256' not in manifest
         assert manifest['parent_provenance']['raw_dir'] == str((tmp_path/'data/real/market_raw/old').resolve())
         assert manifest['parent_provenance']['raw_dir_base'] == 'absolute'
-        assert not next(x for x in dataset['instruments'] if x['symbol']=='002015.SZ')['backtest_supported']
+        assert next(x for x in dataset['instruments'] if x['symbol']=='002015.SZ')['backtest_supported']
         from strategy.jobs import JobManager
         jobs = JobManager(tmp_path, tmp_path/'jobs')
         try:
