@@ -21,3 +21,8 @@ test('non-overlapping coverage blocks submission',()=>{
   const partial={...dataset,instruments:[{symbol:'X',backtest_supported:true,start:'2026-01-01',end:'2026-02-01'}]};
   assert.equal(choices.coverage(partial,['X']),null);
 });
+
+test('stock coverage respects the implemented fee-rule start',()=>{
+  const d={start:'2020-01-01',end:'2025-12-31',instruments:[{symbol:'002015.SZ',backtest_supported:true,start:'2020-01-01',end:'2025-12-31',backtest_start:'2022-07-01'}]};
+  assert.deepEqual(choices.coverage(d,['002015.SZ']),{start:'2022-07-01',end:'2025-12-31'});
+});

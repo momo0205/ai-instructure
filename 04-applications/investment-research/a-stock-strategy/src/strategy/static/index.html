@@ -11,11 +11,11 @@
 <form id="run-form">
 <label>策略<select id="strategy" required></select></label><p id="strategy-description" class="hint"></p>
 <hr><label>历史数据集<select id="dataset" required></select></label><p id="dataset-info" class="hint"></p>
-<div id="strategy-parameters" class="fields"></div><p id="coverage-info" class="hint" role="status"></p><a href="#data-management">管理数据 / 新增代码 ↓</a>
+<div id="strategy-parameters" class="fields"></div><p id="coverage-info" class="hint" role="status"></p><p class="hint">日频近似研究：未知停牌、涨跌停状态按可成交假设处理；前复权价格并非实际成交价。股票支持 2022-07-01 起的区间。</p><a href="#data-management">管理数据 / 新增代码 ↓</a>
 <div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
 <div class="two"><label>初始资金（元）<input id="initial_cash" type="number" value="100000" min="1000" step="1000" required></label><label>持有交易日<input id="holding_period_days" type="number" value="1" min="1" max="252" step="1" required></label></div>
 <details open><summary>市场触发条件</summary><div class="two"><label>最少下跌家数<input id="min_declining_count" type="number" value="4000" min="0" step="1" required></label><label>指数日收益 ≤（%）<input id="trigger_return_threshold" type="number" value="-1" step="0.1" required></label></div></details>
-<details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。ETF 以 100 份为单位，持有期结束后开盘卖出。</p></details>
+<details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。按 100 股／份买入，持有期结束后开盘卖出。股票另计卖出印花税及双边过户费，按成交日期适用规则；ETF 两项均为零。</p></details>
 <button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
 </form></section>
 <div class="results-column"><section class="panel" id="history"><div class="section-title"><h2>任务历史</h2><button type="button" id="refresh" class="quiet">刷新</button></div><p class="hint">勾选已完成任务查看指标对比；点击任务查看详情。</p><div id="jobs" class="job-list"><p class="muted">正在加载…</p></div><div id="comparison" hidden></div></section>
@@ -23,7 +23,7 @@
 </div>
 <section class="panel data-management" id="data-management">
 <div class="section-title"><h2>标的数据管理</h2><button id="refresh-data" type="button">刷新数据目录</button></div>
-<p class="hint">先准备行情，再选择数据集回测。下载不会启动回测，也不会覆盖已有数据或历史结果。当前仅三只已验证 ETF 支持回测；其他证券下载后显示为“仅行情”。</p>
+<p class="hint">先准备行情，再选择数据集回测。下载不会启动回测，也不会覆盖已有数据或历史结果。支持三只已验证 ETF 及已识别的普通沪深主板股票（日频近似研究）；ST、退市及其他板块暂不支持。</p>
 <form id="download-form">
 <div class="two"><label>新增代码<input id="download-symbol" placeholder="例如 002015.SZ" maxlength="9" required></label><p class="hint">上交所使用 .SH，深交所使用 .SZ；系统会校验代码并获取证券名称。</p></div>
 <div class="two"><label>下载开始日期<input id="download-start" type="date" required></label><label>下载结束日期<input id="download-end" type="date" required></label></div>

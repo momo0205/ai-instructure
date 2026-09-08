@@ -126,7 +126,9 @@ async function showJob(id) {
   if(!r.trades?.length)box.append(el('p','本次没有完成交易。请检查触发条件、数据预热和期末未平仓说明。','warnings'));
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
-  box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','费用','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),fmt(t.pnl)])));
+  box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
+  // 旧任务没有执行日志，仍可查看原有结果。
+  if(r.execution_events){const execution=el('details');execution.append(el('summary','成交、取消与延后记录'));execution.append(table(['日期','标的','方向','状态','原因','价格','数量','佣金','印花税','过户费'],r.execution_events.map(e=>[e.date,e.symbol,e.side==='buy'?'买入':'卖出',({filled:'成交',cancelled:'取消',deferred:'延后'})[e.status]||e.status,e.reason||'—',e.price==null?'—':fmt(e.price),fmt(e.quantity),fmt(e.commission),fmt(e.stamp_duty),fmt(e.transfer_fee)])));box.append(execution);}
   const events=el('details');events.append(el('summary','每日触发记录'));events.append(table(['日期','下跌家数','指数日收益','触发'],(r.events||[]).map(e=>[e.as_of,e.declining_count,pct(e.index_return_1d),e.triggered?'是':'否'])));box.append(events);
   const audit=el('details');audit.append(el('summary','参数、版本与数据依据'),el('pre',JSON.stringify({request:job.request,metadata:r.metadata},null,2)));box.append(audit);
 }
@@ -168,7 +170,7 @@ async function refreshData() {
   else {datasetFields();strategyFields();}
   const rows=datasets.flatMap(d=>(d.instruments||[]).map(i=>[
     d.name,`${i.name} · ${i.symbol}`,i.kind,`${i.start} — ${i.end}`,
-    i.backtest_supported?'可回测':`仅行情：${i.reason||'交易规则尚未支持'}`,
+    i.backtest_supported?(i.kind==='stock'?'可回测 · 近似研究':'可回测'):`仅行情：${i.reason||'交易规则尚未支持'}`,
   ]));
   $('instruments').replaceChildren(rows.length?table(['数据集','标的','类型','覆盖区间','状态'],rows):el('p','暂无已准备数据','hint'));
   const base=datasets.find(d=>d.id==='real');
