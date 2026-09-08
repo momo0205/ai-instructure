@@ -33,7 +33,8 @@ def verify_manifests(folder):
 def datasets(project_root):
     """列出实际存在的数据集；样例数据始终明确标记。"""
     result = []
-    for name in ('real','mvp_sample'):
+    managed = sorted(p.name for p in (Path(project_root)/'data').glob('managed_*') if p.is_dir())
+    for name in ('real','mvp_sample', *managed):
         folder = Path(project_root)/'data'/name
         if not all((folder/f).is_file() for f in ('market.csv','breadth.csv')):
             continue
@@ -53,6 +54,14 @@ def datasets(project_root):
         if name=='mvp_sample':
             warnings.insert(0,'合成样例，不代表真实市场表现')
         result.append(dict(id=name,name='真实市场数据' if name=='real' else '合成样例',start=index_calendar.min().date().isoformat(),end=index_calendar.max().date().isoformat(),symbols=sorted(market.symbol.unique().tolist()),source=sorted(breadth.source.unique().tolist()),market_source=market_source,adjustment=market_manifest.get('adjustment',config.get('data',{}).get('adjustment','unknown')),sample=name=='mvp_sample',warnings=warnings))
+        from .instruments import describe
+        metadata = market_manifest.get('instruments', {})
+        result[-1]['instruments'] = [dict(describe(symbol, metadata.get(symbol)),
+            start=rows.date.min().date().isoformat(), end=rows.date.max().date().isoformat())
+            for symbol, rows in market.groupby('symbol')]
+        if name.startswith('managed_'):
+            symbol = market_manifest.get('updated_symbol', '')
+            result[-1]['name'] = f'行情版本 · {symbol} · {name[-8:]}'
     return result
 
 
@@ -87,6 +96,9 @@ def validate_request(root, request):
     symbols = [params['symbol']] if 'symbol' in params else params['candidate_symbols']
     if not isinstance(symbols,list) or not 1 <= len(symbols) <= 100 or any(not isinstance(s,str) or s not in dataset['symbols'] or s=='000001.SH' for s in symbols) or len(set(symbols))!=len(symbols):
         raise ValueError('parameters require unique available tradable symbols')
+    supported = {item['symbol'] for item in dataset['instruments'] if item['backtest_supported']}
+    if any(symbol not in supported for symbol in symbols):
+        raise ValueError('该证券暂不支持回测：当前交易模型只验证了三只境内 ETF')
     if 'weights' in params:
         weights = params['weights']
         keys = {'momentum','reversal','volatility','volume'}
