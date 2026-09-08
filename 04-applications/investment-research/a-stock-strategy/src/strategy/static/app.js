@@ -1,7 +1,7 @@
 /* 页面只负责输入与展示。策略定义和参数校验的最终依据来自服务器目录。 */
 'use strict';
 const $ = id => document.getElementById(id);
-const state = {strategies: [], datasets: [], jobs: [], selected: null, compared: new Set(), busy: false};
+const state = {strategies: [], datasets: [], jobs: [], downloads: [], selected: null, compared: new Set(), busy: false};
 const statuses = {queued:'排队中',running:'运行中',succeeded:'已完成',failed:'失败',cancelled:'已取消',interrupted:'已中断'};
 const fmt = n => n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2});
 const pct = n => n == null ? '—' : `${fmt(Number(n)*100)}%`;
@@ -18,7 +18,20 @@ function strategyFields(values={}) {
   for(const field of spec.parameters) {
     const label=el('label',field.label||field.name); const value=values[field.name]??field.default;
     let input;
-    if(field.type==='object') {input=el('textarea');input.value=JSON.stringify(value,null,2);}
+    if(['symbol','candidate_symbols'].includes(field.name)) {
+      input=el('select');input.multiple=field.name==='candidate_symbols';
+      const selected=Array.isArray(value)?value:[value];
+      const items=InstrumentChoices.available(state.datasets.find(d=>d.id===$('dataset').value));
+      if(!input.multiple) input.append(new Option('请选择已准备的标的',''));
+      for(const item of items) {
+        const option=new Option(`${item.name} · ${item.symbol}`,item.symbol);
+        option.selected=selected.includes(item.symbol);input.append(option);
+      }
+      if(input.multiple) {input.size=Math.min(6,Math.max(3,items.length));}
+      input.onchange=()=>updateCoverage();
+      if(input.multiple) label.append(el('small','可多选，按住 Ctrl / Command 选择多个标的','hint'));
+    }
+    else if(field.type==='object') {input=el('textarea');input.value=JSON.stringify(value,null,2);}
     else if(field.options) {input=el('select');for(const option of field.options) input.append(new Option(option,option));input.value=value;}
     else {input=el('input');input.type=['integer','number','float','int'].includes(field.type)?'number':'text';
       input.value=Array.isArray(value)?value.join(', '):value??'';
@@ -27,6 +40,22 @@ function strategyFields(values={}) {
     input.dataset.parameter=field.name;input.dataset.type=field.type;input.required=true;label.append(input);container.append(label);
     if(field.description)container.append(el('p',field.description,'hint'));
   }
+  updateCoverage();
+}
+function selectedSymbols() {
+  const input=$('strategy-parameters').querySelector('[data-parameter="symbol"], [data-parameter="candidate_symbols"]');
+  return input ? (input.multiple ? [...input.selectedOptions].map(o=>o.value) : [input.value].filter(Boolean)) : [];
+}
+function updateCoverage() {
+  const d=state.datasets.find(x=>x.id===$('dataset').value);
+  const range=InstrumentChoices.coverage(d,selectedSymbols());
+  $('submit').disabled=!range;
+  $('coverage-info').textContent=range?`所选标的共同可用区间：${range.start} — ${range.end}；区间内缺失数据会在提交时校验。`:'请选择有共同数据区间的可回测标的。';
+  if(range) for(const key of ['start','end']) {
+    $(key).min=range.start;$(key).max=range.end;
+    if(!$(key).value || $(key).value<range.start || $(key).value>range.end) $(key).value=range[key];
+  }
+  return range;
 }
 function datasetFields(reset=true) {
   const d=state.datasets.find(x=>x.id===$('dataset').value);if(!d)return;
@@ -34,9 +63,11 @@ function datasetFields(reset=true) {
   for(const key of ['start','end']) {$(key).min=d.start;$(key).max=d.end;if(reset)$(key).value=d[key];}
 }
 function requestFromForm() {
+  if(!updateCoverage()) throw new Error('请先选择可回测标的');
   const parameters={};for(const input of $('strategy-parameters').querySelectorAll('[data-parameter]')) {
     const type=input.dataset.type;let value=input.value;
     if(['integer','number','float','int'].includes(type))value=Number(value);
+    else if(input.multiple)value=[...input.selectedOptions].map(option=>option.value);
     else if(type==='array'||type==='string_array')value=value.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean);
     else if(type==='object') {try {value=JSON.parse(value);}catch {throw new Error('评分权重必须填写合法 JSON 对象');}}
     parameters[input.dataset.parameter]=value;
@@ -47,7 +78,8 @@ function requestFromForm() {
   request.trigger_return_threshold/=100;request.commission_rate/=100;return request;
 }
 function copyRequest(request) {
-  $('strategy').value=request.strategy_id;strategyFields(request.parameters);$('dataset').value=request.dataset_id;datasetFields(false);
+  if(!state.datasets.some(d=>d.id===request.dataset_id)) {notice('原任务数据集已不可用，无法复制参数。');return;}
+  $('strategy').value=request.strategy_id;$('dataset').value=request.dataset_id;datasetFields(false);strategyFields(request.parameters);
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
   for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
   notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
@@ -104,14 +136,67 @@ async function renderComparison() {
   target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),pct(m.win_rate),m.trade_count];})));
 }
 async function refresh() {state.jobs=await api('/api/jobs');renderJobs();}
-$('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>datasetFields();$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
-$('run-form').onsubmit=async event=>{event.preventDefault();notice('');$('submit').disabled=true;try{const job=await api('/api/jobs',requestFromForm());await refresh();await showJob(job.id);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{$('submit').disabled=false;}};
+function renderDownloads() {
+  const target=$('downloads');target.replaceChildren();
+  if(!state.downloads.length) target.append(el('p','尚无下载记录。','hint'));
+  for(const job of state.downloads) {
+    const row=el('div',null,'download-row');
+    row.append(el('strong',`${job.request.symbol} · ${statuses[job.status]||job.status}`),el('p',`${job.request.start} — ${job.request.end}`,'hint'));
+    if(job.error) row.append(el('p',job.error,'warnings'));
+    if(job.dataset_id) {
+      const use=el('button','查看此数据集');use.type='button';
+      use.onclick=()=>{$('dataset').value=job.dataset_id;datasetFields();strategyFields();$('run-form').scrollIntoView({behavior:'smooth'});};row.append(use);
+    }
+    if(['failed','interrupted'].includes(job.status)) {
+      const retry=el('button','重试下载');retry.type='button';retry.onclick=async()=>{
+        retry.disabled=true;try{await api('/api/downloads',job.request);await refreshData();}catch(e){$('download-notice').textContent=e.message;}finally{retry.disabled=false;}
+      };row.append(retry);
+    }
+    target.append(row);
+  }
+}
+async function refreshData() {
+  // 完成状态写入晚于数据发布；先读状态再读目录，确保成功任务的版本已可见。
+  const downloads=await api('/api/downloads');
+  const datasets=await api('/api/datasets');
+  // 等待网络期间用户可能已经切换数据集，保留响应到达时的实际选择。
+  const previous=$('dataset').value;
+  state.datasets=datasets;state.downloads=downloads;
+  // 后台轮询只刷新目录，不重置用户正在编辑的策略参数和日期。
+  $('dataset').replaceChildren(...datasets.map(d=>new Option(d.name,d.id)));
+  if(datasets.some(d=>d.id===previous)) $('dataset').value=previous;
+  else {datasetFields();strategyFields();}
+  const rows=datasets.flatMap(d=>(d.instruments||[]).map(i=>[
+    d.name,`${i.name} · ${i.symbol}`,i.kind,`${i.start} — ${i.end}`,
+    i.backtest_supported?'可回测':`仅行情：${i.reason||'交易规则尚未支持'}`,
+  ]));
+  $('instruments').replaceChildren(rows.length?table(['数据集','标的','类型','覆盖区间','状态'],rows):el('p','暂无已准备数据','hint'));
+  const base=datasets.find(d=>d.id==='real');
+  $('download-submit').disabled=!base;
+  $('download-coverage').textContent=base?`当前市场广度基线：${base.start} — ${base.end}，下载区间需在此范围内。`:'请先通过 CLI 准备真实行情与市场广度，合成样例不能作为下载基线。';
+  if(base) for(const key of ['start','end']) {
+    const input=$(`download-${key}`);input.min=base.start;input.max=base.end;
+    if(!input.value)input.value=base[key];
+  }
+  renderDownloads();
+}
+$('refresh-data').onclick=()=>refreshData().catch(e=>{$('download-notice').textContent=e.message;});
+$('download-form').onsubmit=async event=>{
+  event.preventDefault();$('download-submit').disabled=true;$('download-notice').textContent='';
+  try {
+    const request={symbol:$('download-symbol').value.trim().toUpperCase(),start:$('download-start').value,end:$('download-end').value};
+    await api('/api/downloads',request);$('download-notice').textContent='下载任务已提交。完成后会生成独立数据集；请在回测区选择使用。';await refreshData();
+  } catch(e) {$('download-notice').textContent=e.message;}
+  finally {$('download-submit').disabled=!state.datasets.some(d=>d.id==='real');}
+};
+$('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>{datasetFields();strategyFields();};$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
+$('run-form').onsubmit=async event=>{event.preventDefault();notice('');try{const request=requestFromForm();$('submit').disabled=true;const job=await api('/api/jobs',request);await refresh();await showJob(job.id);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{updateCoverage();}};
 async function init() {
   [state.strategies,state.datasets]=await Promise.all([api('/api/strategies'),api('/api/datasets')]);
   state.strategies.forEach(s=>$('strategy').append(new Option(s.name,s.id)));state.datasets.forEach(d=>$('dataset').append(new Option(d.name,d.id)));
-  strategyFields();datasetFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
-  await refresh();
+  datasetFields();strategyFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
+  await refresh();await refreshData();
   // 串行轮询，避免长任务或慢磁盘时叠加请求。只自动更新尚未结束的详情。
-  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&['running','queued'].includes(j.status));await refresh();if(pending)await showJob(state.selected);}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
+  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&['running','queued'].includes(j.status));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status)))await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
 }
 init().catch(e=>notice(e.message));

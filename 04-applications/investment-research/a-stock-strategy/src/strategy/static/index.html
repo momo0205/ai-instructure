@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/app.js" defer></script></head>
 <body>
 <header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
 <main>
@@ -10,8 +10,8 @@
 <section class="panel setup"><div class="section-title"><h2>新建回测</h2><span class="tag">日频 · 单持仓</span></div>
 <form id="run-form">
 <label>策略<select id="strategy" required></select></label><p id="strategy-description" class="hint"></p>
-<div id="strategy-parameters" class="fields"></div>
 <hr><label>历史数据集<select id="dataset" required></select></label><p id="dataset-info" class="hint"></p>
+<div id="strategy-parameters" class="fields"></div><p id="coverage-info" class="hint" role="status"></p><a href="#data-management">管理数据 / 新增代码 ↓</a>
 <div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
 <div class="two"><label>初始资金（元）<input id="initial_cash" type="number" value="100000" min="1000" step="1000" required></label><label>持有交易日<input id="holding_period_days" type="number" value="1" min="1" max="252" step="1" required></label></div>
 <details open><summary>市场触发条件</summary><div class="two"><label>最少下跌家数<input id="min_declining_count" type="number" value="4000" min="0" step="1" required></label><label>指数日收益 ≤（%）<input id="trigger_return_threshold" type="number" value="-1" step="0.1" required></label></div></details>
@@ -20,6 +20,19 @@
 </form></section>
 <div class="results-column"><section class="panel" id="history"><div class="section-title"><h2>任务历史</h2><button type="button" id="refresh" class="quiet">刷新</button></div><p class="hint">勾选已完成任务查看指标对比；点击任务查看详情。</p><div id="jobs" class="job-list"><p class="muted">正在加载…</p></div><div id="comparison" hidden></div></section>
 <section class="panel" id="detail"><div class="empty"><div class="empty-icon">↗</div><h2>等待第一份研究结果</h2><p>执行回测后，这里会展示净值、回撤和逐笔交易。</p><p class="hint">亏损、零交易和运行失败会分别显示。</p></div></section></div>
-</div><footer>研究结果取决于数据覆盖与执行假设。每次实验均保留对应的参数、版本及数据说明。</footer>
+</div>
+<section class="panel data-management" id="data-management">
+<div class="section-title"><h2>标的数据管理</h2><button id="refresh-data" type="button">刷新数据目录</button></div>
+<p class="hint">先准备行情，再选择数据集回测。下载不会启动回测，也不会覆盖已有数据或历史结果。当前仅三只已验证 ETF 支持回测；其他证券下载后显示为“仅行情”。</p>
+<form id="download-form">
+<div class="two"><label>新增代码<input id="download-symbol" placeholder="例如 002015.SZ" maxlength="9" required></label><p class="hint">上交所使用 .SH，深交所使用 .SZ；系统会校验代码并获取证券名称。</p></div>
+<div class="two"><label>下载开始日期<input id="download-start" type="date" required></label><label>下载结束日期<input id="download-end" type="date" required></label></div>
+<p id="download-coverage" class="hint"></p><button id="download-submit" class="primary" type="submit">新增代码并下载行情</button>
+</form>
+<p id="download-notice" role="status" aria-live="polite"></p>
+<h3>已准备的数据</h3><div id="instruments"></div>
+<h3>下载记录</h3><div id="downloads"></div>
+</section>
+<footer>研究结果取决于数据覆盖与执行假设。每次实验均保留对应的参数、版本及数据说明。</footer>
 </main>
 </body></html>

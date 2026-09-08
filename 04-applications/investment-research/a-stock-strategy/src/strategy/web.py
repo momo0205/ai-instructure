@@ -13,7 +13,8 @@ from urllib.parse import urlsplit
 
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
-             '/app.js': 'app.js', '/style.css': 'style.css'}
+             '/app.js': 'app.js', '/style.css': 'style.css',
+             '/instrument-options.js': 'instrument-options.js'}
     if path not in files:
         raise ValueError('资源不存在')
     return Path(__file__).parent / 'static' / files[path]
@@ -37,10 +38,15 @@ def check_write_request(headers, port: int) -> None:
         raise ValueError('请求大小不合法（上限 64 KB）')
 
 
-def dispatch(method, path, payload, root, manager):
+def dispatch(method, path, payload, root, manager, downloads=None):
     """返回 (HTTP 状态码, JSON 对象)，便于脱离网络测试业务路由。"""
     try:
         if method == 'GET':
+            if path == '/api/instruments':
+                from .instruments import instrument_catalog
+                return 200, instrument_catalog(root)
+            if path == '/api/downloads' and downloads is not None:
+                return 200, downloads.list()
             if path == '/api/strategies':
                 from .registry import catalog
                 return 200, catalog()
@@ -55,6 +61,8 @@ def dispatch(method, path, payload, root, manager):
         if method == 'POST':
             if not isinstance(payload, dict):
                 return 400, {'error': '请求必须是 JSON 对象'}
+            if path == '/api/downloads' and downloads is not None:
+                return 202, downloads.submit(payload)
             if path == '/api/jobs':
                 return 202, manager.submit(payload)
             if path.startswith('/api/jobs/') and path.endswith('/cancel') and path.count('/') == 4:
@@ -71,6 +79,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
     from .jobs import JobManager
     root = Path(root).resolve()
     manager = None
+    downloads = None
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, data, content_type='application/json; charset=utf-8'):
@@ -89,7 +98,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
                 check_host(self.headers, self.server.server_port)
                 path = urlsplit(self.path).path
                 if path.startswith('/api/'):
-                    self.send(*dispatch('GET', path, None, root, manager))
+                    self.send(*dispatch('GET', path, None, root, manager, downloads))
                 else:
                     resource = static_file(path)
                     mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[resource.suffix]
@@ -101,7 +110,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
             try:
                 check_write_request(self.headers, self.server.server_port)
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-                self.send(*dispatch('POST', urlsplit(self.path).path, payload, root, manager))
+                self.send(*dispatch('POST', urlsplit(self.path).path, payload, root, manager, downloads))
             except (ValueError, UnicodeDecodeError) as error:
                 self.send(400, {'error': str(error)})
 
@@ -110,6 +119,8 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
         server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
         # 先占用端口，再恢复任务，避免第二次启动篡改正在运行的服务状态。
         manager = JobManager(root, state_dir or root / 'reports' / 'workbench')
+        from .instruments import DownloadManager
+        downloads = DownloadManager(root, state_dir or root / 'reports' / 'workbench')
         print(f'回测工作台：http://127.0.0.1:{server.server_port}', flush=True)
         server.serve_forever()
     except KeyboardInterrupt:
@@ -119,3 +130,5 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
             server.server_close()
         if manager is not None:
             manager.close()
+        if downloads is not None:
+            downloads.close()
