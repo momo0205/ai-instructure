@@ -7,7 +7,6 @@ from .tradability import TRADABILITY_VERSION
 import hashlib
 import json
 import shutil
-import tomllib
 import pandas as pd
 from .registry import get_strategy_definition
 from .validation import numeric
@@ -15,58 +14,8 @@ from .data import CsvMarketDataProvider
 from .breadth import load_breadth, attach_breadth
 from .backtest import BacktestEngine
 from .evaluation import evaluate
-
-
-def verify_manifests(folder):
-    """拒绝更新中或损坏的数据/清单组合；旧清单无哈希时不声称已验证。"""
-    folder = Path(folder)
-    for manifest_name, filename, field in (
-        ('market_manifest.json', 'market.csv', 'market_sha256'),
-        ('manifest.json', 'breadth.csv', 'breadth_sha256'),
-    ):
-        path = folder/manifest_name
-        if path.is_file():
-            manifest = json.loads(path.read_text())
-            expected = manifest.get(field)
-            if expected is not None and expected != hashlib.sha256((folder/filename).read_bytes()).hexdigest():
-                raise ValueError(f'{filename} hash mismatch：数据正在更新或清单已过期，请重新下载后重试')
-
-
-def datasets(project_root):
-    """列出实际存在的数据集；样例数据始终明确标记。"""
-    result = []
-    managed = sorted(p.name for p in (Path(project_root)/'data').glob('managed_*') if p.is_dir())
-    for name in ('real','mvp_sample', *managed):
-        folder = Path(project_root)/'data'/name
-        if not all((folder/f).is_file() for f in ('market.csv','breadth.csv')):
-            continue
-        verify_manifests(folder)
-        market = CsvMarketDataProvider(folder/'market.csv').load()
-        breadth = load_breadth(folder/'breadth.csv')
-        index_calendar = market.loc[market.symbol == '000001.SH', 'date']
-        if index_calendar.empty:
-            continue
-        config_path = Path(project_root)/'configs'/('real_breadth.toml' if name=='real' else 'mvp.toml')
-        config = tomllib.loads(config_path.read_text()) if config_path.is_file() else {}
-        provenance = config.get('metadata',{})
-        market_manifest_path = folder/'market_manifest.json'
-        market_manifest = json.loads(market_manifest_path.read_text()) if market_manifest_path.is_file() else {}
-        market_source = market_manifest.get('source', config.get('data',{}).get('source','unknown'))
-        warnings = list(market_manifest.get('warnings', provenance.get('warnings',['数据质量未经独立验证'])))
-        # 旧快照保留原文及哈希；展示时注明历史能力说明，避免与当前目录矛盾。
-        warnings = [w.replace('仅三只已验证 ETF 支持回测。', '此版本创建时仅开放 ETF；当前支持范围以标的目录为准。') for w in warnings]
-        if name=='mvp_sample':
-            warnings.insert(0,'合成样例，不代表真实市场表现')
-        result.append(dict(id=name,name='真实市场数据' if name=='real' else '合成样例',start=index_calendar.min().date().isoformat(),end=index_calendar.max().date().isoformat(),symbols=sorted(market.symbol.unique().tolist()),source=sorted(breadth.source.unique().tolist()),market_source=market_source,adjustment=market_manifest.get('adjustment',config.get('data',{}).get('adjustment','unknown')),sample=name=='mvp_sample',warnings=warnings))
-        from .instruments import describe
-        metadata = market_manifest.get('instruments', {})
-        result[-1]['instruments'] = [dict(describe(symbol, metadata.get(symbol)),
-            start=rows.date.min().date().isoformat(), end=rows.date.max().date().isoformat())
-            for symbol, rows in market.groupby('symbol')]
-        if name.startswith('managed_'):
-            symbol = market_manifest.get('updated_symbol', '')
-            result[-1]['name'] = f'行情版本 · {symbol} · {name[-8:]}'
-    return result
+# 保留历史导入路径；目录与文件校验实现归数据仓库。
+from .dataset_repository import datasets, verify_manifests
 
 
 def validate_request(root, request):
