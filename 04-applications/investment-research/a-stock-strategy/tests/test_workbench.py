@@ -101,7 +101,11 @@ def test_dataset_bounds_use_index_calendar(tmp_path):
 
 def test_registry_entry_controls_catalog_and_constructor(monkeypatch):
     import strategy.registry as registry
-    entry=dict(id='test_strategy',name='Test',description='Test',version='test',parameters=[],constructor=lambda **kwargs:kwargs)
-    monkeypatch.setattr(registry,'_REGISTRY',[entry])
-    assert registry.catalog()==[{k:v for k,v in entry.items() if k!='constructor'}]
-    assert registry.build_strategy('test_strategy',{'hello':1})=={'hello':1}
+    monkeypatch.setattr(registry, '_REGISTRY', {})
+    definition = registry.StrategyDefinition(
+        id='test_strategy', name='Test', description='Test', version='test', parameters=[],
+        constructor=lambda **kwargs: kwargs, symbol_selector=lambda p: [],
+    )
+    registry.register_strategy(definition)
+    assert registry.catalog() == [dict(id='test_strategy', name='Test', description='Test', version='test', parameters=[])]
+    assert registry.build_strategy('test_strategy', {'hello': 1}) == {'hello': 1}
