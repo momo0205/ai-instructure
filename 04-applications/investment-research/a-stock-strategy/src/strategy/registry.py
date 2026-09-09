@@ -1,14 +1,104 @@
-"""工作台策略目录：参数单位与默认值在此集中定义。"""
+"""显式策略扩展合同：参数、标的、预热和构造属于策略定义。"""
 from copy import deepcopy
+from dataclasses import dataclass
+from typing import Callable
+
 from .strategies.fixed import FixedAssetStrategy
 from .strategies.rank import CrossSectionalRankStrategy
+from .validation import numeric
+
+
+@dataclass
+class StrategyDefinition:
+    """注册启动时可信 Python 定义；回调接收已归一化参数。
+
+    复杂参数可覆写 normalize_parameters；symbols 返回所需交易标的列表，
+    warmup_sessions 返回每个标的需要的区间前交易日数。
+    """
+    id: str
+    name: str
+    description: str
+    version: str
+    parameters: list[dict]
+    constructor: Callable
+    symbol_selector: Callable
+    warmup: Callable = lambda parameters: 0
+
+    def normalize_parameters(self, parameters):
+        schema = {p['name']: p for p in self.parameters}
+        if not isinstance(parameters, dict) or set(parameters)-set(schema):
+            raise ValueError('unknown strategy parameters')
+        result = deepcopy({key: p['default'] for key, p in schema.items()} | parameters)
+        for key, parameter in schema.items():
+            if parameter['type'] in ('number', 'integer'):
+                result[key] = numeric(result[key], key, parameter['min'], parameter['max'], parameter['type']=='integer')
+            else:
+                expected = {'string': str, 'array': list, 'object': dict, 'boolean': bool}.get(parameter['type'])
+                if expected is None:
+                    raise ValueError(f"{key}: unsupported parameter type {parameter['type']}")
+                if not isinstance(result[key], expected):
+                    raise ValueError(f"{key}: expected {parameter['type']}")
+        return result
+
+    def symbols(self, parameters):
+        return self.symbol_selector(parameters)
+
+    def warmup_sessions(self, parameters):
+        sessions = self.warmup(parameters)
+        if isinstance(sessions, bool) or not isinstance(sessions, int) or sessions < 0:
+            raise ValueError('warmup: expected non-negative integer sessions')
+        return sessions
+
+    def build(self, parameters):
+        return self.constructor(**parameters)
+
+    def catalog_entry(self):
+        return deepcopy(dict(id=self.id, name=self.name, description=self.description,
+                             version=self.version, parameters=self.parameters))
+
+
+class RankStrategyDefinition(StrategyDefinition):
+    def normalize_parameters(self, parameters):
+        result = super().normalize_parameters(parameters)
+        defaults = next(p['default'] for p in self.parameters if p['name']=='weights')
+        weights = result['weights']
+        if not isinstance(weights, dict) or set(weights)-set(defaults):
+            raise ValueError('unknown weights')
+        result['weights'] = deepcopy(defaults) | {k: numeric(v, 'weights', -100, 100) for k, v in weights.items()}
+        return result
+
+
+_REGISTRY = {}
+
+
+def register_strategy(definition):
+    """显式注册，拒绝覆盖已有策略。"""
+    if definition.id in _REGISTRY:
+        raise ValueError(f'strategy already registered: {definition.id}')
+    _REGISTRY[definition.id] = definition
+
+
+def get_strategy_definition(strategy_id):
+    if not isinstance(strategy_id, str) or strategy_id not in _REGISTRY:
+        raise ValueError('unknown strategy_id')
+    return _REGISTRY[strategy_id]
+
+
+def catalog():
+    """返回可直接 JSON 序列化的策略目录副本。"""
+    return [definition.catalog_entry() for definition in _REGISTRY.values()]
+
+
+def build_strategy(strategy_id, parameters):
+    """兼容已有构造入口；调用方应先通过定义归一化参数。"""
+    return get_strategy_definition(strategy_id).build(parameters)
 
 
 def _number(name, label, default, minimum, maximum, kind='integer', step=1):
     return dict(name=name, label=label, type=kind, default=default, min=minimum, max=maximum, step=step)
 
 
-_REGISTRY = [
+_BUILTINS = [
     dict(id='fixed_asset', constructor=FixedAssetStrategy, name='固定标的', description='全市场下跌家数触发后，下一交易日开盘买入指定标的。', version='1', parameters=[dict(name='symbol',label='标的代码',type='string',default='588000.SH')]),
     dict(id='cross_sectional_rank', constructor=CrossSectionalRankStrategy, name='横截面排名', description='触发后按动量、反转、波动率与成交量变化的标准分加权选股。窗口单位为交易日。', version='1', parameters=[
         dict(name='candidate_symbols',label='候选标的',type='array',default=['588000.SH','510300.SH','159915.SZ']),
@@ -19,14 +109,8 @@ _REGISTRY = [
 ]
 
 
-def catalog():
-    """返回可直接 JSON 序列化的策略目录副本。"""
-    return deepcopy([{k:v for k,v in entry.items() if k != 'constructor'} for entry in _REGISTRY])
-
-
-def build_strategy(strategy_id, parameters):
-    """构造已注册策略；参数校验由工作台入口统一执行。"""
-    for entry in _REGISTRY:
-        if entry['id'] == strategy_id:
-            return entry['constructor'](**parameters)
-    raise ValueError('unknown strategy_id')
+register_strategy(StrategyDefinition(**_BUILTINS[0], symbol_selector=lambda p: [p['symbol']]))
+register_strategy(RankStrategyDefinition(
+    **_BUILTINS[1], symbol_selector=lambda p: p['candidate_symbols'],
+    warmup=lambda p: max(p[k] for k in ('momentum_window', 'reversal_window', 'volatility_window', 'volume_window')),
+))
