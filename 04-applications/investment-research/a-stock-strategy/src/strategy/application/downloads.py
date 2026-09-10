@@ -8,10 +8,10 @@ import sqlite3
 import threading
 from urllib.request import urlopen
 from uuid import uuid4
-from .market_download import download_market
-from .instrument_catalog import VERIFIED_ETFS, validate_symbol, describe
-from .market_provider import MarketDataProvider, TencentMarketDataProvider, CallableMarketDataProvider
-from .dataset_repository import DatasetRepository, LocalDatasetRepository
+from strategy.market_data.tencent import download_market
+from strategy.market_data.catalog import VERIFIED_ETFS, validate_symbol, describe
+from strategy.market_data.provider import MarketDataProvider, TencentMarketDataProvider, CallableMarketDataProvider
+from strategy.market_data.repository import DatasetRepository, LocalDatasetRepository
 
 
 def resolve_instrument(symbol):

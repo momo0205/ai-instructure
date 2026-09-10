@@ -8,7 +8,7 @@ import shutil
 import sqlite3
 import threading
 import uuid
-from .workbench import validate_request, execute
+from strategy.application.backtests import validate_request, execute
 
 
 class JobManager:
@@ -56,7 +56,7 @@ class JobManager:
                 raise ValueError('数据在提交过程中更新，请稍后重试')
             if (self.root/'configs').is_dir():
                 shutil.copytree(self.root/'configs',frozen_root/'configs')
-            package = Path(__file__).parent
+            package = Path(__file__).parents[1]
             for source in package.rglob('*.py'):
                 target = frozen_root/'src'/'strategy'/source.relative_to(package)
                 target.parent.mkdir(parents=True,exist_ok=True)

@@ -8,8 +8,8 @@ import math
 import sys
 from typing import Any
 
-from .backtest import BacktestResult
-from .domain import EquityPoint, Trade
+from strategy.backtesting.engine import BacktestResult
+from strategy.domain import EquityPoint, Trade
 
 
 TRADING_DAYS_PER_YEAR = 252.0

@@ -27,4 +27,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-strategy = ["static/*.html", "static/*.js", "static/*.css"]
+"strategy.interfaces.web" = ["static/*.html", "static/*.js", "static/*.css"]

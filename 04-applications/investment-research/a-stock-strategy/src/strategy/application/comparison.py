@@ -10,15 +10,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import BacktestConfig
-from .evaluation import evaluate
-from .reporting import write_report
-from .strategies.fixed import FixedAssetStrategy
-from .strategies.rank import CrossSectionalRankStrategy
+from strategy.interfaces.cli.config import BacktestConfig
+from strategy.backtesting.evaluation import evaluate
+from strategy.storage.reports import write_report
+from strategy.strategies.fixed import FixedAssetStrategy
+from strategy.strategies.rank import CrossSectionalRankStrategy
 
 
 def compare(config: BacktestConfig, data: pd.DataFrame, output_dir: str | Path) -> dict:
-    from .cli import _engine, _metadata
+    from strategy.interfaces.cli.main import _engine, _metadata
 
     out = Path(output_dir)
     params = config.strategy.parameters

@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 import pandas as pd
-from .data import validate_market_frame
+from strategy.market_data.csv import validate_market_frame
 
 URL = 'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get'
 

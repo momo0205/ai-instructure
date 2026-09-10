@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import pandas as pd
-from .data import REQUIRED_MARKET_COLUMNS, validate_market_frame
+from strategy.market_data.csv import REQUIRED_MARKET_COLUMNS, validate_market_frame
 
 
 # Candidate list and validation flow adapted from a-stock-data v3.8.0 (Apache-2.0):

@@ -2,7 +2,7 @@
 from datetime import date
 import math
 import pandas as pd
-from .domain import MarketState
+from strategy.domain import MarketState
 
 
 class MarketTrigger:

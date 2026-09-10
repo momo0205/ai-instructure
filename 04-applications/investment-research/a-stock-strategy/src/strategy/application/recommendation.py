@@ -8,8 +8,8 @@ import math
 from numbers import Real
 import pandas as pd
 
-from .domain import MarketState, Selection
-from .signals import market_state
+from strategy.domain import MarketState, Selection
+from strategy.backtesting.signals import market_state
 
 
 @dataclass(frozen=True)
