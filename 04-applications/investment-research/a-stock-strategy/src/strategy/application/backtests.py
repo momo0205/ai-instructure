@@ -6,8 +6,7 @@ from strategy.backtesting.tradability import TRADABILITY_VERSION
 from strategy.strategies.registry import get_strategy_definition
 from strategy.market_data.csv import CsvMarketDataProvider
 from strategy.market_data.breadth import load_breadth, attach_breadth
-from strategy.backtesting.engine import BacktestEngine
-from strategy.backtesting.evaluation import evaluate
+from strategy.application import simulation
 from strategy.market_data.repository import datasets, verify_manifests
 from strategy.application.requests import validate_request
 from strategy.storage.snapshots import freeze_inputs, write_result
@@ -42,8 +41,12 @@ def execute(root, request, output_dir):
         if count<needed:
             warnings.append(f'warmup insufficient: {symbol} has {count}/{needed} prior sessions；早期信号可能无法选股')
     engine_keys = ('initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps')
-    engine = BacktestEngine(lot_size=100,stamp_duty_rate=0.0,instrument_types=instrument_types,**{k:request[k] for k in engine_keys})
-    result = engine.run(market,definition.build(request['parameters']),start=date.fromisoformat(request['start']),end=date.fromisoformat(request['end']))
+    options = dict(lot_size=100, stamp_duty_rate=0.0, instrument_types=instrument_types,
+                   **{k: request[k] for k in engine_keys})
+    outcome = simulation.run_simulation(simulation.SimulationPlan(
+        market, definition.build(request['parameters']), options, profile='workbench',
+        start=date.fromisoformat(request['start']), end=date.fromisoformat(request['end'])))
+    engine, result = outcome.engine, outcome.result
     metadata = dict(dataset_id=request['dataset_id'],hashes=hashes,strategy_version=definition.version,breadth_source=sorted(breadth.source.unique().tolist()),market_source=dataset['market_source'],adjustment=dataset['adjustment'],sample=request['dataset_id']=='mvp_sample',code_provenance='Python source captured for audit; running service uses modules loaded at startup',timing='close signal; next session open execution',stamp_duty_rate=engine.stamp_duty_rate,lot_size=engine.lot_size)
     metadata.update(execution_mode='approximate',instrument_types=instrument_types,
                     trading_rules_version='cn-mainboard-daily-v1',
@@ -51,5 +54,5 @@ def execute(root, request, output_dir):
                     cost_policy=engine.fee_rules.metadata(),
                     tradability_rules_version=TRADABILITY_VERSION,
                     tradability='input flags only; unknown flags assumed executable; no auction order-book evidence')
-    payload = dict(metrics=asdict(evaluate(result)),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
+    payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
     return write_result(output_dir, payload)

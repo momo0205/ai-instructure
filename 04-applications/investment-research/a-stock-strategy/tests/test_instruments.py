@@ -30,7 +30,9 @@ def test_wrong_exchange_rejected():
         validate_symbol('002015.SH')
 
 
-def test_download_publishes_version_without_mutating_base(tmp_path):
+@pytest.mark.parametrize('memory_tasks', [False, True])
+def test_download_publishes_version_without_mutating_base(tmp_path, memory_tasks):
+    from test_task_repository import MemoryTaskRepository
     from strategy.instruments import DownloadManager
     folder = tmp_path/'data'/'real'
     shutil.copytree(ROOT/'data'/'mvp_sample', folder)
@@ -49,7 +51,8 @@ def test_download_publishes_version_without_mutating_base(tmp_path):
         (Path(output_dir)/'market_manifest.json').write_text(json.dumps({'source':'test','adjustment':adjustment,'raw_dir':str(raw)}))
 
     manager = DownloadManager(tmp_path, tmp_path/'state', downloader=downloader,
-                              resolver=lambda symbol: {'symbol':symbol,'name':'协鑫能科','kind':'stock'})
+                              resolver=lambda symbol: {'symbol':symbol,'name':'协鑫能科','kind':'stock'},
+                              task_repository=MemoryTaskRepository('dataset_id') if memory_tasks else None)
     try:
         task = manager.submit({'symbol':'002015.SZ','start':start,'end':end})
         for _ in range(200):
@@ -58,6 +61,8 @@ def test_download_publishes_version_without_mutating_base(tmp_path):
                 break
             time.sleep(.01)
         assert task['status'] == 'succeeded', task
+        if memory_tasks:
+            assert not list((tmp_path/'state').rglob('*.sqlite3'))
         assert (folder/'market.csv').read_bytes() == original
         dataset = next(x for x in workbench.datasets(tmp_path) if x['id'] == task['dataset_id'])
         assert '002015.SZ' in dataset['symbols']

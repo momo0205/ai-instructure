@@ -232,3 +232,14 @@ launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backt
 当前尚未接入可靠历史停牌、涨跌停、ST及退市状态。前复权价格不是实际成交价，数量和费用金额只是近似；未模拟部分成交、排队、分红配股与持股数量变化。没有利用当天收盘、最高最低价或全天成交量判断开盘是否可成交。
 
 费率依据及实施范围见 [实施计划](docs/superpowers/plans/2026-09-08-stock-backtest.md)。本次规则仅接入网页工作台路径；旧 CLI 配置保留原兼容行为，不会自动识别股票类型。
+
+
+### CLI与网页使用同一个回测请求
+
+将网页任务中的 `request` 对象保存为 `request.json`（只保存请求对象，不是整个结果）：
+
+```bash
+.venv/bin/python -m strategy backtest --request request.json --project-root . --output reports/request-run
+```
+
+该入口与网页共用校验、快照、执行和result.json格式。旧 `--config` 继续支持，其历史触发、成本和报告格式由兼容适配器保留，内部也调用共用运行服务。任务存储接口与schema驱动参数说明见 [后端架构](docs/backend-architecture.md)。

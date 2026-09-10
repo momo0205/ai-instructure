@@ -107,3 +107,33 @@ def test_definition_accepts_zero_and_unbounded_warmup(third_strategy):
     for sessions in (0, 1000000):
         third_strategy.warmup = lambda parameters: sessions
         assert third_strategy.warmup_sessions({}) == sessions
+
+
+@pytest.mark.parametrize('attribute', ['options', 'enum'])
+def test_schema_choices_reject_values_outside_catalog(third_strategy, attribute):
+    third_strategy.parameters = [dict(name='style', type='string', default='fast', **{attribute: ['fast', 'slow']})]
+    assert third_strategy.normalize_parameters({'style': 'slow'}) == {'style': 'slow'}
+    with pytest.raises(ValueError, match='style'):
+        third_strategy.normalize_parameters({'style': 'invalid'})
+
+
+def test_third_strategy_boolean_and_choices_reach_constructor(third_strategy, tmp_path):
+    third_strategy.parameters[0]['role'] = 'instrument'
+    third_strategy.parameters.extend([
+        dict(name='enabled', type='boolean', default=True),
+        dict(name='style', type='string', default='fast', options=['fast', 'slow']),
+    ])
+    received = {}
+
+    def construct(assets, history, enabled, style):
+        received.update(assets=assets, history=history, enabled=enabled, style=style)
+        return FixedAssetStrategy(assets[0])
+
+    third_strategy.constructor = construct
+    result = workbench.execute(ROOT, {'strategy_id': 'third', 'parameters': {
+        'assets': ['588000.SH'], 'enabled': False, 'style': 'slow', 'history': 3,
+    }}, tmp_path)
+    assert result['request']['parameters'] == received
+    assert received['enabled'] is False
+    assert received['style'] == 'slow'
+    assert third_strategy.symbols(received) == ['588000.SH']

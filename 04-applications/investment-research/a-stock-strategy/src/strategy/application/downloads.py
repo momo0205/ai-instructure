@@ -1,13 +1,12 @@
 """下载任务队列与旧导入兼容门面；数据获取和版本发布交给独立模块。"""
 from datetime import date, datetime, timezone
 from pathlib import Path
-import json
 import logging
 import queue
-import sqlite3
 import threading
 from urllib.request import urlopen
 from uuid import uuid4
+from strategy.storage.task_repository import TaskRepository, SQLiteTaskRepository
 from strategy.market_data.tencent import download_market
 from strategy.market_data.catalog import VERIFIED_ETFS, validate_symbol, describe
 from strategy.market_data.provider import MarketDataProvider, TencentMarketDataProvider, CallableMarketDataProvider
@@ -27,7 +26,8 @@ def instrument_catalog(root):
 class DownloadManager:
     """独立单线程下载队列，SQLite 保存历史；失败可重新提交，重启不自动重试。"""
     def __init__(self, root, state_dir, downloader=None, resolver=None, *,
-                 provider: MarketDataProvider | None = None, repository: DatasetRepository | None = None):
+                 provider: MarketDataProvider | None = None, repository: DatasetRepository | None = None,
+                 task_repository: TaskRepository | None = None):
         self.root, self.state_dir = Path(root), Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         if provider is not None and (downloader is not None or resolver is not None):
@@ -37,17 +37,14 @@ class DownloadManager:
             if downloader is not None or resolver is not None else TencentMarketDataProvider())
         self.repository = repository if repository is not None else LocalDatasetRepository(self.root)
         self._lock, self._queue, self._closed = threading.RLock(), queue.Queue(), False
-        self._db = sqlite3.connect(self.state_dir/'downloads.sqlite3', check_same_thread=False)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute('CREATE TABLE IF NOT EXISTS downloads (id TEXT PRIMARY KEY, status TEXT, request TEXT, created_at TEXT, error TEXT, dataset_id TEXT)')
-        self._db.execute("UPDATE downloads SET status='interrupted',error='服务重启，请重试' WHERE status IN ('queued','running')")
-        self._db.commit()
+        self.task_repository = task_repository if task_repository is not None else SQLiteTaskRepository(self.state_dir/'downloads.sqlite3', 'downloads')
+        self.task_repository.interrupt(('queued', 'running'), '服务重启，请重试')
         self._thread = threading.Thread(target=self._worker, name='market-download-worker', daemon=True)
         self._thread.start()
 
     def list(self):
         with self._lock:
-            return [dict(row, request=json.loads(row['request'])) for row in self._db.execute('SELECT * FROM downloads ORDER BY created_at DESC')]
+            return self.task_repository.list()
 
     def submit(self, request):
         if not isinstance(request, dict) or set(request) != {'symbol','start','end'}:
@@ -68,9 +65,8 @@ class DownloadManager:
         with self._lock:
             if self._closed:
                 raise ValueError('下载服务已关闭')
-            self._db.execute('INSERT INTO downloads VALUES (?,?,?,?,NULL,NULL)', (identifier,'queued',json.dumps(request),datetime.now(timezone.utc).isoformat()))
-            self._db.commit()
-            task = next(x for x in self.list() if x['id']==identifier)
+            self.task_repository.create(identifier, request, datetime.now(timezone.utc).isoformat())
+            task = self.task_repository.get(identifier)
             self._queue.put(identifier)
             return task
 
@@ -90,10 +86,9 @@ class DownloadManager:
             if identifier is None:
                 return
             with self._lock:
-                if not self._db.execute("UPDATE downloads SET status='running' WHERE id=? AND status='queued'", (identifier,)).rowcount:
+                if not self.task_repository.transition(identifier, ('queued',), 'running'):
                     continue
-                self._db.commit()
-                request = next(x['request'] for x in self.list() if x['id']==identifier)
+                request = self.task_repository.get(identifier)['request']
             dataset_id, error = None, None
             try:
                 dataset_id = self._publish(identifier, request)
@@ -103,8 +98,7 @@ class DownloadManager:
                 status = 'failed'
                 error = str(exception) if isinstance(exception, ValueError) else '数据源请求或文件处理失败，请检查服务日志并重试'
             with self._lock:
-                self._db.execute('UPDATE downloads SET status=?,error=?,dataset_id=? WHERE id=?', (status,error,dataset_id,identifier))
-                self._db.commit()
+                self.task_repository.transition(identifier, ('running',), status, error=error, dataset_id=dataset_id)
 
     def close(self):
         """关闭时中断未开始任务，等待有限超时的在途网络请求结束。"""
@@ -112,8 +106,7 @@ class DownloadManager:
             if self._closed:
                 return
             self._closed = True
-            self._db.execute("UPDATE downloads SET status='interrupted',error='服务关闭，请重试' WHERE status='queued'")
-            self._db.commit()
+            self.task_repository.interrupt(('queued',), '服务关闭，请重试')
             self._queue.put(None)
         self._thread.join()
-        self._db.close()
+        self.task_repository.close()

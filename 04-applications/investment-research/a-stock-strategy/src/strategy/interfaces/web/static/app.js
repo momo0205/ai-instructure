@@ -18,8 +18,8 @@ function strategyFields(values={}) {
   for(const field of spec.parameters) {
     const label=el('label',field.label||field.name); const value=values[field.name]??field.default;
     let input;
-    if(['symbol','candidate_symbols'].includes(field.name)) {
-      input=el('select');input.multiple=field.name==='candidate_symbols';
+    if(field.role==='instrument') {
+      input=el('select');input.multiple=field.type==='array';
       const selected=Array.isArray(value)?value:[value];
       const items=InstrumentChoices.available(state.datasets.find(d=>d.id===$('dataset').value));
       if(!input.multiple) input.append(new Option('请选择已准备的标的',''));
@@ -31,23 +31,30 @@ function strategyFields(values={}) {
       input.onchange=()=>updateCoverage();
       if(input.multiple) label.append(el('small','可多选，按住 Ctrl / Command 选择多个标的','hint'));
     }
-    else if(field.type==='object') {input=el('textarea');input.value=JSON.stringify(value,null,2);}
-    else if(field.options) {input=el('select');for(const option of field.options) input.append(new Option(option,option));input.value=value;}
+    else if(field.type==='boolean') {input=el('input');input.type='checkbox';input.checked=value;}
+    else if(['object','array'].includes(field.type)) {input=el('textarea');input.value=JSON.stringify(value,null,2);}
+    else if(field.options||field.enum) {input=el('select');for(const option of (field.options||field.enum)) input.append(new Option(option,option));input.value=value;}
     else {input=el('input');input.type=['integer','number','float','int'].includes(field.type)?'number':'text';
       input.value=Array.isArray(value)?value.join(', '):value??'';
       if(field.min!=null)input.min=field.min;if(field.max!=null)input.max=field.max;
       input.step=field.step??(['integer','int'].includes(field.type)?1:'any');}
-    input.dataset.parameter=field.name;input.dataset.type=field.type;input.required=true;label.append(input);container.append(label);
+    input.dataset.parameter=field.name;input.dataset.type=field.type;input.dataset.role=field.role||'';input.required=field.type!=='boolean';label.append(input);container.append(label);
     if(field.description)container.append(el('p',field.description,'hint'));
   }
   updateCoverage();
 }
 function selectedSymbols() {
-  const input=$('strategy-parameters').querySelector('[data-parameter="symbol"], [data-parameter="candidate_symbols"]');
-  return input ? (input.multiple ? [...input.selectedOptions].map(o=>o.value) : [input.value].filter(Boolean)) : [];
+  // Instrument intent is declared by the strategy, independent of parameter names.
+  return [...new Set([...$('strategy-parameters').querySelectorAll('[data-parameter]')]
+    .filter(input=>input.dataset.role==='instrument')
+    .flatMap(input=>input.multiple?[...input.selectedOptions].map(o=>o.value):[input.value].filter(Boolean)))];
 }
 function updateCoverage() {
   const d=state.datasets.find(x=>x.id===$('dataset').value);
+  const spec=state.strategies.find(s=>s.id===$('strategy').value);
+  if(!spec?.parameters.some(p=>p.role==='instrument' && ['string','array'].includes(p.type))) {
+    $('submit').disabled=true;$('coverage-info').textContent='该策略尚未配置页面标的选择，请通过接口执行或完善策略定义。';return null;
+  }
   const range=InstrumentChoices.coverage(d,selectedSymbols());
   $('submit').disabled=!range;
   $('coverage-info').textContent=range?`所选标的共同可用区间：${range.start} — ${range.end}；区间内缺失数据会在提交时校验。`:'请选择有共同数据区间的可回测标的。';
@@ -68,8 +75,11 @@ function requestFromForm() {
     const type=input.dataset.type;let value=input.value;
     if(['integer','number','float','int'].includes(type))value=Number(value);
     else if(input.multiple)value=[...input.selectedOptions].map(option=>option.value);
-    else if(type==='array'||type==='string_array')value=value.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean);
-    else if(type==='object') {try {value=JSON.parse(value);}catch {throw new Error('评分权重必须填写合法 JSON 对象');}}
+    else if(type==='boolean')value=input.checked;
+    else if(type==='object'||type==='array') {
+      try {value=JSON.parse(value);}catch {throw new Error(`${input.dataset.parameter} 必须填写合法 JSON ${type==='array'?'数组':'对象'}`);}
+      if(type==='array'?!Array.isArray(value):value===null||Array.isArray(value)||typeof value!=='object')throw new Error(`${input.dataset.parameter} 类型应为 ${type}`);
+    }
     parameters[input.dataset.parameter]=value;
   }
   const request={strategy_id:$('strategy').value,parameters,dataset_id:$('dataset').value,start:$('start').value,end:$('end').value};

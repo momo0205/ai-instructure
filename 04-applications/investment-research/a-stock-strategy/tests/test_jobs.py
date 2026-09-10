@@ -93,11 +93,11 @@ def test_history_does_not_read_result_column(tmp_path):
         if action==sqlite3.SQLITE_READ and table=='jobs' and column=='result':
             return sqlite3.SQLITE_DENY
         return sqlite3.SQLITE_OK
-    manager._db.set_authorizer(authorize)
+    manager.task_repository._db.set_authorizer(authorize)
     try:
         assert manager.list()==[]
     finally:
-        manager._db.set_authorizer(None)
+        manager.task_repository._db.set_authorizer(None)
         manager.close()
 
 def test_concurrent_data_change_rejected_before_enqueue(tmp_path, monkeypatch):
@@ -122,3 +122,32 @@ def test_concurrent_data_change_rejected_before_enqueue(tmp_path, monkeypatch):
         assert manager.list()==[]
     finally:
         manager.close()
+
+
+def test_close_interrupts_queued_work(tmp_path, monkeypatch):
+    import threading
+    import strategy.jobs as jobs
+    entered, release = threading.Event(), threading.Event()
+    def execute(*args):
+        entered.set()
+        assert release.wait(5)
+        return {'ok': True}
+    monkeypatch.setattr(jobs, 'execute', execute)
+    manager = JobManager(ROOT, tmp_path)
+    first = manager.submit({})
+    assert entered.wait(2)
+    queued = manager.submit({})
+    closing = threading.Thread(target=manager.close)
+    closing.start()
+    try:
+        assert wait(manager, queued['id'])['status'] == 'interrupted'
+    finally:
+        release.set()
+        closing.join(5)
+    assert not closing.is_alive()
+    reopened = JobManager(ROOT, tmp_path)
+    try:
+        assert reopened.get(first['id'])['status'] == 'succeeded'
+        assert reopened.get(queued['id'])['status'] == 'interrupted'
+    finally:
+        reopened.close()

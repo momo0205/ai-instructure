@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from strategy.interfaces.cli.config import BacktestConfig
+from strategy.application.configuration import BacktestConfig
 from strategy.backtesting.evaluation import evaluate
 from strategy.storage.reports import write_report
 from strategy.strategies.fixed import FixedAssetStrategy
@@ -18,7 +18,8 @@ from strategy.strategies.rank import CrossSectionalRankStrategy
 
 
 def compare(config: BacktestConfig, data: pd.DataFrame, output_dir: str | Path) -> dict:
-    from strategy.interfaces.cli.main import _engine, _metadata
+    from strategy.application.legacy_config import plan_for_config, metadata as _metadata
+    from strategy.application import simulation
 
     out = Path(output_dir)
     params = config.strategy.parameters
@@ -69,7 +70,7 @@ def compare(config: BacktestConfig, data: pd.DataFrame, output_dir: str | Path) 
     rows = []
     fixed_equity = None
     for name, strategy in strategies.items():
-        result = _engine(config).run(data, strategy)
+        result = simulation.run_simulation(plan_for_config(config, data, strategy)).result
         metrics = evaluate(result, benchmark_equity=fixed_equity)
         if name == 'fixed_asset' and benchmark_valid:
             fixed_equity = result.equity
