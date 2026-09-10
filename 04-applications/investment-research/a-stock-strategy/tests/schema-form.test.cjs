@@ -41,3 +41,14 @@ test('single and multiple instrument roles aggregate without parameter-name assu
  assert.deepEqual(run('selectedSymbols()'),['X']);assert.equal(run('requestFromForm().parameters.threshold'),1.5);assert.equal(run('requestFromForm().parameters.note'),'hello');
  controls.levels.value='{}';assert.throws(()=>run('requestFromForm()'),/levels.*array/);
 });
+
+test('zero-trade result explains insufficient cash before metrics, without treating an open position as no entry',()=>{
+ const {run}=page();
+ const events=Array.from({length:37},()=>({side:'buy',status:'cancelled',reason:'insufficient_cash'}));
+ const result={trades:[],execution_events:events};
+ assert.match(run(`noTradeMessage(${JSON.stringify(result)})`),/37.*资金不足/);
+ assert.match(run(`noTradeMessage(${JSON.stringify(result)})`),/初始资金/);
+ assert.match(run(`noTradeMessage(${JSON.stringify({...result,execution_events:[...events,{side:'buy',status:'filled'}]})})`),/尚未完成卖出/);
+ assert.equal(run('noTradeMessage({trades:[{}]})'),'');
+ assert.match(run('noTradeMessage({trades:[],execution_events:[]})'),/触发条件/);
+});
