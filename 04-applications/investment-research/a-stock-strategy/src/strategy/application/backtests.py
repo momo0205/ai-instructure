@@ -55,4 +55,6 @@ def execute(root, request, output_dir):
                     tradability_rules_version=TRADABILITY_VERSION,
                     tradability='input flags only; unknown flags assumed executable; no auction order-book evidence')
     payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
+    from strategy.application.diagnostics import result_diagnostics
+    payload['diagnostics'] = result_diagnostics(payload)
     return write_result(output_dir, payload)

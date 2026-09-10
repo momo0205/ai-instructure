@@ -77,3 +77,12 @@ def test_old_stock_range_rejected_before_engine(stock_project):
         data.to_csv(folder/name,index=False)
     with pytest.raises(ValueError,match='2022-07-01'):
         workbench.validate_request(stock_project,{'dataset_id':'managed_stock','parameters':{'symbol':'002015.SZ'}})
+
+
+def test_insufficient_cash_has_fee_aware_budget_evidence(stock_project):
+    result=workbench.execute(stock_project,{'dataset_id':'managed_stock','parameters':{'symbol':'002015.SZ'},'initial_cash':1},stock_project/'small')
+    event=next(e for e in result['execution_events'] if e['reason']=='insufficient_cash')
+    assert event['cash']==1
+    assert event['minimum_quantity']==100
+    assert event['required_cash']>event['price']*100
+    assert result['diagnostics'][0]['code']=='INSUFFICIENT_CASH'

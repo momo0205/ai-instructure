@@ -30,7 +30,13 @@ def test_failure_is_sanitized(tmp_path,monkeypatch):
     manager = JobManager(ROOT,tmp_path)
     job = wait(manager,manager.submit({'dataset_id':'mvp_sample'})['id'])
     assert job['status']=='failed' and '/secret' not in job['error'] and 'abc' not in job['error']
+    assert job['diagnostic']['code']=='BACKTEST_FAILED'
     manager.close()
+    reopened=JobManager(ROOT,tmp_path)
+    try:
+        assert reopened.get(job['id'])['diagnostic']==job['diagnostic']
+    finally:
+        reopened.close()
 
 def test_cancel_cannot_be_overwritten(tmp_path,monkeypatch):
     import threading

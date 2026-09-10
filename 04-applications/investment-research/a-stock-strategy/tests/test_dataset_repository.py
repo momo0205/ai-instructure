@@ -132,3 +132,20 @@ def test_declared_raw_evidence_survives_atomic_publish(project, symlink):
     published = project/'data'/identifier
     result = json.loads((published/'market_manifest.json').read_text())
     assert (published/result['download']['raw_dir']/'response.json').read_text() == '{}'
+
+
+def test_dataset_names_describe_contents_and_keep_sources_separate(project):
+    from strategy.market_data.repository import datasets
+    folder=project/'data'/'managed_example'
+    shutil.copytree(project/'data'/'real',folder)
+    (folder/'market_manifest.json').write_text(json.dumps({
+        'updated_symbol':'600519.SH','instruments':{'600519.SH':{'name':'贵州茅台','kind':'stock'}},
+        'source':'managed baseline + tencent.newfqkline','download':{'retrieved_at':'2026-09-08T08:14:41+00:00'}}))
+    rows={d['id']:d for d in datasets(project)}
+    assert rows['real']['name']=='基础数据集 · 指数 + 3 只 ETF'
+    expanded=rows['managed_example']
+    assert '扩展数据集 · 新增贵州茅台（600519.SH）' in expanded['name']
+    assert '下载于 2026-09-08' in expanded['name']
+    assert expanded['market_source']=='managed baseline + tencent.newfqkline'
+    assert expanded['source']
+    assert expanded['id']=='managed_example'

@@ -137,7 +137,14 @@ class BacktestEngine:
                         pending_exit_date = dates[exit_idx] if exit_idx < len(dates) else None
                     else:
                         warnings.append(f"entry not executed for {symbol} on {day} (insufficient cash)")
-                        execution_events.append(self._execution_event(day, symbol, "buy", "cancelled", "insufficient_cash"))
+                        # 诊断使用撮合同一费率，前端无需复制预算规则。
+                        from strategy.backtesting.fees import STOCK_BUY_LOT_SIZE
+                        lot = STOCK_BUY_LOT_SIZE if kind == 'stock' else self.lot_size
+                        notional = lot * price
+                        event = self._execution_event(day, symbol, "buy", "cancelled", "insufficient_cash", price=price)
+                        event.update(cash=cash, minimum_quantity=lot,
+                                     required_cash=notional + self.fee_rules.calculate(notional, day, kind, 'buy').total if lot else None)
+                        execution_events.append(event)
 
             if position is not None and pending_exit_date is not None and day >= pending_exit_date:
                 row = self._row(today, position["symbol"])

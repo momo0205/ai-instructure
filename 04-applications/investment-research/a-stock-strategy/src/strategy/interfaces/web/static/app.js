@@ -7,9 +7,15 @@ const fmt = n => n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).to
 const pct = n => n == null ? '—' : `${fmt(Number(n)*100)}%`;
 function el(tag, text, cls) { const n=document.createElement(tag); if(text!=null)n.textContent=text; if(cls)n.className=cls; return n; }
 function notice(text) {$('notice').textContent=text;$('notice').hidden=!text;}
+function diagnosticText(item) {
+  const c=item.context||{};
+  const budget=c.minimum_required_cash==null?'':` 可用资金 ${fmt(c.available_cash)} 元；被取消买入中最低所需 ${fmt(c.minimum_required_cash)} 元（含费用）。`;
+  return `${item.message} [${item.code}]。${budget} ${item.action||''}`;
+}
 async function api(path, body) {
-  const response=await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const result=await response.json(); if(!response.ok)throw new Error(result.error||'请求失败'); return result;
+  let response;try {response=await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+  catch {throw new Error('[NETWORK_ERROR] 无法连接本地服务，请确认服务已启动并重试。');}
+  let result;try {result=await response.json();}catch {throw new Error('[INVALID_RESPONSE] 服务返回了无法读取的结果，请重试并检查服务日志。');} if(!response.ok)throw new Error(result.diagnostic?diagnosticText(result.diagnostic):result.error||'请求失败'); return result;
 }
 function strategyName(id) {return state.strategies.find(s=>s.id===id)?.name||id;}
 function strategyFields(values={}) {
@@ -66,7 +72,7 @@ function updateCoverage() {
 }
 function datasetFields(reset=true) {
   const d=state.datasets.find(x=>x.id===$('dataset').value);if(!d)return;
-  $('dataset-info').textContent=`${d.sample?'样例数据 · 不代表真实市场':'真实历史数据'} · ${d.start} — ${d.end} · ${d.adjustment||'未声明复权'}\n行情：${d.market_source||'未知'}；广度：${(d.source||[]).join('、')||'未知'}\n${(d.symbols||[]).join(' / ')} ${(d.warnings||[]).join('；')}`;
+  $('dataset-info').textContent=`${d.sample?'样例数据 · 不代表真实市场':'真实历史数据'}\n覆盖日期：${d.start} — ${d.end} · ${d.adjustment||'未声明复权'}\n行情来源：${d.market_source||'未知'}\n广度来源：${(d.source||[]).join('、')||'未知'}\n${(d.symbols||[]).join(' / ')} ${(d.warnings||[]).join('；')}`;
   for(const key of ['start','end']) {$(key).min=d.start;$(key).max=d.end;if(reset)$(key).value=d[key];}
 }
 function requestFromForm() {
@@ -136,13 +142,15 @@ async function showJob(id) {
   const actions=el('div',null,'actions');const copy=el('button','复制参数重跑');copy.onclick=()=>copyRequest(job.request);actions.append(copy);
   if(['queued','running'].includes(job.status)){const cancel=el('button','取消任务');cancel.onclick=async()=>{try{await api(`/api/jobs/${id}/cancel`,{});await refresh();await showJob(id);}catch(e){notice(e.message);}};actions.append(cancel);}
   box.append(actions);
-  if(job.status!=='succeeded') {box.append(el('p',job.error||(['running','queued'].includes(job.status)?'后台处理中，可关闭页面后再回来查看。':'此任务未产生回测结果。'),'hint'));return;}
+  if(job.status!=='succeeded') {box.append(el('p',(job.diagnostic?diagnosticText(job.diagnostic):job.error)||(['running','queued'].includes(job.status)?'后台处理中，可关闭页面后再回来查看。':'此任务未产生回测结果。'),'hint'));return;}
   const r=job.result;if(!r){box.append(el('p','结果文件不可用','warnings'));return;}
   const exportButton=el('button','导出结果 JSON');exportButton.onclick=()=>download(r,id);actions.append(exportButton);
-  const emptyMessage=noTradeMessage(r);if(emptyMessage)box.append(el('p',emptyMessage,'warnings'));
+  if(r.diagnostics?.length){for(const item of r.diagnostics)box.append(el('p',diagnosticText(item),'warnings'));}
+  else {const emptyMessage=noTradeMessage(r);if(emptyMessage)box.append(el('p',emptyMessage,'warnings'));}
+  if(!r.trades?.length)title.lastChild.textContent='完成 · 无完整交易';
   const metrics=el('div',null,'metrics');for(const [label,key,isPct] of [['累计收益','cumulative_return',true],['最大回撤','max_drawdown',true],['胜率','win_rate',true],['交易次数','trade_count',false]]){
     const card=el('div',null,'metric');card.append(el('small',label),el('strong',key==='win_rate'&&!r.trades?.length?'—':isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
-  if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));box.append(warnings);}
+  if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));const details=el('details');details.append(el('summary','数据、模型与执行详细说明'),warnings);box.append(details);}
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
   box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
@@ -154,7 +162,7 @@ async function showJob(id) {
 async function renderComparison() {
   const target=$('comparison');target.hidden=state.compared.size===0;if(target.hidden)return;
   const jobs=await Promise.all([...state.compared].map(id=>api(`/api/jobs/${id}`)));target.replaceChildren(el('h3','已选任务对比','compare-title'),el('p','不同区间、数据版本或预热情况会影响可比性，请结合各任务说明阅读。','hint'));
-  target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),pct(m.win_rate),m.trade_count];})));
+  target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),m.trade_count?pct(m.win_rate):'—',m.trade_count];})));
 }
 async function refresh() {state.jobs=await api('/api/jobs');renderJobs();}
 function renderDownloads() {
@@ -163,7 +171,7 @@ function renderDownloads() {
   for(const job of state.downloads) {
     const row=el('div',null,'download-row');
     row.append(el('strong',`${job.request.symbol} · ${statuses[job.status]||job.status}`),el('p',`${job.request.start} — ${job.request.end}`,'hint'));
-    if(job.error) row.append(el('p',job.error,'warnings'));
+    if(job.error) row.append(el('p',`${job.diagnostic?diagnosticText(job.diagnostic):job.error} · 任务 ${job.id}`,'warnings'));
     if(job.dataset_id) {
       const use=el('button','查看此数据集');use.type='button';
       use.onclick=()=>{$('dataset').value=job.dataset_id;datasetFields();strategyFields();$('run-form').scrollIntoView({behavior:'smooth'});};row.append(use);

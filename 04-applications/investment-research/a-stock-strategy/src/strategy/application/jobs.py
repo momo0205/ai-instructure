@@ -1,7 +1,9 @@
 """可替换存储的持久任务队列。单个工作线程串行执行，取消后丢弃计算结果。"""
+from strategy.application.diagnostics import task_view, encode_error, exception_diagnostic
 from datetime import datetime, timezone
 from pathlib import Path
 import json
+import logging
 import hashlib
 import queue
 import shutil
@@ -68,12 +70,12 @@ class JobManager:
     def list(self):
         """按创建时间倒序读取历史摘要，避免列表传输完整净值。"""
         with self._lock:
-            return self.task_repository.list()
+            return [task_view(row, 'backtest') for row in self.task_repository.list()]
 
     def get(self, identifier):
         """查询详情；未知任务抛出 KeyError，成功任务包含结果。"""
         with self._lock:
-            return self.task_repository.get(identifier)
+            return task_view(self.task_repository.get(identifier), 'backtest')
 
     def cancel(self, identifier):
         """取消排队或运行任务；已完成状态保持不变，运行计算不会写回成功状态。"""
@@ -96,9 +98,10 @@ class JobManager:
                 result = execute(self.state_dir/'runs'/identifier/'input_project',request,self.state_dir/'runs'/identifier)
                 json.dumps(result,allow_nan=False)
                 status,error = 'succeeded',None
-            except Exception:
+            except Exception as exception:
+                logging.getLogger(__name__).exception('回测任务 %s 失败', identifier)
                 # 异常原文可能包含路径、令牌或数据，公开接口仅给出固定说明。
-                result,status,error = None,'failed','回测执行失败；请检查数据完整性和参数后重新提交'
+                result,status,error = None,'failed',encode_error(exception_diagnostic(exception, 'backtest'))
             with self._lock:
                 self.task_repository.transition(identifier, ('running',), status, error=error, result=result)
 
