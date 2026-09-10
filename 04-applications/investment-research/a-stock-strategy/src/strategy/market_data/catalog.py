@@ -1,5 +1,6 @@
 """纯证券目录：代码校验和回测支持范围判断，不请求行情。"""
 import re
+from strategy.validation import UserError
 
 from strategy.backtesting.fees import STOCK_SUPPORTED_FROM
 
@@ -9,13 +10,13 @@ VERIFIED_ETFS = {'588000.SH':'科创50ETF', '510300.SH':'沪深300ETF', '159915.
 def validate_symbol(symbol):
     """显式交易所避免把深市股票误当上证证券，不自动修改用户输入。"""
     if not isinstance(symbol, str) or not re.fullmatch(r'\d{6}\.(SH|SZ)', symbol):
-        raise ValueError('代码格式应为 588000.SH 或 002015.SZ')
+        raise UserError('INVALID_SYMBOL', '代码格式应为 588000.SH 或 002015.SZ')
     code, exchange = symbol.split('.')
     expected = 'SH' if code[0] in '56' else 'SZ' if code[0] in '013' else None
     if expected is None:
-        raise ValueError('当前下载仅支持沪深股票及基金代码')
+        raise UserError('INVALID_SYMBOL', '当前下载仅支持沪深股票及基金代码')
     if exchange != expected:
-        raise ValueError(f'交易所不匹配，请使用 {code}.{expected}')
+        raise UserError('INVALID_SYMBOL', f'交易所不匹配，请使用 {code}.{expected}')
     return symbol
 
 

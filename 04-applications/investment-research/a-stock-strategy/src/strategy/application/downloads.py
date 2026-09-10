@@ -1,4 +1,6 @@
 """下载任务队列与旧导入兼容门面；数据获取和版本发布交给独立模块。"""
+from strategy.validation import UserError
+from strategy.application.diagnostics import task_view, encode_error, exception_diagnostic
 from datetime import date, datetime, timezone
 from pathlib import Path
 import logging
@@ -31,7 +33,7 @@ class DownloadManager:
         self.root, self.state_dir = Path(root), Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         if provider is not None and (downloader is not None or resolver is not None):
-            raise ValueError('provider 与旧 downloader/resolver 注入不能同时指定')
+            raise UserError('INVALID_REQUEST', 'provider 与旧 downloader/resolver 注入不能同时指定')
         self.provider = provider if provider is not None else (
             CallableMarketDataProvider(downloader or download_market, resolver or resolve_instrument)
             if downloader is not None or resolver is not None else TencentMarketDataProvider())
@@ -44,27 +46,27 @@ class DownloadManager:
 
     def list(self):
         with self._lock:
-            return self.task_repository.list()
+            return [task_view(row, 'download') for row in self.task_repository.list()]
 
     def submit(self, request):
         if not isinstance(request, dict) or set(request) != {'symbol','start','end'}:
-            raise ValueError('新增代码需要 symbol、start、end')
+            raise UserError('INVALID_REQUEST', '新增代码需要 symbol、start、end')
         validate_symbol(request['symbol'])
         try:
             for key in ('start','end'):
                 if date.fromisoformat(request[key]).isoformat() != request[key]:
                     raise ValueError
         except (ValueError, TypeError):
-            raise ValueError('下载日期格式应为 YYYY-MM-DD') from None
+            raise UserError('INVALID_REQUEST', '下载日期格式应为 YYYY-MM-DD') from None
         base = next((item for item in self.repository.list() if item['id']=='real'), None)
         if base is None:
-            raise ValueError('需要先准备真实基线数据（data/real）；不允许与合成样例混合')
+            raise UserError('INVALID_REQUEST', '需要先准备真实基线数据（data/real）；不允许与合成样例混合')
         if not base['start'] <= request['start'] <= request['end'] <= base['end']:
-            raise ValueError(f"下载范围必须位于真实基线 {base['start']} 至 {base['end']}，以匹配指数和市场广度")
+            raise UserError('INVALID_REQUEST', f"下载范围必须位于真实基线 {base['start']} 至 {base['end']}，以匹配指数和市场广度")
         identifier = uuid4().hex
         with self._lock:
             if self._closed:
-                raise ValueError('下载服务已关闭')
+                raise UserError('INVALID_REQUEST', '下载服务已关闭')
             self.task_repository.create(identifier, request, datetime.now(timezone.utc).isoformat())
             task = self.task_repository.get(identifier)
             self._queue.put(identifier)
@@ -74,7 +76,7 @@ class DownloadManager:
         """任务只协调数据源与仓库，不包含供应商格式或文件合并规则。"""
         metadata = self.provider.resolve(request['symbol'])
         if metadata.get('symbol') != request['symbol']:
-            raise ValueError('证券元数据代码不匹配')
+            raise UserError('INVALID_REQUEST', '证券元数据代码不匹配')
         prepared = self.repository.prepare(identifier)
         self.provider.download(request['start'], request['end'], prepared.stage/'download',
                                symbols=[request['symbol']], adjustment=prepared.adjustment)
@@ -96,7 +98,7 @@ class DownloadManager:
             except Exception as exception:
                 logging.getLogger(__name__).exception('下载任务 %s 失败', identifier)
                 status = 'failed'
-                error = str(exception) if isinstance(exception, ValueError) else '数据源请求或文件处理失败，请检查服务日志并重试'
+                error = encode_error(exception_diagnostic(exception, 'download'))
             with self._lock:
                 self.task_repository.transition(identifier, ('running',), status, error=error, dataset_id=dataset_id)
 

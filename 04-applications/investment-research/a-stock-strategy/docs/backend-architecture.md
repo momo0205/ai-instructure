@@ -115,3 +115,19 @@ boolean渲染复选框（false合法）；number/integer渲染数字输入；str
 ```
 
 结果为与网页相同的result.json和snapshot。--request与--config互斥；旧--config仍生成原CSV/图表报告，其内部执行已共用SimulationPlan，不再由CLI构造运行逻辑。两种输入的默认规则可能不同，因此比较时应使用同一请求或明确审查legacy_toml成本参数。
+
+### 用户诊断契约
+
+`application/diagnostics.py` 统一 `{code, severity, message, action, context}`。
+HTTP 失败保留 `error` 字符串并附加 `diagnostic`；任务详情/下载列表同理。
+任务 error TEXT 内使用带版本的 JSON 保存新诊断，应用层解码，存储接口及历史表结构不变。
+旧失败记录使用保守通用码，不猜测历史异常原因；旧成功回测可从 execution_events 补摘要。
+
+结果 `diagnostics` 与任务执行状态独立：资金不足、订单阻断、期末未平仓均可与已完成交易并存。
+`INSUFFICIENT_CASH` 的预算证据由引擎调用同一个 FeeRules 计算，UI 不复制费率。
+历史事件若缺少预算字段，只显示取消次数，不推测所需资金。无完整交易时胜率显示 —。
+`RESEARCH_LIMITATIONS` 提示展开原有警告；它不意味着数据已通过独立验证。
+
+已审定可公开的校验说明用 `validation.UserError(code, message)`，第三方异常不能直接包装。
+未知异常返回 `DOWNLOAD_FAILED` / `BACKTEST_FAILED` / `INTERNAL_ERROR`，详细堆栈留在服务日志。
+前端连接错误和非 JSON 响应分别使用 `NETWORK_ERROR` / `INVALID_RESPONSE`。

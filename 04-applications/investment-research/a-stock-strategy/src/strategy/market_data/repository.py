@@ -1,6 +1,8 @@
 """本地数据版本仓库：目录、校验、冻结与原子发布，不发起网络请求。"""
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from strategy.validation import UserError
 from typing import Protocol
 import hashlib
 import json
@@ -24,7 +26,7 @@ def verify_manifests(folder):
             manifest = json.loads(path.read_text())
             expected = manifest.get(field)
             if expected is not None and expected != hashlib.sha256((folder/filename).read_bytes()).hexdigest():
-                raise ValueError(f'{filename} hash mismatch：数据正在更新或清单已过期，请重新下载后重试')
+                raise UserError('DATA_VALIDATION_FAILED', f'{filename} hash mismatch：数据正在更新或清单已过期，请重新下载后重试')
 
 
 def datasets(project_root):
@@ -58,9 +60,19 @@ def datasets(project_root):
         result[-1]['instruments'] = [dict(describe(symbol, metadata.get(symbol)),
             start=rows.date.min().date().isoformat(), end=rows.date.max().date().isoformat())
             for symbol, rows in market.groupby('symbol')]
-        if name.startswith('managed_'):
+        if name == 'real':
+            etfs = sum(item['kind'] == 'etf' for item in result[-1]['instruments'])
+            stocks = sum(item['kind'] == 'stock' for item in result[-1]['instruments'])
+            result[-1]['name'] = f'基础数据集 · 指数 + {etfs} 只 ETF' + (f' + {stocks} 只股票' if stocks else '')
+        elif name.startswith('managed_'):
             symbol = market_manifest.get('updated_symbol', '')
-            result[-1]['name'] = f'行情版本 · {symbol} · {name[-8:]}'
+            security_name = metadata.get(symbol, {}).get('name', symbol or '证券')
+            # 历史版本没有创建时间时，只标下载日期，不使用文件修改时间推测。
+            created = market_manifest.get('created_at')
+            timestamp = created or market_manifest.get('download', {}).get('retrieved_at')
+            date_label = ('创建于 ' if created else '下载于 ') + str(timestamp)[:10] if timestamp else '日期未记录'
+            result[-1]['name'] = f'扩展数据集 · 新增{security_name}（{symbol}） · {date_label} · {name[-8:]}'
+
     return result
 
 
@@ -91,7 +103,7 @@ class LocalDatasetRepository:
     def prepare(self, identifier):
         """冻结基线并准备提供方输出目录，尚不暴露可回测版本。"""
         if not isinstance(identifier, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', identifier):
-            raise ValueError('invalid dataset identifier')
+            raise UserError('DATA_VALIDATION_FAILED', 'invalid dataset identifier')
         base = self.root/'data'/'real'
         verify_manifests(base)
         stage = self.root/'data'/('.download_'+identifier)
@@ -102,7 +114,7 @@ class LocalDatasetRepository:
         for name in hashes:
             shutil.copyfile(base/name, stage/name)
         if any(hashlib.sha256((base/name).read_bytes()).hexdigest()!=digest or hashlib.sha256((stage/name).read_bytes()).hexdigest()!=digest for name,digest in hashes.items()):
-            raise ValueError('基线数据在复制时变化，请重试')
+            raise UserError('DATA_VALIDATION_FAILED', '基线数据在复制时变化，请重试')
         verify_manifests(stage)
         old_manifest = json.loads((stage/'market_manifest.json').read_text()) if (stage/'market_manifest.json').exists() else {}
         config_path = self.root/'configs'/'real_breadth.toml'
@@ -110,7 +122,7 @@ class LocalDatasetRepository:
         # 清单优先于配置；缺少证据时禁止猜测复权方式，避免混合价格口径。
         adjustment = old_manifest.get('adjustment', config.get('data', {}).get('adjustment'))
         if adjustment not in ('none','qfq'):
-            raise ValueError('基线复权方式未知，无法安全合并行情')
+            raise UserError('DATA_VALIDATION_FAILED', '基线复权方式未知，无法安全合并行情')
         download = stage/'download'
         download.mkdir()
         shutil.copyfile(stage/'breadth.csv', download/'breadth.csv')
@@ -122,15 +134,15 @@ class LocalDatasetRepository:
         hashes, old_manifest, adjustment = prepared.hashes, prepared.old_manifest, prepared.adjustment
         base, download = self.root/'data'/'real', stage/'download'
         if metadata.get('symbol') != request['symbol']:
-            raise ValueError('证券元数据代码不匹配')
+            raise UserError('DATA_VALIDATION_FAILED', '证券元数据代码不匹配')
         downloaded_manifest = json.loads((download/'market_manifest.json').read_text())
         if not isinstance(downloaded_manifest.get('source'), str) or not downloaded_manifest['source'].strip():
-            raise ValueError('下载清单缺少数据来源')
+            raise UserError('DATA_VALIDATION_FAILED', '下载清单缺少数据来源')
         if not isinstance(downloaded_manifest.get('market_sha256'), str) or not re.fullmatch(r'[0-9a-f]{64}', downloaded_manifest['market_sha256']):
-            raise ValueError('下载清单缺少有效行情哈希')
+            raise UserError('DATA_VALIDATION_FAILED', '下载清单缺少有效行情哈希')
         verify_manifests(download)
         if downloaded_manifest.get('adjustment') != adjustment:
-            raise ValueError('下载行情复权方式与基线不一致')
+            raise UserError('DATA_VALIDATION_FAILED', '下载行情复权方式与基线不一致')
         # 提供方可替换，因此仓库自己验证标准CSV，不信任适配器已校验的假设。
         CsvMarketDataProvider(download/'market.csv').load()
         incoming = pd.read_csv(download/'market.csv')
@@ -138,24 +150,24 @@ class LocalDatasetRepository:
         expected = set(existing.loc[(existing.symbol=='000001.SH') & existing.date.between(request['start'],request['end']), 'date'])
         actual = set(incoming.loc[incoming.symbol==request['symbol'],'date'])
         if not expected or actual != expected:
-            raise ValueError('目标证券与基线交易日不一致（可能停牌或上市时间不足），未发布')
+            raise UserError('DATA_VALIDATION_FAILED', '目标证券与基线交易日不一致（可能停牌或上市时间不足），未发布')
         # 同一证券整段替换，避免不同时点前复权价格拼接造成虚假跳变。
         merged = pd.concat([existing[existing.symbol!=request['symbol']], incoming[incoming.symbol==request['symbol']]], ignore_index=True).sort_values(['date','symbol'])
         merged.to_csv(stage/'market.csv', index=False)
         if downloaded_manifest.get('raw_dir'):
             raw = Path(downloaded_manifest['raw_dir']).resolve()
             if not raw.is_dir() or not raw.is_relative_to(download.resolve()):
-                raise ValueError('原始响应目录必须位于本次下载目录内')
+                raise UserError('DATA_VALIDATION_FAILED', '原始响应目录必须位于本次下载目录内')
             # 指向暂存路径的绝对链接在原子重命名后会失效，证据只接受实体文件。
             if any(path.is_symlink() for path in raw.rglob('*')):
-                raise ValueError('原始响应不允许符号链接')
+                raise UserError('DATA_VALIDATION_FAILED', '原始响应不允许符号链接')
             raw_hashes = downloaded_manifest.get('raw_sha256')
             if not isinstance(raw_hashes, dict) or not raw_hashes:
-                raise ValueError('原始响应缺少内容哈希')
+                raise UserError('DATA_VALIDATION_FAILED', '原始响应缺少内容哈希')
             for name, digest in raw_hashes.items():
                 path = (raw/name).resolve()
                 if not path.is_relative_to(raw) or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-                    raise ValueError('原始响应文件或哈希不匹配')
+                    raise UserError('DATA_VALIDATION_FAILED', '原始响应文件或哈希不匹配')
             downloaded_manifest['raw_dir'] = str(raw.relative_to(stage.resolve()))
         # 两份下载清单使用同一相对路径，原子发布重命名后仍能找到原始响应。
         downloaded_manifest['raw_dir_base'] = 'dataset_root'
@@ -175,7 +187,7 @@ class LocalDatasetRepository:
                 parent_provenance['raw_dir_base'] = 'absolute'
             else:
                 parent_provenance['raw_dir_base'] = 'unknown'
-        manifest = dict(old_manifest, source='managed baseline + '+downloaded_manifest.get('source', 'unknown'), adjustment=adjustment,
+        manifest = dict(old_manifest, created_at=datetime.now(timezone.utc).isoformat(), source='managed baseline + '+downloaded_manifest.get('source', 'unknown'), adjustment=adjustment,
                         market_sha256=hashlib.sha256((stage/'market.csv').read_bytes()).hexdigest(),
                         parent_dataset='real', parent_hashes=hashes, download=downloaded_manifest,
                         parent_provenance=parent_provenance,

@@ -52,3 +52,14 @@ test('zero-trade result explains insufficient cash before metrics, without treat
  assert.equal(run('noTradeMessage({trades:[{}]})'),'');
  assert.match(run('noTradeMessage({trades:[],execution_events:[]})'),/触发条件/);
 });
+
+test('structured diagnostic shows code, action and budget evidence',()=>{
+ const {run}=page();
+ const text=run(`diagnosticText({code:'INSUFFICIENT_CASH',message:'资金不足',action:'调整模拟资金',context:{count:37,available_cash:100000,minimum_required_cash:150000}})`);
+ assert.match(text,/INSUFFICIENT_CASH/);assert.match(text,/调整模拟资金/);assert.match(text,/150,000/);
+});
+
+test('API connection failure is actionable in Chinese',async()=>{
+ const {context}=page();context.fetch=async()=>{throw new TypeError('Failed to fetch');};
+ await assert.rejects(vm.runInContext("api('/api/jobs')",context),/NETWORK_ERROR.*本地服务/);
+});

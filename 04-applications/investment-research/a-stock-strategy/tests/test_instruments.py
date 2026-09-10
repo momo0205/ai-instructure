@@ -1,3 +1,4 @@
+from strategy.validation import UserError
 import json
 import shutil
 import time
@@ -89,7 +90,7 @@ def test_failed_download_can_retry_and_does_not_publish(tmp_path):
     from strategy.instruments import DownloadManager
     folder = tmp_path/'data'/'real'
     shutil.copytree(ROOT/'data'/'mvp_sample', folder)
-    manager = DownloadManager(tmp_path, tmp_path/'state', resolver=lambda _: (_ for _ in ()).throw(ValueError('代码不存在')))
+    manager = DownloadManager(tmp_path, tmp_path/'state', resolver=lambda _: (_ for _ in ()).throw(UserError('SYMBOL_NOT_CONFIRMED', '代码不存在')))
     try:
         request = {'symbol':'002015.SZ','start':'2024-02-01','end':'2024-02-02'}
         for _ in range(2):
@@ -99,6 +100,7 @@ def test_failed_download_can_retry_and_does_not_publish(tmp_path):
                     break
                 time.sleep(.01)
             assert manager.list()[0]['error']=='代码不存在'
+            assert manager.list()[0]['diagnostic']['code']=='SYMBOL_NOT_CONFIRMED'
         assert len(manager.list())==2
         assert not list((tmp_path/'data').glob('managed_*'))
     finally:

@@ -5,7 +5,9 @@
 """
 from __future__ import annotations
 
+from strategy.application.diagnostics import diagnostic, error_response, exception_diagnostic
 import json
+import logging
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -57,21 +59,24 @@ def dispatch(method, path, payload, root, manager, downloads=None):
                 return 200, manager.list()
             if path.startswith('/api/jobs/') and path.count('/') == 3:
                 job = manager.get(path.rsplit('/', 1)[1])
-                return (200, job) if job is not None else (404, {'error': '任务不存在'})
+                return (200, job) if job is not None else (404, error_response(diagnostic('NOT_FOUND')))
         if method == 'POST':
             if not isinstance(payload, dict):
-                return 400, {'error': '请求必须是 JSON 对象'}
+                return 400, error_response(diagnostic('INVALID_REQUEST'))
             if path == '/api/downloads' and downloads is not None:
                 return 202, downloads.submit(payload)
             if path == '/api/jobs':
                 return 202, manager.submit(payload)
             if path.startswith('/api/jobs/') and path.endswith('/cancel') and path.count('/') == 4:
                 return 200, manager.cancel(path.split('/')[3])
-        return 404, {'error': '接口不存在'}
+        return 404, error_response(diagnostic('NOT_FOUND'))
     except (ValueError, TypeError) as error:
-        return 400, {'error': str(error)}
+        return 400, error_response(exception_diagnostic(error, 'request'))
     except KeyError:
-        return 404, {'error': '任务不存在'}
+        return 404, error_response(diagnostic('NOT_FOUND'))
+    except Exception:
+        logging.getLogger(__name__).exception('接口处理失败：%s %s', method, path)
+        return 500, error_response(diagnostic('INTERNAL_ERROR'))
 
 
 def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
@@ -104,7 +109,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
                     mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[resource.suffix]
                     self.send(200, resource.read_bytes(), mime + '; charset=utf-8')
             except (ValueError, FileNotFoundError) as error:
-                self.send(404, {'error': str(error)})
+                self.send(404, error_response(diagnostic('INVALID_REQUEST')))
 
         def do_POST(self):
             try:
@@ -112,7 +117,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                 self.send(*dispatch('POST', urlsplit(self.path).path, payload, root, manager, downloads))
             except (ValueError, UnicodeDecodeError) as error:
-                self.send(400, {'error': str(error)})
+                self.send(400, error_response(diagnostic('INVALID_REQUEST')))
 
     server = None
     try:

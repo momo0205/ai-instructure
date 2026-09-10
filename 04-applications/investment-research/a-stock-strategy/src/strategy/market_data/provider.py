@@ -1,5 +1,6 @@
 """行情提供方边界；任务队列和数据集发布不依赖具体供应商。"""
 from pathlib import Path
+from strategy.validation import UserError
 import hashlib
 import json
 import re
@@ -40,7 +41,7 @@ class TencentMarketDataProvider:
         match = re.search(r'v_'+key+r'="([^"]+)"', raw)
         fields = match.group(1).split('~') if match else []
         if len(fields) < 4 or fields[2] != symbol[:6] or not fields[1].strip():
-            raise ValueError('数据源未确认该证券代码，请检查代码或稍后重试')
+            raise UserError('SYMBOL_NOT_CONFIRMED', '数据源未确认该证券代码，请检查代码或稍后重试')
         kind = 'etf' if symbol in VERIFIED_ETFS or 'ETF' in fields[1].upper() else 'stock' if symbol[0] in '036' else 'unknown'
         return dict(symbol=symbol, name=fields[1].strip(), kind=kind)
 
@@ -74,7 +75,7 @@ class CallableMarketDataProvider:
             if manifest.get('raw_dir') and 'raw_sha256' not in manifest:
                 raw = Path(manifest['raw_dir']).resolve()
                 if not raw.is_dir() or not raw.is_relative_to(output.resolve()):
-                    raise ValueError('原始响应目录必须位于本次下载目录内')
+                    raise UserError('DATA_VALIDATION_FAILED', '原始响应目录必须位于本次下载目录内')
                 manifest['raw_sha256'] = {str(p.relative_to(raw)): hashlib.sha256(p.read_bytes()).hexdigest()
                                           for p in raw.rglob('*') if p.is_file() and p.resolve().is_relative_to(raw)}
             path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
