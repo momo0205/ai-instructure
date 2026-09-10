@@ -6,8 +6,8 @@ import re
 from typing import Protocol
 from urllib.request import Request, urlopen
 
-from .instrument_catalog import VERIFIED_ETFS, validate_symbol
-from .market_download import download_market
+from strategy.market_data.catalog import VERIFIED_ETFS, validate_symbol
+from strategy.market_data.tencent import download_market
 
 
 class MarketDataProvider(Protocol):

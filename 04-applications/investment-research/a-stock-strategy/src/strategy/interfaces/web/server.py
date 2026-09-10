@@ -43,15 +43,15 @@ def dispatch(method, path, payload, root, manager, downloads=None):
     try:
         if method == 'GET':
             if path == '/api/instruments':
-                from .instruments import instrument_catalog
+                from strategy.application.downloads import instrument_catalog
                 return 200, instrument_catalog(root)
             if path == '/api/downloads' and downloads is not None:
                 return 200, downloads.list()
             if path == '/api/strategies':
-                from .registry import catalog
+                from strategy.strategies.registry import catalog
                 return 200, catalog()
             if path == '/api/datasets':
-                from .workbench import datasets
+                from strategy.application.backtests import datasets
                 return 200, datasets(root)
             if path == '/api/jobs':
                 return 200, manager.list()
@@ -76,7 +76,7 @@ def dispatch(method, path, payload, root, manager, downloads=None):
 
 def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
     """启动单用户服务；浏览器关闭不会终止后台任务，Ctrl-C 关闭服务。"""
-    from .jobs import JobManager
+    from strategy.application.jobs import JobManager
     root = Path(root).resolve()
     manager = None
     downloads = None
@@ -119,7 +119,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None):
         server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
         # 先占用端口，再恢复任务，避免第二次启动篡改正在运行的服务状态。
         manager = JobManager(root, state_dir or root / 'reports' / 'workbench')
-        from .instruments import DownloadManager
+        from strategy.application.downloads import DownloadManager
         downloads = DownloadManager(root, state_dir or root / 'reports' / 'workbench')
         print(f'回测工作台：http://127.0.0.1:{server.server_port}', flush=True)
         server.serve_forever()

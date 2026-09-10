@@ -1,7 +1,7 @@
 """纯证券目录：代码校验和回测支持范围判断，不请求行情。"""
 import re
 
-from .fees import STOCK_SUPPORTED_FROM
+from strategy.backtesting.fees import STOCK_SUPPORTED_FROM
 
 VERIFIED_ETFS = {'588000.SH':'科创50ETF', '510300.SH':'沪深300ETF', '159915.SZ':'创业板ETF'}
 

@@ -8,18 +8,18 @@ import hashlib
 import pandas as pd
 from pathlib import Path
 
-from .backtest import BacktestEngine
-from .config import load_config
-from .data import CsvMarketDataProvider
-from .evaluation import evaluate
-from .recommendation import recommend
-from .reporting import write_report
-from .strategies.fixed import FixedAssetStrategy
-from .strategies.rank import CrossSectionalRankStrategy
+from strategy.backtesting.engine import BacktestEngine
+from strategy.interfaces.cli.config import load_config
+from strategy.market_data.csv import CsvMarketDataProvider
+from strategy.backtesting.evaluation import evaluate
+from strategy.application.recommendation import recommend
+from strategy.storage.reports import write_report
+from strategy.strategies.fixed import FixedAssetStrategy
+from strategy.strategies.rank import CrossSectionalRankStrategy
 
 
 def _strategy(config):
-    from .registry import build_strategy
+    from strategy.strategies.registry import build_strategy
     params = config.strategy.parameters
     if config.strategy.name == "fixed_asset": strategy = build_strategy('fixed_asset', {'symbol':params.get('symbol','588000.SH')})
     elif config.strategy.name in {"cross_sectional_rank", "rank"}:
@@ -40,7 +40,7 @@ def _load(config_path):
     if config.market.min_declining_count is not None and not config.market.breadth_path:
         raise ValueError("historical market breadth requires a validated [market].breadth_path with counts and source")
     if config.market.breadth_path:
-        from .breadth import load_breadth, attach_breadth
+        from strategy.market_data.breadth import load_breadth, attach_breadth
         breadth_path = Path(config.market.breadth_path)
         if not breadth_path.is_absolute():
             breadth_path = Path(config_path).resolve().parent / breadth_path
@@ -86,7 +86,7 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     web = sub.add_parser('serve', help='Start the local browser workbench')
     web.add_argument('--port', type=int, default=8765)
-    web.add_argument('--project-root', default=str(Path(__file__).resolve().parents[2]))
+    web.add_argument('--project-root', default=str(Path(__file__).resolve().parents[4]))
     market_download = sub.add_parser('download-market', help='Download Tencent index and ETF daily bars')
     market_download.add_argument('--start', required=True)
     market_download.add_argument('--end', required=True)
@@ -107,20 +107,20 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == 'serve':
-            from .web import serve
+            from strategy.interfaces.web.server import serve
             serve(Path(args.project_root), args.port)
             return 0
         if args.command == 'download-market':
-            from .market_download import download_market
+            from strategy.market_data.tencent import download_market
             print(json.dumps(download_market(args.start,args.end,args.output,args.symbols,args.adjustment)))
             return 0
         if args.command == "download-breadth":
-            from .ingest import download_tushare_daily
+            from strategy.market_data.ingest import download_tushare_daily
             paths = download_tushare_daily(args.start, args.end, args.output)
             print(json.dumps(paths, default=str))
             return 0
         if args.command == "import-breadth":
-            from .ingest import build_breadth
+            from strategy.market_data.ingest import build_breadth
             frame = pd.read_csv(args.input, dtype={"trade_date": str, "ts_code": str})
             breadth = build_breadth(frame, args.source)
             if breadth.empty:
@@ -133,7 +133,7 @@ def main(argv=None) -> int:
             return 0
         config, data = _load(args.config)
         if args.command == "compare":
-            from .comparison import compare
+            from strategy.application.comparison import compare
             payload = compare(config, data, args.output)
             print(json.dumps({"output": str(Path(args.output).resolve()), "files": payload.get("files"), "warnings": payload.get("warnings")}, default=str))
             return 0

@@ -3,9 +3,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable
 
-from .strategies.fixed import FixedAssetStrategy
-from .strategies.rank import CrossSectionalRankStrategy
-from .validation import numeric
+from strategy.strategies.fixed import FixedAssetStrategy
+from strategy.strategies.rank import CrossSectionalRankStrategy
+from strategy.validation import numeric
 
 
 @dataclass

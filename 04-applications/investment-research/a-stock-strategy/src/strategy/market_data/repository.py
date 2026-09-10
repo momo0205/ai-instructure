@@ -8,8 +8,8 @@ import re
 import shutil
 import tomllib
 import pandas as pd
-from .data import CsvMarketDataProvider
-from .breadth import load_breadth
+from strategy.market_data.csv import CsvMarketDataProvider
+from strategy.market_data.breadth import load_breadth
 
 
 def verify_manifests(folder):
@@ -53,7 +53,7 @@ def datasets(project_root):
         if name=='mvp_sample':
             warnings.insert(0,'合成样例，不代表真实市场表现')
         result.append(dict(id=name,name='真实市场数据' if name=='real' else '合成样例',start=index_calendar.min().date().isoformat(),end=index_calendar.max().date().isoformat(),symbols=sorted(market.symbol.unique().tolist()),source=sorted(breadth.source.unique().tolist()),market_source=market_source,adjustment=market_manifest.get('adjustment',config.get('data',{}).get('adjustment','unknown')),sample=name=='mvp_sample',warnings=warnings))
-        from .instrument_catalog import describe
+        from strategy.market_data.catalog import describe
         metadata = market_manifest.get('instruments', {})
         result[-1]['instruments'] = [dict(describe(symbol, metadata.get(symbol)),
             start=rows.date.min().date().isoformat(), end=rows.date.max().date().isoformat())

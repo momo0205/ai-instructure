@@ -11,9 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from .backtest import BacktestResult
-from .evaluation import Metrics
-from .llm import BacktestReport, detached, get_llm_provider
+from strategy.backtesting.engine import BacktestResult
+from strategy.backtesting.evaluation import Metrics
+from strategy.application.llm import BacktestReport, detached, get_llm_provider
 
 
 @dataclass(frozen=True)

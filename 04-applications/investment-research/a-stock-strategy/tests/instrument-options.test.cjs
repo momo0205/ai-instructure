@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const choices = require('../src/strategy/static/instrument-options.js');
+const choices = require('../src/strategy/interfaces/web/static/instrument-options.js');
 const dataset = {start:'2024-01-02',end:'2025-12-31', instruments:[
   {symbol:'588000.SH',name:'科创50 ETF',backtest_supported:true,start:'2024-01-02',end:'2025-12-31'},
   {symbol:'510300.SH',name:'沪深300 ETF',backtest_supported:true,start:'2024-06-01',end:'2025-12-01'},
