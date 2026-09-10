@@ -121,6 +121,15 @@ function chart(points, key, title, percent=false) {
 function download(result, id) {
   const a=el('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));a.download=`backtest-${id}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
+// 从执行日志解释空结果；已买入但未卖出的任务不能误报为从未成交。
+function noTradeMessage(result) {
+  if(result.trades?.length)return '';
+  const entries=(result.execution_events||[]).filter(e=>e.side==='buy');
+  if(entries.some(e=>e.status==='filled'))return '本次已买入，但尚未完成卖出。胜率暂无样本；请查看期末持仓与卖出延后记录。';
+  const insufficient=entries.filter(e=>e.status==='cancelled'&&e.reason==='insufficient_cash').length;
+  if(insufficient)return `本次没有买入成交：${insufficient} 次买入因资金不足取消。请检查初始资金是否足够支付最小买入数量及费用；股票按 100 股整手买入。可复制参数、调整模拟初始资金后重跑。当前收益与回撤仅表示账户未发生交易，不能据此评价策略。`;
+  return '本次没有完成交易，胜率暂无样本。请检查触发条件、数据预热和成交取消记录；旧任务还需检查期末未平仓说明。';
+}
 async function showJob(id) {
   state.selected=id;const job=await api(`/api/jobs/${id}`);if(state.selected!==id)return;
   const box=$('detail');box.replaceChildren();const title=el('div',null,'section-title');title.append(el('h2',strategyName(job.request?.strategy_id)),el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(title);
@@ -130,10 +139,10 @@ async function showJob(id) {
   if(job.status!=='succeeded') {box.append(el('p',job.error||(['running','queued'].includes(job.status)?'后台处理中，可关闭页面后再回来查看。':'此任务未产生回测结果。'),'hint'));return;}
   const r=job.result;if(!r){box.append(el('p','结果文件不可用','warnings'));return;}
   const exportButton=el('button','导出结果 JSON');exportButton.onclick=()=>download(r,id);actions.append(exportButton);
+  const emptyMessage=noTradeMessage(r);if(emptyMessage)box.append(el('p',emptyMessage,'warnings'));
   const metrics=el('div',null,'metrics');for(const [label,key,isPct] of [['累计收益','cumulative_return',true],['最大回撤','max_drawdown',true],['胜率','win_rate',true],['交易次数','trade_count',false]]){
-    const card=el('div',null,'metric');card.append(el('small',label),el('strong',isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
+    const card=el('div',null,'metric');card.append(el('small',label),el('strong',key==='win_rate'&&!r.trades?.length?'—':isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
   if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));box.append(warnings);}
-  if(!r.trades?.length)box.append(el('p','本次没有完成交易。请检查触发条件、数据预热和期末未平仓说明。','warnings'));
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
   box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
