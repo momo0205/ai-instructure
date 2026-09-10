@@ -38,6 +38,10 @@ class StrategyDefinition:
                     raise ValueError(f"{key}: unsupported parameter type {parameter['type']}")
                 if not isinstance(result[key], expected):
                     raise ValueError(f"{key}: expected {parameter['type']}")
+            # Choice constraints are enforced on the server even for direct API callers.
+            for attribute in ('options', 'enum'):
+                if attribute in parameter and result[key] not in parameter[attribute]:
+                    raise ValueError(f"{key}: expected one of {parameter[attribute]}")
         return result
 
     def symbols(self, parameters):
@@ -99,9 +103,9 @@ def _number(name, label, default, minimum, maximum, kind='integer', step=1):
 
 
 _BUILTINS = [
-    dict(id='fixed_asset', constructor=FixedAssetStrategy, name='固定标的', description='全市场下跌家数触发后，下一交易日开盘买入指定标的。', version='1', parameters=[dict(name='symbol',label='标的代码',type='string',default='588000.SH')]),
+    dict(id='fixed_asset', constructor=FixedAssetStrategy, name='固定标的', description='全市场下跌家数触发后，下一交易日开盘买入指定标的。', version='1', parameters=[dict(name='symbol',label='标的代码',type='string',role='instrument',default='588000.SH')]),
     dict(id='cross_sectional_rank', constructor=CrossSectionalRankStrategy, name='横截面排名', description='触发后按动量、反转、波动率与成交量变化的标准分加权选股。窗口单位为交易日。', version='1', parameters=[
-        dict(name='candidate_symbols',label='候选标的',type='array',default=['588000.SH','510300.SH','159915.SZ']),
+        dict(name='candidate_symbols',label='候选标的',type='array',role='instrument',default=['588000.SH','510300.SH','159915.SZ']),
         *[_number(n, label, default, 1, 252) for n,label,default in [('momentum_window','动量窗口',20),('reversal_window','反转窗口',3),('volatility_window','波动率窗口',20),('volume_window','成交量窗口',5)]],
         dict(name='weights',label='因子权重',type='object',default=dict(momentum=0.0,reversal=1.0,volatility=-0.25,volume=0.0)),
         _number('min_volume','最低成交量（原始数据单位）',0.0,0,1e15,'number',1)

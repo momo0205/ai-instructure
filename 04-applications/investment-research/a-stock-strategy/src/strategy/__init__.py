@@ -1,4 +1,4 @@
-from strategy.interfaces.cli.config import (
+from strategy.application.configuration import (
     BacktestConfig,
     BacktestSettings,
     CostConfig,
