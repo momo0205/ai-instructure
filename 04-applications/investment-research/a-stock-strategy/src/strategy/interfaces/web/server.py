@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
-             '/app.js': 'app.js', '/style.css': 'style.css',
+             '/app.js': 'app.js', '/tabs.js': 'tabs.js', '/style.css': 'style.css',
              '/instrument-options.js': 'instrument-options.js'}
     if path not in files:
         raise ValueError('资源不存在')

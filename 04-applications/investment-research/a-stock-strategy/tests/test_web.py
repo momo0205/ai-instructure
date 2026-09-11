@@ -10,6 +10,7 @@ def test_web_static_files_are_allowlisted():
     from strategy.web import static_file
     assert static_file('/').name == 'index.html'
     assert static_file('/app.js').name == 'app.js'
+    assert static_file('/tabs.js').is_file()
     for path in ['/../../pyproject.toml', '/api/../.env', '/index.html/other']:
         with pytest.raises(ValueError):
             static_file(path)
