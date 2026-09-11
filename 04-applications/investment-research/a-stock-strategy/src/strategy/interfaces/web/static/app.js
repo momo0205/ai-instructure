@@ -6,6 +6,7 @@ const statuses = {queued:'排队中',running:'运行中',succeeded:'已完成',f
 const fmt = n => n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2});
 const pct = n => n == null ? '—' : `${fmt(Number(n)*100)}%`;
 function el(tag, text, cls) { const n=document.createElement(tag); if(text!=null)n.textContent=text; if(cls)n.className=cls; return n; }
+function activateTab(id){if(typeof WorkbenchTabs!=='undefined')WorkbenchTabs.select(id);}
 function notice(text) {$('notice').textContent=text;$('notice').hidden=!text;}
 function diagnosticText(item) {
   const c=item.context||{};
@@ -103,7 +104,7 @@ function copyRequest(request) {
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
   for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
   $('effectiveness').checked=request.effectiveness===true&&!$('effectiveness').disabled;
-  notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
+  activateTab('research');notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
 }
 function renderJobs() {
   const box=$('jobs');box.replaceChildren();if(!state.jobs.length){box.append(el('p','还没有任务。从左侧开始第一次回测。','muted'));return;}
@@ -112,7 +113,7 @@ function renderJobs() {
     check.onchange=()=>{check.checked?state.compared.add(job.id):state.compared.delete(job.id);renderComparison().catch(e=>notice(e.message));};row.append(check);
     const button=el('button');button.type='button';button.append(el('span',strategyName(job.request?.strategy_id),'job-title'));
     button.append(el('span',`${job.request?.start||''} → ${job.request?.end||''} · ${job.id.slice(0,8)}`,'job-meta'));
-    button.onclick=()=>showJob(job.id).catch(e=>notice(e.message));row.append(button,el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(row);
+    button.onclick=()=>showJob(job.id).then(()=>{activateTab('research');$('detail').scrollIntoView({behavior:'smooth',block:'start'});}).catch(e=>notice(e.message));row.append(button,el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(row);
   }
 }
 function table(headers, rows) {
@@ -180,7 +181,7 @@ function renderDownloads() {
     if(job.error) row.append(el('p',`${job.diagnostic?diagnosticText(job.diagnostic):job.error} · 任务 ${job.id}`,'warnings'));
     if(job.dataset_id) {
       const use=el('button','查看此数据集');use.type='button';
-      use.onclick=()=>{$('dataset').value=job.dataset_id;datasetFields();strategyFields();$('run-form').scrollIntoView({behavior:'smooth'});};row.append(use);
+      use.onclick=()=>{$('dataset').value=job.dataset_id;datasetFields();strategyFields();activateTab('research');$('run-form').scrollIntoView({behavior:'smooth'});};row.append(use);
     }
     if(['failed','interrupted'].includes(job.status)) {
       const retry=el('button','重试下载');retry.type='button';retry.onclick=async()=>{
