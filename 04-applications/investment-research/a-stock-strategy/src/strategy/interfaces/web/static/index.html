@@ -4,7 +4,7 @@
 <body>
 <header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
 <main>
-<div class="heading"><div><p class="eyebrow">STRATEGY LAB / 策略实验</p><h1>从一个想法，到一份研究。</h1><p class="muted">选择策略、调整参数，保留每一次实验的依据与结果。</p></div><span class="heading-note">配置 · 回测 · 对照 · 复盘</span></div>
+<div class="heading"><div><p class="eyebrow">STRATEGY LAB / 策略实验</p><h1>策略研究工作台</h1><p class="muted">用历史数据验证想法，用对照实验理解收益。</p></div><span class="heading-note">配置 · 回测 · 对照 · 复盘</span></div>
 <nav class="tabs" role="tablist" aria-label="研究台导航">
 <button id="tab-research" role="tab" data-tab="research" aria-controls="panel-research" aria-selected="true">策略回测 <span>Research</span></button>
 <button id="tab-history" role="tab" data-tab="history" aria-controls="panel-history" aria-selected="false" tabindex="-1">任务历史 <span>History</span></button>
@@ -12,18 +12,24 @@
 </nav>
 <div id="notice" role="status" aria-live="polite" hidden></div>
 <div id="panel-research" role="tabpanel" data-tab="research" aria-labelledby="tab-research" class="workspace">
-<section class="panel setup"><div class="section-title"><h2>新建回测</h2><span class="tag">日频 · 单持仓</span></div>
+<details class="panel setup" id="configuration" open>
+<summary class="configuration-title"><span><strong>配置回测</strong><small>选择标的与规则，开始一次新的实验</small></span><span class="config-chevron">展开 / 收起</span></summary>
 <form id="run-form">
+<div class="config-grid">
+<section class="config-block"><div class="block-label"><span>01</span> 策略与标的</div>
 <label>策略<select id="strategy" required></select></label><p id="strategy-description" class="hint"></p>
-<hr><label>历史数据集<select id="dataset" required></select></label><details class="dataset-details"><summary>数据来源与覆盖说明</summary><p id="dataset-info" class="hint"></p></details>
-<div id="strategy-parameters" class="fields"></div><p id="coverage-info" class="hint" role="status"></p><details><summary>研究与成交假设</summary><p class="hint">日频近似研究：未知停牌、涨跌停状态按可成交假设处理；前复权价格并非实际成交价。股票支持 2022-07-01 起的区间。</p></details><a href="#panel-data" data-tab-target="data" class="inline-link">管理数据 / 新增代码 →</a>
-<div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
+<label>历史数据集<select id="dataset" required></select></label><details class="dataset-details"><summary>数据来源与覆盖说明</summary><p id="dataset-info" class="hint"></p></details>
+<div id="strategy-parameters" class="fields"></div><p id="coverage-info" class="hint" role="status"></p><a href="#panel-data" data-tab-target="data" class="inline-link">管理数据 / 新增代码 →</a>
+</section>
+<section class="config-block"><div class="block-label"><span>02</span> 区间与触发条件</div><div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
 <div class="two"><label>初始资金（元）<input id="initial_cash" type="number" value="100000" min="1000" step="1000" required></label><label>持有交易日<input id="holding_period_days" type="number" value="1" min="1" max="252" step="1" required></label></div>
 <details open><summary>市场触发条件</summary><div class="two"><label>最少下跌家数<input id="min_declining_count" type="number" value="4000" min="0" step="1" required></label><label>指数日收益 ≤（%）<input id="trigger_return_threshold" type="number" value="-1" step="0.1" required></label></div></details>
-<details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。按 100 股／份买入，持有期结束后开盘卖出。股票另计卖出印花税及双边过户费，按成交日期适用规则；ETF 两项均为零。</p></details>
+</section>
+<section class="config-block"><div class="block-label"><span>03</span> 执行与对照</div><details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。按 100 股／份买入，持有期结束后开盘卖出。股票另计卖出印花税及双边过户费，按成交日期适用规则；ETF 两项均为零。</p></details>
 <label class="comparison-toggle"><input id="effectiveness" type="checkbox"> 同时进行策略有效性对照</label><p id="effectiveness-hint" class="hint">固定标的：买入持有 + 100 轮随机择时，运行时间较长。历史对照不能替代样本外验证。</p>
-<button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
-</form></section>
+<details><summary>研究与成交假设</summary><p class="hint">日频近似研究：未知停牌、涨跌停状态按可成交假设处理；前复权价格并非实际成交价。股票支持 2022-07-01 起的区间。</p></details></section>
+</div><div class="run-actions"><button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
+</div></form></details>
 <div class="results-column"><section class="panel" id="detail"><div class="empty"><div class="empty-icon">↗</div><h2>等待第一份研究结果</h2><p>执行回测后，这里会展示净值、回撤和逐笔交易。</p><p class="hint">亏损、零交易和运行失败会分别显示。</p></div></section></div>
 </div>
 <section id="panel-history" role="tabpanel" data-tab="history" aria-labelledby="tab-history" hidden><section class="panel" id="history"><div class="section-title"><h2>任务历史</h2><button type="button" id="refresh" class="quiet">刷新</button></div><p class="hint">勾选已完成任务查看指标对比；点击任务查看详情。</p><div id="jobs" class="job-list"><p class="muted">正在加载…</p></div><div id="comparison" hidden></div></section>

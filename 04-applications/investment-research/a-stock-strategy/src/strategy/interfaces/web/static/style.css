@@ -104,3 +104,39 @@ footer { font-size: 11px; color: #8a9790; padding: 26px 0; text-align: center; }
 @media(max-width:1100px) { .workspace { grid-template-columns: 320px minmax(0,1fr); gap: 18px; }.panel { padding: 20px; }.metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }.heading-note { display: none; } }
 @media(max-width:760px) { header { padding: 0 18px; height: 62px; }.brand small { display: none; }main { padding: 24px 14px 0; }h1 { font-size: 24px; }.heading { margin-bottom: 22px; }.tabs { width: 100%; gap: 2px; }.tabs button { flex: 1; padding: 10px 8px; }.tabs button span { display: none; }.workspace { grid-template-columns: 1fr; }.empty { padding: 55px 12px; }.metric strong { font-size: 22px; }.data-management form { padding: 6px 14px 18px; }.local { font-size: 10px; }.panel { padding: 18px; }.job { gap: 10px; } }
 @media(prefers-reduced-motion:reduce) { button, .secondary { transition: none; } }
+
+/* 第二版布局：紧凑顶部导航、横向配置，结果获得完整阅读宽度。 */
+:root { background: #f4f6f9; color: #253343; --accent: #256d68; --accent-soft: #eaf4f2; --line: #e3e8ee; --muted: #748091; }
+header { height: 60px; background: #142c35; color: #f4f8fa; border: 0; }
+.brand { font-size: 22px; }.brand span { color: #64c8b6; }.brand small { color: #a3b8bf; }.local { color: #9fdacb; background: #ffffff0c; border-color: #ffffff15; }
+main { max-width: 1440px; padding-top: 24px; }
+.heading { margin-bottom: 18px; align-items: center; }.eyebrow { display: none; }h1 { font-size: 23px; letter-spacing: -.5px; }.heading .muted { font-size: 12px; }
+.tabs { position: sticky; top: 0; z-index: 10; width: 100%; border: 0; border-bottom: 1px solid #dce3e9; border-radius: 0; background: #f4f6f9f5; backdrop-filter: blur(12px); padding: 0; gap: 26px; margin-bottom: 20px; }
+.tabs button { position: relative; padding: 14px 3px; border-radius: 0; color: #778493; }
+.tabs button[aria-selected="true"] { box-shadow: none; background: transparent; color: #174f50; }
+.tabs button[aria-selected="true"]::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 3px; background: #277c72; border-radius: 3px 3px 0 0; }
+.tabs button:hover { background: transparent; color: #174f50; }.tabs button span { margin-left: 8px; font-size: 10px; }
+.workspace { display: flex; flex-direction: column; gap: 20px; }.workspace > * { width: 100%; }
+.panel { border-radius: 12px; box-shadow: 0 3px 14px #23384904; }
+details.setup { margin: 0; padding: 0; border: 1px solid var(--line); background: #fff; }
+.configuration-title { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; list-style: none; cursor: pointer; }
+.configuration-title::-webkit-details-marker { display: none; }.configuration-title strong { font-size: 14px; color: #293d49; }.configuration-title small { margin-left: 14px; color: #909ba6; font-size: 11px; font-weight: 400; }.config-chevron { color: #648582; font-size: 11px; }
+.setup[open] .configuration-title { border-bottom: 1px solid #edf0f4; }
+.config-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; padding: 20px 24px; gap: 28px; }
+.config-block { min-width: 0; }.config-block + .config-block { border-left: 1px solid #edf0f4; padding-left: 28px; }
+.block-label { color: #465967; font-size: 12px; font-weight: 600; margin-bottom: 16px; }.block-label span { font-size: 10px; color: #8eaaa8; margin-right: 7px; }
+.config-block label { margin-top: 10px; font-size: 11px; }.config-block .two label { margin-top: 0; }.config-block .two { margin-bottom: 14px; gap: 12px; }
+.config-block input, .config-block select { min-height: 36px; padding: 8px 10px; background: #fff; border-color: #dfe5eb; border-radius: 6px; }
+.config-block details { margin-top: 14px; padding-top: 12px; }.config-block .dataset-details { border: 0; margin-top: 7px; padding: 0; }.config-block .hint { font-size: 11px; line-height: 1.7; margin-bottom: 10px; }
+.config-block #coverage-info { padding: 8px 10px; background: #f5f8fa; border-radius: 5px; margin-top: 10px; }.config-block .comparison-toggle { margin-top: 18px; font-size: 12px; background: #eef6f4; padding: 12px; }
+.config-block .comparison-toggle input { min-height: 14px; width: 14px; padding: 0; }
+.run-actions { display: flex; flex-direction: row-reverse; align-items: center; gap: 20px; padding: 14px 24px; border-top: 1px solid #edf0f4; background: #fafbfc; border-radius: 0 0 12px 12px; }
+.run-actions .primary { margin: 0; width: 170px; padding: 11px; flex-shrink: 0; }.run-actions .hint { margin: 0; font-size: 11px; }
+#detail { scroll-margin-top: 68px; padding: 26px; }.empty { padding: 48px 20px; }.empty-icon { width: 48px; height: 48px; border-radius: 12px; font-size: 25px; margin-bottom: 16px; }.empty h2 { font-size: 15px; }.empty p { margin: 6px 0; font-size: 12px; }
+.metric { background: #fff; border: 1px solid #e4eaf0; padding: 20px; }.metric:first-child { background: #f0f7f5; border-color: #d9eae4; }.metric strong { font-size: 29px; font-weight: 600; }.metrics { gap: 16px; }
+#effectiveness-result { padding: 20px; background: #f8fafc; border: 1px solid #e7edf3; border-radius: 10px; }.subheading { margin-top: 16px; }.chart { background: #fff; }.warnings { background: #fffbf2; border-color: #f0e7d3; }
+[role="tabpanel"]:not([hidden]) { animation: panel-in .18s ease-out; }
+@keyframes panel-in { from { opacity: .88; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@media(max-width:1100px) { .config-grid { gap: 18px; padding: 18px; }.config-block + .config-block { padding-left: 18px; }.metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }.metric strong { font-size: 24px; } }
+@media(max-width:760px) { .config-grid { grid-template-columns: 1fr; gap: 20px; }.config-block + .config-block { padding-left: 0; border-left: 0; border-top: 1px solid #edf0f4; padding-top: 18px; }.configuration-title { padding: 16px 18px; }.configuration-title small { display: none; }.tabs { gap: 12px; }.tabs button { padding: 13px 0; }.run-actions { padding: 14px 18px; flex-direction: column; gap: 8px; }.run-actions .primary { width: 100%; }.metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }.metric { padding: 14px; }#detail { padding: 18px; }#effectiveness-result { padding: 12px; }main { padding-top: 20px; }.empty { padding: 30px 10px; } }
+@media(prefers-reduced-motion:reduce) { [role="tabpanel"]:not([hidden]) { animation: none; } }
