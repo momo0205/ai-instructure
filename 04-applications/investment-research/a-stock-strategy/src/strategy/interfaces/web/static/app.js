@@ -19,6 +19,9 @@ async function api(path, body) {
 }
 function strategyName(id) {return state.strategies.find(s=>s.id===id)?.name||id;}
 function strategyFields(values={}) {
+  $('effectiveness').disabled=$('strategy').value!=='fixed_asset';
+  if($('effectiveness').disabled)$('effectiveness').checked=false;
+  $('effectiveness-hint').textContent=$('effectiveness').disabled?'有效性对照目前仅支持固定标的；动态选标的需另行拆分择时与选股影响。':'买入持有 + 100 轮随机择时，运行时间较长。历史对照不能替代样本外验证。';
   const spec=state.strategies.find(s=>s.id===$('strategy').value); const container=$('strategy-parameters');container.replaceChildren();
   if(!spec)return; $('strategy-description').textContent=spec.description;
   for(const field of spec.parameters) {
@@ -91,6 +94,7 @@ function requestFromForm() {
   const request={strategy_id:$('strategy').value,parameters,dataset_id:$('dataset').value,start:$('start').value,end:$('end').value};
   for(const key of ['initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps'])request[key]=Number($(key).value);
   // 页面用百分数，后端用小数；只在边界转换一次，避免 1% 与 0.01% 混淆。
+  request.effectiveness=$('strategy').value==='fixed_asset'&&$('effectiveness').checked;
   request.trigger_return_threshold/=100;request.commission_rate/=100;return request;
 }
 function copyRequest(request) {
@@ -98,6 +102,7 @@ function copyRequest(request) {
   $('strategy').value=request.strategy_id;$('dataset').value=request.dataset_id;datasetFields(false);strategyFields(request.parameters);
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
   for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
+  $('effectiveness').checked=request.effectiveness===true&&!$('effectiveness').disabled;
   notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
 }
 function renderJobs() {
@@ -151,6 +156,7 @@ async function showJob(id) {
   const metrics=el('div',null,'metrics');for(const [label,key,isPct] of [['累计收益','cumulative_return',true],['最大回撤','max_drawdown',true],['胜率','win_rate',true],['交易次数','trade_count',false]]){
     const card=el('div',null,'metric');card.append(el('small',label),el('strong',key==='win_rate'&&!r.trades?.length?'—':isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
   if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));const details=el('details');details.append(el('summary','数据、模型与执行详细说明'),warnings);box.append(details);}
+  renderEffectiveness(box,r.effectiveness);
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
   box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
@@ -229,3 +235,34 @@ async function init() {
   setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&['running','queued'].includes(j.status));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status)))await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
 }
 init().catch(e=>notice(e.message));
+
+// 分布横轴包括策略收益，确保极端策略值的标记仍可见。
+function returnHistogram(values, actual) {
+  let low=Math.min(...values,actual),high=Math.max(...values,actual);
+  if(low===high){low-=0.005;high+=0.005;}
+  const counts=Array(12).fill(0);
+  for(const v of values)counts[Math.min(11,Math.floor((v-low)/(high-low)*12))]++;
+  return {low,high,counts};
+}
+function renderEffectiveness(box, result) {
+  const section=el('section');section.id='effectiveness-result';section.append(el('h2','策略有效性对照','subheading'));
+  if(!result){section.append(el('p','本次未运行对照。可复制参数，勾选“同时进行策略有效性对照”后重跑。','hint'));box.append(section);return;}
+  if(result.status!=='available'){section.append(el('p',result.message,'warnings'));box.append(section);return;}
+  const a=result.strategy_metrics,b=result.buy_and_hold.metrics,r=result.random;
+  section.append(table(['方案','累计收益','最大回撤','完整交易笔数','持仓日占比'],[
+    ['原策略',pct(a.cumulative_return),pct(a.max_drawdown),a.trade_count,pct(1-a.cash_ratio)],
+    ['买入持有',pct(b.cumulative_return),pct(b.max_drawdown),b.trade_count,pct(1-b.cash_ratio)]]));
+  section.append(el('p',`累计收益差（原策略减买入持有）：${fmt((a.cumulative_return-b.cumulative_return)*100)} 个百分点。资金暴露不同，请同时比较回撤与持仓比例。`,'hint'));
+  if(r.status==='unavailable'){section.append(el('p',r.message,'hint'));for(const text of [...result.limitations,...(result.buy_and_hold.warnings||[])])section.append(el('p',text,'hint'));box.append(section);return;}
+  section.append(el('p',`随机择时共 ${result.trials} 轮，中位收益 ${pct(r.median_return)}，5%—95% 分位区间 ${pct(r.p05_return)} 至 ${pct(r.p95_return)}。原策略位于第 ${fmt(r.strategy_percentile)} 百分位（平局按一半计入）。`));
+  section.append(el('p',`每轮计划 ${result.target_trade_count} 笔、持有 ${result.holding_period_days} 个交易日；实际完整成交笔数匹配的轮数为 ${r.matching_trade_count_trials}/${result.trials}。随机种子 ${result.seed}。`,'hint'));
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 760 220');svg.setAttribute('role','img');svg.setAttribute('aria-label','随机择时累计收益分布');svg.classList.add('chart');
+  const bins=returnHistogram(r.samples.map(x=>x.cumulative_return),a.cumulative_return),max=Math.max(...bins.counts,1);
+  function node(tag,attrs,text){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);}
+  bins.counts.forEach((v,i)=>{const h=v/max*130;node('rect',{x:60+i*55,y:160-h,width:50,height:h,fill:'#77b5a7'});node('text',{x:85+i*55,y:155-h,'text-anchor':'middle'},String(v));});
+  const x=60+(a.cumulative_return-bins.low)/(bins.high-bins.low)*660;node('line',{x1:x,x2:x,y1:15,y2:165,stroke:'#b78657','stroke-width':3});
+  node('text',{x:60,y:195},pct(bins.low));node('text',{x:720,y:195,'text-anchor':'end'},pct(bins.high));node('text',{x:390,y:215,'text-anchor':'middle'},'横轴：累计收益；柱高：随机轮数；金线：原策略');section.append(svg);
+  const details=el('details');details.append(el('summary','方法、限制与随机实验明细'));for(const text of result.limitations)details.append(el('p',text,'hint'));
+  for(const text of result.buy_and_hold.warnings||[])details.append(el('p',`买入持有说明：${text}`,'hint'));
+  details.append(table(['随机轮次','收益','回撤','完整交易笔数','持仓日占比','期末持仓'],r.samples.map((s,i)=>[i+1,pct(s.cumulative_return),pct(s.max_drawdown),s.trade_count,pct(1-s.cash_ratio),s.open_position?'有':'无'])));section.append(details);box.append(section);
+}

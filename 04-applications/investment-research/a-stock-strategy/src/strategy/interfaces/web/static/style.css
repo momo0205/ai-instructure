@@ -7,3 +7,5 @@
 .download-row button{margin-right:8px}
 select[multiple] option{padding:7px 5px}
 #download-notice{font-size:13px;color:#796036;overflow-wrap:anywhere}
+
+.comparison-toggle{display:flex;align-items:center;gap:8px}.comparison-toggle input{width:auto}
