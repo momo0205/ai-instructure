@@ -131,3 +131,12 @@ HTTP 失败保留 `error` 字符串并附加 `diagnostic`；任务详情/下载�
 已审定可公开的校验说明用 `validation.UserError(code, message)`，第三方异常不能直接包装。
 未知异常返回 `DOWNLOAD_FAILED` / `BACKTEST_FAILED` / `INTERNAL_ERROR`，详细堆栈留在服务日志。
 前端连接错误和非 JSON 响应分别使用 `NETWORK_ERROR` / `INVALID_RESPONSE`。
+
+### 固定标的有效性对照
+
+请求 `effectiveness: true` 开启 `application/effectiveness.py`，默认 false；页面显式勾选。
+当前仅支持 fixed_asset。对照复用同一个 SimulationPlan 与引擎，计划适配器只替换市场触发日期，仍保留固定策略当日状态过滤。
+
+买入持有：首日收盘形成计划、次日开盘买入，末日开盘计划卖出。随机择时：以已完成交易数为计划笔数，压缩组合空间均匀抽取不重叠窗口，持有期相同。100轮固定种子20260910，保存各轮信号日、累计收益、回撤、实际完整成交数、持仓日占比及期末持仓。
+
+实际成交笔数可能不同，不筛选随机结果；页面展示匹配轮数。历史百分位为低于策略的随机轮数加平局一半，除以总轮数，不是显著性或样本外证据。零完整交易仍展示基准，只跳过随机实验。少于3个交易日时整个对照不可用，原始回测正常保留。

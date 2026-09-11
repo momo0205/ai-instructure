@@ -43,9 +43,10 @@ def execute(root, request, output_dir):
     engine_keys = ('initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps')
     options = dict(lot_size=100, stamp_duty_rate=0.0, instrument_types=instrument_types,
                    **{k: request[k] for k in engine_keys})
-    outcome = simulation.run_simulation(simulation.SimulationPlan(
+    plan = simulation.SimulationPlan(
         market, definition.build(request['parameters']), options, profile='workbench',
-        start=date.fromisoformat(request['start']), end=date.fromisoformat(request['end'])))
+        start=date.fromisoformat(request['start']), end=date.fromisoformat(request['end']))
+    outcome = simulation.run_simulation(plan)
     engine, result = outcome.engine, outcome.result
     metadata = dict(dataset_id=request['dataset_id'],hashes=hashes,strategy_version=definition.version,breadth_source=sorted(breadth.source.unique().tolist()),market_source=dataset['market_source'],adjustment=dataset['adjustment'],sample=request['dataset_id']=='mvp_sample',code_provenance='Python source captured for audit; running service uses modules loaded at startup',timing='close signal; next session open execution',stamp_duty_rate=engine.stamp_duty_rate,lot_size=engine.lot_size)
     metadata.update(execution_mode='approximate',instrument_types=instrument_types,
@@ -57,4 +58,7 @@ def execute(root, request, output_dir):
     payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
     from strategy.application.diagnostics import result_diagnostics
     payload['diagnostics'] = result_diagnostics(payload)
+    if request['effectiveness']:
+        from strategy.application.effectiveness import compare_effectiveness
+        payload['effectiveness'] = compare_effectiveness(plan, symbols[0], payload)
     return write_result(output_dir, payload)

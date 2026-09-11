@@ -12,10 +12,14 @@ from strategy.market_data.repository import datasets
 
 def validate_request(root, request):
     """严格校验日期、标的和参数。收益阈值用小数；滑点用基点，1 bp = 0.01%。"""
-    defaults = dict(strategy_id='fixed_asset',parameters={},dataset_id='mvp_sample',start=None,end=None,initial_cash=100000.0,holding_period_days=1,min_declining_count=4000,trigger_return_threshold=-.01,commission_rate=.0003,minimum_commission=5.0,slippage_bps=2.0)
+    defaults = dict(effectiveness=False,strategy_id='fixed_asset',parameters={},dataset_id='mvp_sample',start=None,end=None,initial_cash=100000.0,holding_period_days=1,min_declining_count=4000,trigger_return_threshold=-.01,commission_rate=.0003,minimum_commission=5.0,slippage_bps=2.0)
     if not isinstance(request,dict) or set(request)-set(defaults):
         raise UserError('INVALID_REQUEST', '请求包含未知字段或格式错误（unknown request fields or invalid request）')
     value = defaults | request
+    if not isinstance(value['effectiveness'], bool):
+        raise UserError('INVALID_REQUEST', 'effectiveness 必须为布尔值')
+    if value['effectiveness'] and value['strategy_id'] != 'fixed_asset':
+        raise UserError('INVALID_REQUEST', '有效性对照当前仅支持固定标的策略')
     available = {d['id']:d for d in datasets(root)}
     if not isinstance(value['dataset_id'],str) or value['dataset_id'] not in available:
         raise UserError('INVALID_REQUEST', '数据集不存在，请刷新后重选（unknown dataset_id）')

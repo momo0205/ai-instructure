@@ -63,3 +63,18 @@ test('API connection failure is actionable in Chinese',async()=>{
  const {context}=page();context.fetch=async()=>{throw new TypeError('Failed to fetch');};
  await assert.rejects(vm.runInContext("api('/api/jobs')",context),/NETWORK_ERROR.*本地服务/);
 });
+
+test('effectiveness selection is boolean, copied and disabled for dynamic strategy',()=>{
+ const {run,nodes}=page();nodes.strategy.value='fixed_asset';run("state.strategies[0].id='fixed_asset';$('effectiveness').checked=true;null");
+ assert.equal(run('requestFromForm().effectiveness'),true);
+ run("state.strategies[0].id='fixed_asset';copyRequest({...requestFromForm(),effectiveness:false});null");
+ assert.equal(nodes.effectiveness.checked,false);
+ run("$('effectiveness').checked=true;state.strategies[0].id='cross_sectional_rank';$('strategy').value='cross_sectional_rank';strategyFields();null");
+ assert.equal(nodes.effectiveness.disabled,true);assert.equal(nodes.effectiveness.checked,false);
+});
+
+test('return histogram retains every sample including equal returns',()=>{
+ const {run}=page();
+ const bins=run('returnHistogram([0,0,0],0)');assert.equal(bins.counts.reduce((a,b)=>a+b,0),3);assert.ok(bins.high>bins.low);
+ const spread=run('returnHistogram([-0.1,0,0.1],0.2)');assert.equal(spread.counts.reduce((a,b)=>a+b,0),3);assert.ok(spread.high>=0.2);
+});
