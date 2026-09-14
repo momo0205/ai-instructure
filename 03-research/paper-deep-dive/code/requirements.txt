@@ -1,0 +1,6 @@
+numpy>=1.21
+torch>=2.0
+torchvision>=0.15
+scikit-learn>=1.0
+matplotlib>=3.5
+pytest>=7.0
