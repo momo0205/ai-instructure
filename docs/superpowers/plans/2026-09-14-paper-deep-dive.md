@@ -709,6 +709,13 @@ class DeepMLP:
       h[i+1] = a[i]                （普通层）
       h[i+1] = a[i] + h[i-1]       （i 为奇数时为残差块出口）
     输出 logits = h[L] @ W[L]。
+
+    维度说明（实现时发现的必要修正）：
+    第 0 层是 stem（in_dim -> hidden），故 h[0] 宽度为 in_dim，而 a[1] 宽度为 hidden。
+    当 in_dim != hidden 时 i=1 的恒等 shortcut 宽度不匹配、无法相加。因此只在
+    h[i-1] 与 a[i] 宽度一致时才加 shortcut（真实 ResNet 此处用 1x1 投影；本实现
+    为保持手写反向简洁而跳过）。forward 与 backward 共用 `_block_skip` 判定，
+    确保梯度索引 +G[i+2] 与真实计算图一致。
     """
 
     def __init__(self, in_dim=784, hidden=128, n_layers=20, n_classes=10,
@@ -720,6 +727,15 @@ class DeepMLP:
         dims = [in_dim] + [hidden] * n_layers + [n_classes]
         self.W = [xavier(rng, dims[i], dims[i + 1]) for i in range(len(dims) - 1)]
 
+    def _block_skip(self, j, h, a):
+        return (
+            self.residual
+            and j % 2 == 1
+            and j - 1 < len(h)
+            and j < len(a)
+            and h[j - 1].shape == a[j].shape
+        )
+
     def forward(self, x, cache):
         L = self.n_layers
         h = [x]
@@ -727,7 +743,7 @@ class DeepMLP:
         for i in range(L):
             ai = sigmoid(h[i] @ self.W[i])
             a.append(ai)
-            if self.residual and (i % 2 == 1):
+            if self._block_skip(i, h, a):
                 h.append(ai + h[i - 1])
             else:
                 h.append(ai)
@@ -748,7 +764,7 @@ class DeepMLP:
             dz = G[i + 1] * a[i] * (1.0 - a[i])
             grads[i] = h[i].T @ dz
             gi = dz @ self.W[i].T
-            if self.residual and (i % 2 == 0) and (i + 2 <= L):
+            if self.residual and (i % 2 == 0) and (i + 2 <= L) and self._block_skip(i + 1, h, a):
                 gi = gi + G[i + 2]
             G[i] = gi
         return grads
@@ -1167,16 +1183,19 @@ from ddpm.simple_ddpm import Diffusion
 
 
 def test_q_sample_limits():
+    # T=1000（标准 DDPM horizon）使 alpha_bar[T-1] ~ 4e-5，"纯噪声"才成立；
+    # T=100 时 alpha_bar[99] ~ 0.36，仅约 64% 噪声。t=0 用 atol=0.05 因
+    # beta_start=1e-4 会注入 sqrt(1e-4)*noise = 0.01*noise。
     torch.manual_seed(0)
-    diff = Diffusion(T=100)
+    diff = Diffusion(T=1000)
     x0 = torch.randn(8, 1, 28, 28)
     noise = torch.randn_like(x0)
 
     t0 = torch.zeros(8, dtype=torch.long)
     xt0 = diff.q_sample(x0, t0, noise)
-    assert torch.allclose(xt0, x0, atol=1e-3), "t=0 should be (almost) clean"
+    assert torch.allclose(xt0, x0, atol=0.05), "t=0 should be (almost) clean"
 
-    tT = torch.full((8,), 99, dtype=torch.long)
+    tT = torch.full((8,), 999, dtype=torch.long)
     xtT = diff.q_sample(x0, tT, noise)
     assert torch.allclose(xtT, noise, atol=0.05), "t=T-1 should be (almost) pure noise"
 
