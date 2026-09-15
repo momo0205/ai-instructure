@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>论文精读工作台 · ResNet / Transformer / DDPM</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1c2430; --muted:#5b6572;
+  --line:#e3e7ec; --accent:#2563eb; --accent-soft:#e8effd; --ok:#16a34a;
+  --code-bg:#0f172a; --code-ink:#e2e8f0; --radius:12px; --shadow:0 1px 3px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.65}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 80px}
+header.top{position:sticky;top:0;background:rgba(246,247,249,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:20}
+.top-inner{max-width:1080px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:15px;letter-spacing:.2px}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.progress{flex:1;min-width:220px}
+.progress .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563eb,#4f8dfd);transition:width .35s ease}
+.progress .pct{font-size:12px;color:var(--muted);margin-top:4px}
+.tabs{display:flex;gap:6px;max-width:1080px;margin:16px auto 0;padding:0 20px}
+.tab{flex:1;text-align:center;padding:10px 12px;border:1px solid var(--line);background:var(--card);border-radius:10px 10px 0 0;border-bottom:none;cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);transition:.15s}
+.tab .qn{font-size:11px;font-weight:600;color:var(--accent);display:block}
+.tab.active{color:var(--ink);background:var(--card);box-shadow:var(--shadow);position:relative;top:1px}
+.tab .done{font-size:11px;color:var(--ok);font-weight:600}
+.pane{display:none}
+.pane.active{display:block}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:0 var(--radius) var(--radius) var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.hero h1{margin:0 0 4px;font-size:22px}
+.hero .meta{color:var(--muted);font-size:13px;margin-bottom:14px}
+.hero .actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;color:var(--ink)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1d4fd0}
+.btn.ghost{background:transparent}
+.sec{margin-top:26px}
+.sec>h2{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 12px}
+.sec>h2 .tag{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:99px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+.md h1,.md h2,.md h3{line-height:1.35;margin:.9em 0 .4em}
+.md h1{font-size:19px}.md h2{font-size:16px}.md h3{font-size:14.5px}
+.md p{margin:.5em 0}
+.md code{background:#eef2f6;padding:1px 5px;border-radius:5px;font-size:.88em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.md pre{background:var(--code-bg);color:var(--code-ink);padding:14px 16px;border-radius:10px;overflow:auto;font-size:12.5px}
+.md pre code{background:transparent;color:inherit;padding:0}
+.md table{border-collapse:collapse;width:100%;font-size:13.5px;margin:.6em 0}
+.md th,.md td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.md th{background:#f2f5f8;font-weight:600}
+.md blockquote{border-left:3px solid var(--accent);margin:.6em 0;padding:2px 14px;color:var(--muted);background:var(--accent-soft);border-radius:0 8px 8px 0}
+.md ul,.md ol{padding-left:22px}
+.md details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:6px 0;background:#fbfcfd}
+.md details summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.md details[open]{background:var(--accent-soft);border-color:#c9dbfb}
+textarea.note{width:100%;min-height:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;font-size:13.5px;resize:vertical;background:#fbfcfd}
+textarea.note:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.save-hint{font-size:12px;color:var(--muted)}
+.save-hint.saved{color:var(--ok)}
+.code-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.code-file{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
+.cmdline{display:flex;align-items:center;gap:8px;background:#0b1220;border-radius:8px;padding:8px 12px;margin:10px 0}
+.cmdline code{flex:1;color:#7dd3fc;font-family:ui-monospace,monospace;font-size:13px;overflow:auto;white-space:nowrap}
+.copy{font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid #243447;background:#16233a;color:#cfe4ff;cursor:pointer}
+.copy:hover{background:#1d3350}
+.copy.copied{background:var(--ok);border-color:var(--ok);color:#fff}
+pre.codeblock{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:10px;overflow:auto;font-size:12.5px;max-height:480px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:10px;overflow:auto;font-size:12.5px;max-height:480px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.result-banner{margin-top:10px;font-size:13px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:10px 14px;border-radius:9px}
+.quiz-item{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--card)}
+.quiz-item .qrow{display:flex;gap:10px;align-items:flex-start}
+.quiz-item input[type=checkbox]{margin-top:5px;transform:scale(1.15);accent-color:var(--ok);cursor:pointer}
+.quiz-item.done .qtext{color:var(--muted);text-decoration:line-through}
+.quiz-q{font-weight:600;font-size:14px;flex:1}
+.checks{display:flex;gap:18px;flex-wrap:wrap}
+.checks label{display:flex;gap:8px;align-items:center;font-size:13.5px;cursor:pointer;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.checks input{accent-color:var(--ok);transform:scale(1.15)}
+footer{margin-top:40px;text-align:center;color:var(--muted);font-size:12px}
+.reset{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline}
+.paper-badge{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;margin-right:8px}
+@media(max-width:640px){.tabs{flex-direction:column}.hero h1{font-size:19px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">论文精读工作台<small>问题驱动 · 最小复现 · 本地保存</small></div>
+    <div class="progress">
+      <div class="bar"><i id="gbar"></i></div>
+      <div class="pct" id="gpct">整体进度 0%</div>
+    </div>
+    <button class="reset" id="resetAll">清空进度</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main class="wrap" id="panes"></main>
+<footer>论文原文请点 Tab 顶部「打开 PDF」调用系统阅读器 · 进度与笔记保存在本浏览器 localStorage</footer>
+
+<script id="data" type="application/json">[{"id": "resnet", "name": "ResNet", "title": "Deep Residual Learning for Image Recognition", "meta": "He et al. · 2015 · CVPR 2016", "qnum": "Q1", "pdf": "papers/resnet/resnet.pdf", "question": "# Q1：为什么网络越深越难训练？\n\n## 一句话问题\n\n按理说更深的网络表达能力更强，为什么单纯堆叠层数反而让训练更难？\n\n## 为什么这个问题重要\n\n这是 ResNet 的出发点。理解它，才能理解残差连接到底解决了什么。\n\n## 我的初始理解（学习前先写，不要看论文）\n\n_在这里写下你现在的猜测。_\n\n## 需要区分的两个概念\n\n| 概念 | 含义 | 现象 |\n|------|------|------|\n| 梯度消失/爆炸 | 反向传播时梯度逐层相乘导致过大或过小 | 浅层几乎不更新 |\n| 退化问题 (degradation) | 深层网络训练误差反而比浅层高 | 不是过拟合，训练集误差也更高 |\n\n## 论文的核心主张\n\nResNet 提出：让网络学习残差 F(x) = H(x) - x，而不是直接学 H(x)，\n则\"恒等映射\"变成把 F(x) 学成 0，比直接学 H(x)=x 容易。\n\n## 子问题\n\n1. 退化问题为什么不是过拟合导致的？论文用哪张图证明？\n2. 一个残差块的公式是什么？shortcut 上有没有参数？\n3. 当输入输出维度不一致时，shortcut 怎么处理？\n4. 梯度通过 shortcut 回传时，为什么会\"不衰减\"？\n5. 论文的 bottleneck 结构为什么要 1x1 -> 3x3 -> 1x1？\n\n## 证据位置（读论文时填）\n\n| 论点 | 论文位置 | 原文摘录 |\n|------|---------|---------|\n| 退化现象 | 图 1 | |\n| 残差公式 | 式 (1)(2) | |\n| 维度不匹配处理 | 3.3 节 | |\n| 梯度流分析 | （后续论文/博客） | |\n\n## 复现验证\n\n跑 `code/resnet/plain_vs_residual.py`，对比 plain 与 residual 的浅层梯度范数。\n\n## 我的结论（读完后写）\n\n_待填。_\n", "notes": "# ResNet 精读笔记\n\n## 元信息\n\n- 标题：Deep Residual Learning for Image Recognition\n- 作者：Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun\n- 年份 / 会议：2015 / CVPR 2016\n- 本地原文：[resnet.pdf](resnet.pdf)\n\n## 速读记录（Week 1）\n\n### 三段式结构图\n\n_画出 Intro -> Method -> Experiments 的逻辑流。_\n\n### Introduction 的关键句\n\n> _摘录 2-3 句最关键的话，并翻译。_\n\n### 我的 3 个困惑点\n\n1.\n2.\n3.\n\n## 精读记录（Week 2）\n\n### 3.1 残差学习\n\n_核心公式：y = F(x, {Wi}) + x_\n\n### 3.2 恒等映射的 shortcut\n\n### 3.3 网络架构（bottleneck）\n\n### 3.4 实现细节\n\n## 公式推导（手写稿索引）\n\n| 公式 | 含义 | 手写稿路径 |\n|------|------|-----------|\n| y = F(x) + x | 残差块前向 | derivations/01.png |\n| ∂L/∂x = ∂L/∂y (1 + ∂F/∂x) | 梯度回传（为什么缓解消失） | derivations/02.png |\n\n## 我的理解\n\n_用自己的话写，不许抄论文。_\n", "summary": "# ResNet 一页纸总结\n\n## 一句话\n\n## 解决的问题\n\n## 核心方法\n\n## 关键结果\n\n## 对我的启发\n\n## 仍然不懂的地方\n", "checkpoint": "# Checkpoint 1：ResNet 自测\n\n每题先自己作答，再展开答案对照。对 8/10 以上算通过。\n\n## 1. 退化问题的定义是什么？\n<details><summary>答案</summary>\n层数增加时，训练误差（不是测试误差）反而变大。说明不是过拟合，而是优化变难。\n</details>\n\n## 2. 为什么不能简单认为\"加深网络最差也就是退化成浅层网络\"？\n<details><summary>答案</summary>\n因为恒等映射对多层非线性堆叠来说很难学——理论上存在解（多余的层学恒等），但优化器找不到。\n</details>\n\n## 3. 写出一个残差块的公式。\n<details><summary>答案</summary>\ny = F(x, {W_i}) + x，其中 F 是两层卷积 + BN + ReLU；F(x)=0 时即恒等映射。\n</details>\n\n## 4. shortcut 上有参数吗？为什么？\n<details><summary>答案</summary>\n恒等 shortcut 无参数。这样不增加参数量，且梯度可无损直通。\n</details>\n\n## 5. 输入输出通道不一致时怎么处理？\n<details><summary>答案</summary>\n用 1x1 卷积投影 W_s x 对齐维度（式 2），论文发现恒等映射已足够，投影只在需要时用。\n</details>\n\n## 6. 从梯度角度解释 shortcut 为什么缓解梯度消失。\n<details><summary>答案</summary>\n∂L/∂x = ∂L/∂y · (1 + ∂F/∂x)。那个\"+1\"是恒等通路，保证梯度至少原样回传一层，不会被 ∂F/∂x 完全衰减。\n</details>\n\n## 7. bottleneck 结构是什么？为什么用？\n<details><summary>答案</summary>\n1x1 降维 -> 3x3 -> 1x1 升维。减少 3x3 卷积的通道数，控制深层网络的参数量和计算量。\n</details>\n\n## 8. 论文在 CIFAR-10 上做了消融，说明了什么？\n<details><summary>答案</summary>\nplain-34 比 plain-18 训练误差更高（退化），residual-34 反而更好，证明残差结构解决的是优化问题。\n</details>\n\n## 9. 复现代码里 plain 网络的浅层梯度为什么接近 0？\n<details><summary>答案</summary>\n20 层 sigmoid，每层导数相乘（<1），梯度指数衰减；残差网络的恒等通路提供\"+1\"，梯度不衰减。\n</details>\n\n## 10. 一个陷阱：残差连接一定有用吗？\n<details><summary>答案</summary>\n不一定。网络不够深、存在 BN 或良好初始化时，退化不明显，残差收益有限；极深时才显著。\n</details>\n", "code": "\"\"\"Plain vs Residual 深层 MLP，手写前向与反向传播。\n\n回答 Q1：为什么网络越深越难训练？残差连接如何缓解？\n\nRun:  python3 resnet/plain_vs_residual.py\n\"\"\"\nimport os\nimport sys\n\nimport numpy as np\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\nfrom common.mnist import load_mnist\n\n\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30.0, 30.0)))\n\n\ndef softmax(z):\n    z = z - z.max(axis=1, keepdims=True)\n    e = np.exp(z)\n    return e / e.sum(axis=1, keepdims=True)\n\n\ndef xavier(rng, fan_in, fan_out):\n    return rng.normal(0.0, np.sqrt(1.0 / fan_in), size=(fan_in, fan_out)).astype(np.float32)\n\n\nclass DeepMLP:\n    \"\"\"全连接深层网络；residual=True 时每 2 层加一个恒等 shortcut。\n\n    记 h[0]=x，第 i 层 a[i]=sigmoid(h[i] @ W[i])，则\n      h[i+1] = a[i]                （普通层）\n      h[i+1] = a[i] + h[i-1]       （i 为奇数时为残差块出口）\n    输出 logits = h[L] @ W[L]。\n\n    维度说明（与朴素公式的唯一差异）：\n    第 0 层是 stem（in_dim -> hidden），故 h[0] 宽度为 in_dim，而 a[1] 宽度为\n    hidden。当 in_dim != hidden 时 i=1 的恒等 shortcut 宽度不匹配、无法相加。\n    这里只在 h[i-1] 与 a[i] 宽度一致时才加 shortcut（真实 ResNet 中该位置对应\n    需要 1x1 投影的 stem 层；本实现为保持手写反向的简洁，直接跳过该 shortcut，\n    其余 block 的 shortcut 全部保留）。forward/backward 使用完全相同的判定。\n    \"\"\"\n\n    def __init__(self, in_dim=784, hidden=128, n_layers=20, n_classes=10,\n                 residual=False, seed=0):\n        assert n_layers % 2 == 0, \"n_layers must be even (residual blocks of 2)\"\n        self.residual = residual\n        self.n_layers = n_layers\n        rng = np.random.default_rng(seed)\n        dims = [in_dim] + [hidden] * n_layers + [n_classes]\n        self.W = [xavier(rng, dims[i], dims[i + 1]) for i in range(len(dims) - 1)]\n\n    def _block_skip(self, j, h, a):\n        \"\"\"第 j 层（j 为奇数，残差块出口）是否使用恒等 shortcut。\n\n        j=1 是 stem block：h[0] 宽度为 in_dim，而 a[1] 宽度为 hidden，当\n        in_dim != hidden 时二者无法相加，只能退化为普通层。forward 与 backward\n        共用此判定，确保梯度索引（+G[i+2]）与真实计算图完全一致。\n        \"\"\"\n        return (\n            self.residual\n            and j % 2 == 1\n            and j - 1 < len(h)\n            and j < len(a)\n            and h[j - 1].shape == a[j].shape\n        )\n\n    def forward(self, x, cache):\n        L = self.n_layers\n        h = [x]\n        a = []\n        for i in range(L):\n            ai = sigmoid(h[i] @ self.W[i])\n            a.append(ai)\n            if self._block_skip(i, h, a):\n                h.append(ai + h[i - 1])\n            else:\n                h.append(ai)\n        logits = h[L] @ self.W[L]\n        cache[\"h\"] = h\n        cache[\"a\"] = a\n        return logits\n\n    def backward(self, cache, dlogits):\n        h = cache[\"h\"]\n        a = cache[\"a\"]\n        L = self.n_layers\n        grads = [None] * (L + 1)\n        G = [None] * (L + 2)\n        grads[L] = h[L].T @ dlogits\n        G[L] = dlogits @ self.W[L].T\n        for i in range(L - 1, -1, -1):\n            dz = G[i + 1] * a[i] * (1.0 - a[i])\n            grads[i] = h[i].T @ dz\n            gi = dz @ self.W[i].T\n            if self.residual and (i % 2 == 0) and (i + 2 <= L) and self._block_skip(i + 1, h, a):\n                gi = gi + G[i + 2]\n            G[i] = gi\n        return grads\n\n\ndef train(residual, steps=500, batch=64, lr=0.1, seed=0):\n    x_tr, y_tr, x_te, y_te = load_mnist(n_train=6000, n_test=1000)\n    net = DeepMLP(residual=residual, seed=seed)\n    rng = np.random.default_rng(seed)\n    losses, g0 = [], []\n    for _ in range(steps):\n        idx = rng.integers(0, len(x_tr), batch)\n        xb, yb = x_tr[idx], y_tr[idx]\n        cache = {}\n        logits = net.forward(xb, cache)\n        p = softmax(logits)\n        loss = -np.log(p[np.arange(batch), yb] + 1e-12).mean()\n        dlogits = p.copy()\n        dlogits[np.arange(batch), yb] -= 1.0\n        dlogits /= batch\n        grads = net.backward(cache, dlogits)\n        for i in range(len(net.W)):\n            net.W[i] -= lr * grads[i]\n        losses.append(float(loss))\n        g0.append(float(np.linalg.norm(grads[0])))\n    return net, losses, g0\n\n\ndef main():\n    result = {}\n    for name, res in [(\"plain\", False), (\"residual\", True)]:\n        net, losses, g0 = train(res)\n        result[name] = (losses, g0)\n        print(f\"[{name:8s}] loss {losses[0]:.4f} -> {losses[-1]:.4f} | \"\n              f\"mean |grad layer-0| = {np.mean(g0[10:]):.3e}\")\n    g_plain = np.mean(result[\"plain\"][1][10:])\n    g_res = np.mean(result[\"residual\"][1][10:])\n    print(f\"\\n浅层梯度范数比 residual/plain = {g_res / (g_plain + 1e-30):.3e}\")\n    print(\"结论：plain 网络浅层梯度趋近于 0（梯度消失），残差连接保住了梯度通路。\")\n    try:\n        import matplotlib\n        matplotlib.use(\"Agg\")\n        import matplotlib.pyplot as plt\n        fig, ax = plt.subplots(1, 2, figsize=(10, 4))\n        for name in result:\n            ax[0].plot(result[name][0], label=name)\n            ax[1].plot(result[name][1], label=name)\n        ax[0].set_title(\"training loss\")\n        ax[1].set_title(\"|grad| at layer 0\")\n        ax[1].set_yscale(\"log\")\n        for a in ax:\n            a.legend()\n            a.grid(alpha=0.3)\n        out = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"output.png\")\n        fig.tight_layout()\n        fig.savefig(out, dpi=120)\n        print(f\"图已保存: {out}\")\n    except Exception as e:\n        print(f\"[plot skipped] {type(e).__name__}: {e}\")\n\n\nif __name__ == \"__main__\":\n    main()\n", "code_file": "code/resnet/plain_vs_residual.py", "run_cmd": "python3 resnet/plain_vs_residual.py", "code_lang": "python", "result": "梯度比 residual/plain = 1.79e+11：plain 浅层梯度趋近 0，残差连接保住梯度通路。"}, {"id": "transformer", "name": "Transformer", "title": "Attention Is All You Need", "meta": "Vaswani et al. · 2017 · NeurIPS", "qnum": "Q2", "pdf": "papers/transformer/attention_is_all_you_need.pdf", "question": "# Q2：为什么注意力能替代序列建模？\n\n## 一句话问题\n\nRNN 必须按顺序计算，注意力为什么能打破这个限制，同时还建模得更好？\n\n## 为什么这个问题重要\n\n这是 Transformer 的出发点。理解它，才能理解为什么它成为大模型的基础架构。\n\n## 我的初始理解（学习前先写）\n\n_在这里写下你现在的猜测。_\n\n## 论文要解决的两个痛点\n\n| 痛点 | RNN 的问题 | 注意力的解法 |\n|------|-----------|-------------|\n| 顺序依赖 | 时刻 t 必须等 t-1 算完，无法并行 | 所有位置同时计算 |\n| 长距离依赖 | 信息要经过多步传递，路径长度 O(n) | 任意两位置路径长度 O(1) |\n\n## 论文的核心主张\n\n只用注意力（不用循环、不用卷积）就能构建更强的序列模型，\n关键是 Scaled Dot-Product Attention：\n\n    Attention(Q, K, V) = softmax(Q K^T / sqrt(d_k)) V\n\n## 子问题\n\n1. 为什么要除以 sqrt(d_k)？不除会怎样？\n2. 为什么要多头（multi-head）？单头不够吗？\n3. 位置编码（Positional Encoding）为什么必需？它怎么加进去？\n4. self-attention 的计算复杂度是多少？瓶颈在哪？\n5. 为什么用 LayerNorm 而不是 BatchNorm？\n6. 训练时的 mask 有哪两种，分别用在哪？\n\n## 证据位置（读论文时填）\n\n| 论点 | 论文位置 | 原文摘录 |\n|------|---------|---------|\n| 缩放因子解释 | 3.2.1 节脚注 | |\n| 多头结构 | 3.2.2 节 | |\n| 位置编码公式 | 3.5 节 | |\n| 复杂度对比表 | 表 1 | |\n\n## 复现验证\n\n跑 `code/transformer/tiny_attention.py`，可视化注意力矩阵，验证因果掩码。\n\n## 我的结论（读完后写）\n\n_待填。_\n", "notes": "# Transformer 精读笔记\n\n## 元信息\n\n- 标题：Attention Is All You Need\n- 作者：Vaswani et al.\n- 年份 / 会议：2017 / NeurIPS\n- 本地原文：[attention_is_all_you_need.pdf](attention_is_all_you_need.pdf)\n\n## 速读记录（Week 1）\n\n### 三段式结构图\n\n_画出 Intro -> Method -> Experiments 的逻辑流。_\n\n### Introduction 的关键句\n\n> _摘录 2-3 句最关键的话，并翻译。_\n\n### 我的 3 个困惑点\n\n1.\n2.\n3.\n\n## 精读记录（Week 2）\n\n### 3.2.1 Scaled Dot-Product Attention\n\n### 3.2.2 Multi-Head Attention\n\n### 3.3 Position-wise Feed-Forward\n\n### 3.5 Positional Encoding\n\n## 公式推导（手写稿索引）\n\n| 公式 | 含义 | 手写稿路径 |\n|------|------|-----------|\n| softmax(QK^T/√d_k)V | 注意力输出 | derivations/01.png |\n| 为什么除以 √d_k | 方差分析 | derivations/02.png |\n| PE(pos,2i) | 位置编码 | derivations/03.png |\n\n## 我的理解\n\n_用自己的话写，不许抄论文。_\n", "summary": "# Transformer 一页纸总结\n\n## 一句话\n\n## 解决的问题\n\n## 核心方法\n\n## 关键结果\n\n## 对我的启发\n\n## 仍然不懂的地方\n", "checkpoint": "# Checkpoint 2：Transformer 自测\n\n每题先自己作答，再展开答案对照。对 8/10 以上算通过。\n\n## 1. 写出 scaled dot-product attention 公式。\n<details><summary>答案</summary>\nAttention(Q,K,V) = softmax(QK^T / sqrt(d_k)) V\n</details>\n\n## 2. 为什么要除以 sqrt(d_k)？\n<details><summary>答案</summary>\nq·k 的方差随 d_k 增大而增大，softmax 会进入饱和区导致梯度过小。除以 sqrt(d_k) 把方差拉回 1。\n</details>\n\n## 3. 多头的计算量比单头大吗？为什么？\n<details><summary>答案</summary>\n基本相当。因为总维度不变，多头把 d_model 切成 h 份并行，每头维度 d_k = d_model/h。\n</details>\n\n## 4. 位置编码为什么必需？\n<details><summary>答案</summary>\n自注意力对输入置换等变，没有位置就丢失顺序信息。需要显式注入位置。\n</details>\n\n## 5. 论文用正弦位置编码有什么好处？\n<details><summary>答案</summary>\n无需学习参数，且相对位置可由线性变换表示，理论上可外推到更长序列。\n</details>\n\n## 6. self-attention 的复杂度？瓶颈？\n<details><summary>答案</summary>\nO(n^2 · d)。瓶颈是 n^2 部分——序列长度平方，长序列时内存和计算爆炸。\n</details>\n\n## 7. 为什么用 LayerNorm 不用 BatchNorm？\n<details><summary>答案</summary>\n序列任务 batch 内长度不一、统计量随序列变化，BN 不稳定；LN 对每个样本在特征维归一化，不依赖 batch。\n</details>\n\n## 8. padding mask 和 causal mask 分别用在哪？\n<details><summary>答案</summary>\npadding mask 屏蔽补齐的无效位置，encoder/decoder 都用；causal mask 屏蔽未来位置，只用在 decoder。\n</details>\n\n## 9. 复现代码里注意力矩阵上三角为什么是 0？\n<details><summary>答案</summary>\ncausal mask 把未来位置置为 -inf，softmax 后变 0，保证位置 t 只看到 ≤t 的 token。\n</details>\n\n## 10. 陷阱：注意力能建模所有长距离依赖吗？\n<details><summary>答案</summary>\n能一步覆盖任意距离，但权重是数据学出来的，可能过度平滑/分散；复杂度也限制了实际长度。\n</details>\n", "code": "\"\"\"单头自注意力字符级语言模型（Tiny Shakespeare）。\n\n回答 Q2：为什么注意力能替代序列建模？\n\nRun:  python3 transformer/tiny_attention.py\n\"\"\"\nimport math\nimport os\nimport sys\nimport urllib.request\n\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nDATA_URL = (\"https://raw.githubusercontent.com/karpathy/char-rnn/\"\n            \"master/data/tinyshakespeare/input.txt\")\nCACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"input.txt\")\nFALLBACK = (\"to be or not to be that is the question\\n\"\n            \"whether tis nobler in the mind to suffer\\n\") * 200\n\n\ndef load_text():\n    if os.path.exists(CACHE):\n        with open(CACHE, \"r\", encoding=\"utf-8\") as f:\n            return f.read()\n    try:\n        os.makedirs(os.path.dirname(CACHE), exist_ok=True)\n        urllib.request.urlretrieve(DATA_URL, CACHE)\n        with open(CACHE, \"r\", encoding=\"utf-8\") as f:\n            print(\"[text] downloaded Tiny Shakespeare\")\n            return f.read()\n    except Exception as e:\n        print(f\"[text] download failed ({type(e).__name__}), using fallback text\")\n        return FALLBACK\n\n\nclass CharTokenizer:\n    def __init__(self, text):\n        self.chars = sorted(set(text))\n        self.stoi = {c: i for i, c in enumerate(self.chars)}\n        self.itos = {i: c for c, i in self.stoi.items()}\n\n    @property\n    def vocab_size(self):\n        return len(self.chars)\n\n    def encode(self, s):\n        return [self.stoi[c] for c in s]\n\n    def decode(self, ids):\n        return \"\".join(self.itos[i] for i in ids)\n\n\nclass SingleHeadAttention(nn.Module):\n    def __init__(self, n_embd, block_size):\n        super().__init__()\n        self.Wq = nn.Linear(n_embd, n_embd, bias=False)\n        self.Wk = nn.Linear(n_embd, n_embd, bias=False)\n        self.Wv = nn.Linear(n_embd, n_embd, bias=False)\n        self.scale = n_embd ** -0.5\n        self.register_buffer(\"mask\", torch.tril(torch.ones(block_size, block_size)).bool())\n\n    def forward(self, x, return_attn=False):\n        B, T, C = x.shape\n        q, k, v = self.Wq(x), self.Wk(x), self.Wv(x)\n        att = (q @ k.transpose(-2, -1)) * self.scale\n        att = att.masked_fill(~self.mask[:T, :T], float(\"-inf\"))\n        att = F.softmax(att, dim=-1)\n        out = att @ v\n        return (out, att) if return_attn else out\n\n\nclass Block(nn.Module):\n    def __init__(self, n_embd, block_size):\n        super().__init__()\n        self.ln1 = nn.LayerNorm(n_embd)\n        self.attn = SingleHeadAttention(n_embd, block_size)\n        self.ln2 = nn.LayerNorm(n_embd)\n        self.ff = nn.Sequential(\n            nn.Linear(n_embd, 4 * n_embd), nn.GELU(), nn.Linear(4 * n_embd, n_embd)\n        )\n\n    def forward(self, x, return_attn=False):\n        if return_attn:\n            a, att = self.attn(self.ln1(x), return_attn=True)\n            x = x + a\n            x = x + self.ff(self.ln2(x))\n            return x, att\n        x = x + self.attn(self.ln1(x))\n        x = x + self.ff(self.ln2(x))\n        return x\n\n\nclass TinyTransformer(nn.Module):\n    def __init__(self, vocab_size, n_embd=64, block_size=32, n_layer=2):\n        super().__init__()\n        self.block_size = block_size\n        self.tok_emb = nn.Embedding(vocab_size, n_embd)\n        self.pos_emb = nn.Embedding(block_size, n_embd)\n        self.blocks = nn.ModuleList([Block(n_embd, block_size) for _ in range(n_layer)])\n        self.ln_f = nn.LayerNorm(n_embd)\n        self.head = nn.Linear(n_embd, vocab_size)\n\n    def forward(self, idx, return_attn=False):\n        B, T = idx.shape\n        pos = torch.arange(T, device=idx.device)\n        x = self.tok_emb(idx) + self.pos_emb(pos)[None, :, :]\n        att_last = None\n        for blk in self.blocks:\n            if return_attn:\n                x, att_last = blk(x, return_attn=True)\n            else:\n                x = blk(x)\n        x = self.ln_f(x)\n        logits = self.head(x)\n        return (logits, att_last) if return_attn else logits\n\n\ndef get_batch(data, block_size, batch, rng):\n    ix = torch.randint(len(data) - block_size - 1, (batch,), generator=rng)\n    x = torch.stack([data[i:i + block_size] for i in ix])\n    y = torch.stack([data[i + 1:i + block_size + 1] for i in ix])\n    return x, y\n\n\ndef main():\n    torch.manual_seed(0)\n    text = load_text()\n    tok = CharTokenizer(text)\n    data = torch.tensor(tok.encode(text), dtype=torch.long)\n    n = int(0.9 * len(data))\n    train_data = data[:n]\n\n    model = TinyTransformer(tok.vocab_size)\n    opt = torch.optim.AdamW(model.parameters(), lr=3e-3)\n    rng = torch.Generator().manual_seed(0)\n\n    steps, block_size, batch = 500, 32, 32\n    for step in range(1, steps + 1):\n        x, y = get_batch(train_data, block_size, batch, rng)\n        logits = model(x)\n        loss = F.cross_entropy(logits.reshape(-1, tok.vocab_size), y.reshape(-1))\n        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        if step % 100 == 0:\n            print(f\"step {step:4d}  loss {loss.item():.4f}\")\n\n    model.eval()\n    with torch.no_grad():\n        idx = torch.zeros((1, 1), dtype=torch.long)\n        for _ in range(200):\n            idx_cond = idx[:, -block_size:]\n            logits, att = model(idx_cond, return_attn=True)\n            probs = F.softmax(logits[:, -1, :], dim=-1)\n            nxt = torch.multinomial(probs, 1)\n            idx = torch.cat([idx, nxt], dim=1)\n    print(\"\\n生成样本:\\n\" + tok.decode(idx[0].tolist()))\n\n    with torch.no_grad():\n        x, _ = get_batch(train_data, block_size, 1, rng)\n        _, att = model(x, return_attn=True)\n    print(\"\\n注意力矩阵（前 5x5，行=query，列=key，上三角应为 0）:\")\n    print(att[0, :5, :5].numpy().round(2))\n\n\nif __name__ == \"__main__\":\n    main()\n", "code_file": "code/transformer/tiny_attention.py", "run_cmd": "python3 transformer/tiny_attention.py", "code_lang": "python", "result": "loss 2.48 → 1.99；注意力矩阵上三角全 0（因果掩码生效）。"}, {"id": "ddpm", "name": "DDPM", "title": "Denoising Diffusion Probabilistic Models", "meta": "Ho, Jain, Abbeel · 2020 · NeurIPS", "qnum": "Q3", "pdf": "papers/ddpm/ddpm.pdf", "question": "# Q3：为什么扩散模型能生成高质量样本？\n\n## 一句话问题\n\n从纯噪声直接生成图像很难，为什么\"分很多小步去噪\"反而能做到高质量？\n\n## 为什么这个问题重要\n\n这是 DDPM 的出发点。理解它，才能理解扩散模型为什么取代 GAN 成为主流生成模型。\n\n## 我的初始理解（学习前先写）\n\n_在这里写下你现在的猜测。_\n\n## 论文的核心洞察\n\n把\"一步生成\"拆成\"T 步去噪\"：\n- 前向过程 q：对图像逐步加噪声，直到变成纯高斯噪声（无需学习，固定公式）\n- 反向过程 p：训练网络逐步预测并减去噪声，还原图像\n\n## 子问题\n\n1. 前向过程为什么可以一步到位采样 x_t？公式是什么？\n2. 为什么网络预测噪声 eps，而不是直接预测 x_0？\n3. 损失函数为什么就是简单的 MSE？ELBO 推导到哪一步变成 MSE？\n4. beta 调度（linear schedule）的作用是什么？\n5. 采样公式里为什么 t>0 时要再加一次随机噪声？\n6. 为什么反向过程需要 U-Net 这种带跳连的结构？\n\n## 证据位置（读论文时填）\n\n| 论点 | 论文位置 | 原文摘录 |\n|------|---------|---------|\n| 前向一步采样 | 式 (4) | |\n| 简化损失 | 式 (14) | |\n| 采样算法 | Algorithm 2 | |\n| 训练算法 | Algorithm 1 | |\n\n## 复现验证\n\n跑 `code/ddpm/simple_ddpm.py`，观察加噪/去噪过程，生成数字图像。\n\n## 我的结论（读完后写）\n\n_待填。_\n", "notes": "# DDPM 精读笔记\n\n## 元信息\n\n- 标题：Denoising Diffusion Probabilistic Models\n- 作者：Jonathan Ho, Ajay Jain, Pieter Abbeel\n- 年份 / 会议：2020 / NeurIPS\n- 本地原文：[ddpm.pdf](ddpm.pdf)\n\n## 速读记录（Week 1）\n\n### 三段式结构图\n\n_画出 Intro -> Method -> Experiments 的逻辑流。_\n\n### Introduction 的关键句\n\n> _摘录 2-3 句最关键的话，并翻译。_\n\n### 我的 3 个困惑点\n\n1.\n2.\n3.\n\n## 精读记录（Week 2）\n\n### 2 前向过程 q(x_t|x_{t-1})\n\n### 3 反向过程与 ELBO\n\n### 3.2 简化损失 L_simple\n\n### 4 模型架构与 beta 调度\n\n## 公式推导（手写稿索引）\n\n| 公式 | 含义 | 手写稿路径 |\n|------|------|-----------|\n| q(x_t|x_0)=N(√ᾱ_t x_0, (1-ᾱ_t)I) | 前向一步采样 | derivations/01.png |\n| L_simple = E‖ε-ε_θ(x_t,t)‖² | 简化损失 | derivations/02.png |\n| x_{t-1} 采样公式 | 反向去噪 | derivations/03.png |\n\n## 我的理解\n\n_用自己的话写，不许抄论文。_\n", "summary": "# DDPM 一页纸总结\n\n## 一句话\n\n## 解决的问题\n\n## 核心方法\n\n## 关键结果\n\n## 对我的启发\n\n## 仍然不懂的地方\n", "checkpoint": "# Checkpoint 3：DDPM 自测\n\n每题先自己作答，再展开答案对照。对 8/10 以上算通过。\n\n## 1. 写出前向一步采样公式。\n<details><summary>答案</summary>\nq(x_t | x_0) = N(sqrt(alpha_bar_t) x_0, (1 - alpha_bar_t) I)，即 x_t = sqrt(ᾱ_t) x_0 + sqrt(1-ᾱ_t) ε。\n</details>\n\n## 2. 为什么前向过程可以直接采样 x_t，不用一步步加噪？\n<details><summary>答案</summary>\n因为高斯分布相加仍是高斯，T 次条件高斯的复合有解析闭式，可一步得到。\n</details>\n\n## 3. 为什么预测噪声 eps 而不是直接预测 x_0？\n<details><summary>答案</summary>\nt 很小时 eps 和 x_0 关系近似线性、容易学；且简化损失对应去噪得分匹配，训练更稳定。\n</details>\n\n## 4. 简化损失函数是什么？它从哪来？\n<details><summary>答案</summary>\nL_simple = E_{t,x_0,ε} ‖ε - ε_θ(x_t, t)‖²。从 ELBO 逐项化简，丢掉与 t 相关的加权系数得到。\n</details>\n\n## 5. beta 调度是什么？linear schedule 指什么？\n<details><summary>答案</summary>\n每步加的噪声方差 β_t。linear 指 β_t 从 1e-4 线性增到 0.02，使 ᾱ_T≈0。\n</details>\n\n## 6. 采样时为什么 t>0 要再加一次噪声？\n<details><summary>答案</summary>\n反向过程是随机过程，均值 + β_t 方差采样才对应 q(x_{t-1}|x_t)；t=0 时不再加，直接输出均值。\n</details>\n\n## 7. 反向过程为什么要用 U-Net？\n<details><summary>答案</summary>\n去噪需要在多个尺度上处理细节和全局结构，U-Net 的下采样-上采样 + 跳连能同时保留两者。\n</details>\n\n## 8. 时间步 t 怎么注入网络？\n<details><summary>答案</summary>\n正弦位置嵌入 + MLP 得到时间向量，加到每个残差块的特征上。\n</details>\n\n## 9. 复现测试里 t=0 和 t=T-1 分别验证了什么？\n<details><summary>答案</summary>\nt=0 时 ᾱ≈1，x_t≈x_0（干净）；t=T-1 时 ᾱ≈0，x_t≈ε（纯噪声），验证前向公式正确。\n</details>\n\n## 10. 陷阱：DDPM 采样为什么慢？\n<details><summary>答案</summary>\n需要 T 次网络前向（如 1000 步）串行执行，无法一次生成；DDIM 等后续工作用来加速。\n</details>\n", "code": "\"\"\"简化版 DDPM：在 MNIST 上做前向加噪与反向去噪。\n\n回答 Q3：为什么扩散模型能生成高质量样本？\n\nRun:  python3 ddpm/simple_ddpm.py\n\"\"\"\nimport math\nimport os\nimport sys\n\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\nfrom common.mnist import load_mnist\n\n\nclass SinusoidalPosEmb(nn.Module):\n    def __init__(self, dim):\n        super().__init__()\n        self.dim = dim\n\n    def forward(self, t):\n        half = self.dim // 2\n        freqs = torch.exp(torch.arange(half, device=t.device) * (-math.log(10000.0) / (half - 1)))\n        emb = t[:, None].float() * freqs[None, :]\n        return torch.cat([emb.sin(), emb.cos()], dim=-1)\n\n\nclass DoubleConv(nn.Module):\n    def __init__(self, cin, cout, t_dim):\n        super().__init__()\n        self.conv1 = nn.Conv2d(cin, cout, 3, padding=1)\n        self.conv2 = nn.Conv2d(cout, cout, 3, padding=1)\n        self.norm1 = nn.GroupNorm(4, cout)\n        self.norm2 = nn.GroupNorm(4, cout)\n        self.t_proj = nn.Linear(t_dim, cout)\n\n    def forward(self, x, t):\n        h = self.norm1(F.silu(self.conv1(x)))\n        h = h + self.t_proj(t)[:, :, None, None]\n        h = self.norm2(F.silu(self.conv2(h)))\n        return h\n\n\nclass TinyUNet(nn.Module):\n    def __init__(self, base=32, t_dim=64):\n        super().__init__()\n        self.t_mlp = nn.Sequential(\n            SinusoidalPosEmb(t_dim), nn.Linear(t_dim, t_dim), nn.SiLU(),\n            nn.Linear(t_dim, t_dim),\n        )\n        self.inc = DoubleConv(1, base, t_dim)\n        self.down1 = DoubleConv(base, base, t_dim)\n        self.down2 = DoubleConv(base, base * 2, t_dim)\n        self.mid = DoubleConv(base * 2, base * 2, t_dim)\n        self.up2 = DoubleConv(base * 3, base, t_dim)\n        self.up1 = DoubleConv(base * 2, base, t_dim)\n        self.outc = nn.Conv2d(base, 1, 1)\n        self.pool = nn.MaxPool2d(2)\n\n    def forward(self, x, t):\n        t = self.t_mlp(t)\n        h0 = self.inc(x, t)\n        h1 = self.down1(self.pool(h0), t)\n        h2 = self.down2(self.pool(h1), t)\n        m = self.mid(h2, t)\n        u2 = F.interpolate(m, scale_factor=2, mode=\"nearest\")\n        u2 = self.up2(torch.cat([u2, h1], dim=1), t)\n        u1 = F.interpolate(u2, scale_factor=2, mode=\"nearest\")\n        u1 = self.up1(torch.cat([u1, h0], dim=1), t)\n        return self.outc(u1)\n\n\nclass Diffusion:\n    def __init__(self, T=100, beta_start=1e-4, beta_end=0.02, device=\"cpu\"):\n        self.T = T\n        self.device = device\n        self.betas = torch.linspace(beta_start, beta_end, T, device=device)\n        self.alphas = 1.0 - self.betas\n        self.alpha_bars = torch.cumprod(self.alphas, dim=0)\n\n    def q_sample(self, x0, t, noise):\n        ab = self.alpha_bars[t].view(-1, 1, 1, 1)\n        return ab.sqrt() * x0 + (1.0 - ab).sqrt() * noise\n\n    def loss(self, model, x0):\n        B = x0.shape[0]\n        t = torch.randint(0, self.T, (B,), device=x0.device)\n        noise = torch.randn_like(x0)\n        xt = self.q_sample(x0, t, noise)\n        pred = model(xt, t.float())\n        return F.mse_loss(pred, noise)\n\n    @torch.no_grad()\n    def sample(self, model, n):\n        x = torch.randn(n, 1, 28, 28, device=self.device)\n        for t in reversed(range(self.T)):\n            tt = torch.full((n,), t, device=self.device, dtype=torch.float)\n            pred = model(x, tt)\n            beta = self.betas[t]\n            alpha = self.alphas[t]\n            ab = self.alpha_bars[t]\n            mean = (1.0 / alpha.sqrt()) * (x - (beta / (1.0 - ab).sqrt()) * pred)\n            x = mean if t == 0 else mean + beta.sqrt() * torch.randn_like(x)\n        return x\n\n\ndef main():\n    torch.manual_seed(0)\n    x_tr, _, _, _ = load_mnist(n_train=8000, n_test=100)\n    x = torch.tensor(x_tr[:8000]).reshape(-1, 1, 28, 28)\n\n    diff = Diffusion(T=100)\n    model = TinyUNet()\n    opt = torch.optim.Adam(model.parameters(), lr=1e-3)\n\n    steps, batch = 800, 64\n    for step in range(1, steps + 1):\n        idx = torch.randint(0, len(x), (batch,))\n        loss = diff.loss(model, x[idx])\n        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        if step % 100 == 0:\n            print(f\"step {step:4d}  mse {loss.item():.4f}\")\n\n    model.eval()\n    samples = diff.sample(model, 16).clamp(-1, 1)\n    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"samples.png\")\n    try:\n        import matplotlib\n        matplotlib.use(\"Agg\")\n        import matplotlib.pyplot as plt\n        grid = samples.squeeze(1).cpu().numpy()\n        fig, axes = plt.subplots(4, 4, figsize=(5, 5))\n        for i, ax in enumerate(axes.flat):\n            ax.imshow((grid[i] + 1) / 2, cmap=\"gray\")\n            ax.axis(\"off\")\n        fig.tight_layout()\n        fig.savefig(out, dpi=120)\n        print(f\"生成样本已保存: {out}\")\n    except Exception as e:\n        print(f\"[plot skipped] {type(e).__name__}: {e}\")\n        torch.save(samples, os.path.join(os.path.dirname(out), \"samples.pt\"))\n\n\nif __name__ == \"__main__\":\n    main()\n", "code_file": "code/ddpm/simple_ddpm.py", "run_cmd": "python3 ddpm/simple_ddpm.py", "code_lang": "python", "result": "mse 0.095 → 0.056；从纯噪声生成出数字形态。"}]</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const LS = 'paperDeepDive.v1';
+let state = {};
+try { state = JSON.parse(localStorage.getItem(LS) || '{}'); } catch(e){ state = {}; }
+function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
+function get(k, d){ return (k in state) ? state[k] : d; }
+function set(k, v){ state[k] = v; save(); renderProgress(); }
+
+// 内置轻量 markdown 解析（离线可用，无外部依赖）
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inline(s){
+  s = escHtml(s);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function md(src){
+  if(!src) return '';
+  const lines = src.split('\n');
+  let html='', i=0;
+  while(i<lines.length){
+    const line=lines[i];
+    if(/^```/.test(line)){ let buf=[]; i++; while(i<lines.length && !/^```/.test(lines[i])){buf.push(lines[i]);i++;} i++; html+='<pre><code>'+escHtml(buf.join('\n'))+'</code></pre>'; continue; }
+    if(/^# /.test(line)){ html+='<h1>'+inline(line.slice(2))+'</h1>'; i++; continue; }
+    if(/^## /.test(line)){ html+='<h2>'+inline(line.slice(3))+'</h2>'; i++; continue; }
+    if(/^### /.test(line)){ html+='<h3>'+inline(line.slice(4))+'</h3>'; i++; continue; }
+    if(/^> ?/.test(line)){ html+='<blockquote>'+inline(line.replace(/^> ?/,''))+'</blockquote>'; i++; continue; }
+    if(/^<details/.test(line)){ let buf=[line]; i++; while(i<lines.length && !/<\/details>/.test(lines[i])){buf.push(lines[i]);i++;} if(i<lines.length)buf.push(lines[i]); i++;
+      let inner=buf.join('\n'); inner=inner.replace(/<details><summary>(.*?)<\/summary>/s,'<details><summary>'+inline('$1')+'</summary>');
+      inner=inner.replace(/<\/summary>([\s\S]*)<\/details>/, (m,g)=>'</summary><div>'+inline(g.trim())+'</div></details>');
+      html+=inner; continue; }
+    if(/^\|/.test(line)){ let rows=[]; while(i<lines.length && /^\|/.test(lines[i])){rows.push(lines[i]);i++;}
+      if(rows.length>=2){ let head=rows[0].split('|').slice(1,-1).map(c=>c.trim()); let body=rows.slice(2);
+        html+='<table><thead><tr>'+head.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'
+          +body.map(r=>'<tr>'+r.split('|').slice(1,-1).map(c=>'<td>'+inline(c.trim())+'</td>').join('')+'</tr>').join('')+'</tbody></table>'; }
+      continue; }
+    if(/^\d+\. /.test(line)){ let items=[]; while(i<lines.length && /^\d+\. /.test(lines[i])){items.push(lines[i].replace(/^\d+\. /,''));i++;} html+='<ol>'+items.map(x=>'<li>'+inline(x)+'</li>').join('')+'</ol>'; continue; }
+    if(/^[-*] /.test(line)){ let items=[]; while(i<lines.length && /^[-*] /.test(lines[i])){items.push(lines[i].replace(/^[-*] /,''));i++;} html+='<ul>'+items.map(x=>'<li>'+inline(x)+'</li>').join('')+'</ul>'; continue; }
+    if(line.trim()===''){ i++; continue; }
+    html+='<p>'+inline(line)+'</p>'; i++;
+  }
+  return html;
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = DATA.map((p,i)=>{
+    const done = paperPct(p.id)===100 ? '<span class="done">✓ 已完成</span>' : '';
+    return '<div class="tab'+(i===0?' active':'')+'" data-p="'+p.id+'"><span class="qn">'+p.qnum+'</span>'+p.name+' '+done+'</div>';
+  }).join('');
+  nav.querySelectorAll('.tab').forEach(t=>t.onclick=()=>selectPane(t.dataset.p));
+}
+
+function sectionChecklist(p){
+  const items=[['q','已读核心问题并写下初始理解'],['read','已速读 Abstract/Intro/Conclusion'],['derive','已推导核心公式（有手写存档）'],['code','已跑通最小复现并改过参数'],['quiz','自测 ≥ 8/10'],['sum','已写一页纸总结']];
+  return '<div class="checks">'+items.map(it=>{
+    const k=p.id+'.ck.'+it[0];
+    const on=get(k,false)?' checked':'';
+    return '<label><input type="checkbox" data-k="'+k+'"'+on+'><span>'+it[1]+'</span></label>';
+  }).join('')+'</div>';
+}
+
+function quizBlock(p){
+  const raw = p.checkpoint;
+  const parts = raw.split(/^## /m).slice(1);
+  const items = parts.map(part=>{
+    const nl = part.indexOf('\n');
+    const q = part.slice(0,nl).trim();
+    const body = part.slice(nl+1).trim();
+    return {q, body};
+  });
+  return items.map((it,idx)=>{
+    const k = p.id+'.quiz.'+idx;
+    const on = get(k,false);
+    return '<div class="quiz-item'+(on?' done':'')+'"><div class="qrow">'
+      +'<input type="checkbox" data-k="'+k+'"'+(on?' checked':'')+'>'
+      +'<div style="flex:1"><div class="quiz-q qtext">'+esc(it.q)+'</div>'
+      +'<div class="md">'+md(it.body)+'</div></div></div></div>';
+  }).join('');
+}
+
+function renderPanes(){
+  const main=document.getElementById('panes');
+  main.innerHTML = DATA.map((p,i)=>{
+    const noteKey=p.id+'.note', sumKey=p.id+'.summary';
+    const note=get(noteKey,''), sum=get(sumKey,'');
+    return '<section class="pane'+(i===0?' active':'')+'" id="pane-'+p.id+'">'
+    +'<div class="hero">'
+    +'<span class="paper-badge">'+p.qnum+'</span><h1 style="display:inline">'+esc(p.name)+'</h1>'
+    +'<div class="meta">'+esc(p.title)+' · '+esc(p.meta)+'</div>'
+    +'<div class="actions">'
+    +'<a class="btn primary" href="'+p.pdf+'" target="_blank" rel="noopener">打开论文 PDF</a>'
+    +'<span style="font-size:12px;color:var(--muted);align-self:center">已在系统阅读器打开 · 笔记区在下方</span>'
+    +'</div></div>'
+
+    +'<div class="sec"><h2>学习进度自检</h2><div class="card">'+sectionChecklist(p)+'</div></div>'
+
+    +'<div class="sec"><h2>核心问题 <span class="tag">'+p.qnum+'</span></h2><div class="card md">'+md(p.question)+'</div></div>'
+
+    +'<div class="sec"><h2>精读笔记模板</h2><div class="card md">'+md(p.notes)+'</div>'
+    +'<div class="card" style="margin-top:12px"><div class="toolbar"><strong style="font-size:14px">我的精读笔记</strong><span class="save-hint" id="hint-'+p.id+'-note">自动保存</span></div>'
+    +'<textarea class="note" data-k="'+noteKey+'" data-hint="hint-'+p.id+'-note" placeholder="在这里写你的精读笔记、公式推导理解、困惑点……">'+esc(note)+'</textarea></div></div>'
+
+    +'<div class="sec"><h2>最小复现</h2><div class="card">'
+    +'<div class="code-head"><span class="code-file">'+p.code_file+'</span></div>'
+    +'<div class="cmdline"><code>$ '+p.run_cmd+'</code><button class="copy" data-cmd="'+p.run_cmd+'">复制命令</button></div>'
+    +'<pre class="codeblock"><code>'+esc(p.code)+'</code></pre>'
+    +'<div class="result-banner">预期结果：'+esc(p.result)+'</div>'
+    +'</div></div>'
+
+    +'<div class="sec"><h2>自测题（勾选表示已掌握）</h2>'+quizBlock(p)+'</div>'
+
+    +'<div class="sec"><h2>一页纸总结</h2><div class="card md" style="margin-bottom:12px">'+md(p.summary)+'</div>'
+    +'<div class="card"><div class="toolbar"><strong style="font-size:14px">我的一页纸总结</strong><span class="save-hint" id="hint-'+p.id+'-sum">自动保存</span></div>'
+    +'<textarea class="note" data-k="'+sumKey+'" data-hint="hint-'+p.id+'-sum" placeholder="用自己的话写一页纸总结……">'+esc(sum)+'</textarea></div></div>'
+
+    +'</section>';
+  }).join('');
+
+  main.querySelectorAll('textarea.note').forEach(t=>{
+    t.addEventListener('input', ()=>{
+      set(t.dataset.k, t.value);
+      const h=document.getElementById(t.dataset.hint);
+      if(h){h.textContent='已保存';h.classList.add('saved');}
+    });
+  });
+  main.querySelectorAll('input[type=checkbox]').forEach(c=>{
+    c.addEventListener('change', ()=>{ set(c.dataset.k, c.checked); });
+  });
+  main.querySelectorAll('.copy').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      navigator.clipboard.writeText(b.dataset.cmd).then(()=>{
+        b.textContent='已复制';b.classList.add('copied');
+        setTimeout(()=>{b.textContent='复制命令';b.classList.remove('copied');},1500);
+      });
+    });
+  });
+}
+
+function paperPct(id){
+  const cks=['q','read','derive','code','quiz','sum'].map(s=>id+'.ck.'+s);
+  const ckDone=cks.filter(k=>get(k,false)).length;
+  const quizN=10, quizDone=Array.from({length:quizN},(_,i)=>get(id+'.quiz.'+i,false)).filter(Boolean).length;
+  const note=get(id+'.note','').trim().length>0?1:0;
+  const sum=get(id+'.summary','').trim().length>0?1:0;
+  const total=cks.length+quizN+2, done=ckDone+quizDone+note+sum;
+  return Math.round(done/total*100);
+}
+function renderProgress(){
+  const pcts=DATA.map(p=>paperPct(p.id));
+  const g=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
+  document.getElementById('gbar').style.width=g+'%';
+  document.getElementById('gpct').textContent='整体进度 '+g+'%';
+  renderTabsOnly();
+}
+function renderTabsOnly(){
+  document.querySelectorAll('#tabs .tab').forEach((t,i)=>{
+    const p=DATA[i], done=paperPct(p.id)===100;
+    const d=t.querySelector('.done');
+    if(done && !d){ t.innerHTML='<span class="qn">'+p.qnum+'</span>'+p.name+' <span class="done">✓ 已完成</span>'; }
+    if(!done && d){ d.remove(); }
+  });
+}
+function selectPane(id){
+  document.querySelectorAll('#tabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.p===id));
+  document.querySelectorAll('.pane').forEach(pn=>pn.classList.toggle('active',pn.id==='pane-'+id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('resetAll').onclick=()=>{
+  if(confirm('确定清空所有进度、勾选和笔记？此操作不可恢复。')){ state={}; save(); renderPanes(); renderProgress(); }
+};
+
+renderTabs(); renderPanes(); renderProgress();
+</script>
+</body>
+</html>
