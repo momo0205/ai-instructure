@@ -8,6 +8,8 @@ Run:  python3 build_dashboard.py
 """
 import json
 import os
+import base64
+import re
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,6 +17,19 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 def read(rel):
     with open(os.path.join(BASE, rel), "r", encoding="utf-8") as f:
         return f.read()
+
+
+def inline_images(md_text, paper_dir):
+    """把 markdown 里的相对图片路径替换为 base64 data URI，使单 HTML 离线可看。"""
+    def repl(m):
+        alt, rel = m.group(1), m.group(2)
+        p = os.path.join(BASE, "papers", paper_dir, rel)
+        if not os.path.exists(p):
+            return m.group(0)
+        with open(p, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        return f"![{alt}](data:image/png;base64,{b64})"
+    return re.sub(r"!\[([^\]]*)\]\((figures/[^)]+)\)", repl, md_text)
 
 
 PAPERS = [
@@ -34,6 +49,7 @@ PAPERS = [
         "run_cmd": "python3 resnet/plain_vs_residual.py",
         "code_lang": "python",
         "result": "梯度比 residual/plain = 1.79e+11：plain 浅层梯度趋近 0，残差连接保住梯度通路。",
+        "zh": inline_images(read("papers/resnet/中文翻译.md"), "resnet"),
     },
     {
         "id": "transformer",
@@ -51,6 +67,7 @@ PAPERS = [
         "run_cmd": "python3 transformer/tiny_attention.py",
         "code_lang": "python",
         "result": "loss 2.48 → 1.99；注意力矩阵上三角全 0（因果掩码生效）。",
+        "zh": inline_images(read("papers/transformer/中文翻译.md"), "transformer"),
     },
     {
         "id": "ddpm",
@@ -68,6 +85,7 @@ PAPERS = [
         "run_cmd": "python3 ddpm/simple_ddpm.py",
         "code_lang": "python",
         "result": "mse 0.095 → 0.056；从纯噪声生成出数字形态。",
+        "zh": inline_images(read("papers/ddpm/中文翻译.md"), "ddpm"),
     },
 ]
 
@@ -145,6 +163,10 @@ textarea.note:focus{outline:2px solid var(--accent-soft);border-color:var(--acce
 .copy.copied{background:var(--ok);border-color:var(--ok);color:#fff}
 pre.codeblock{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:10px;overflow:auto;font-size:12.5px;max-height:480px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:10px;overflow:auto;font-size:12.5px;max-height:480px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .result-banner{margin-top:10px;font-size:13px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:10px 14px;border-radius:9px}
+.howrun{background:var(--accent-soft);border:1px solid #c9dbfb;border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.howrun-steps{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--ink)}
+.howrun-steps li{margin:4px 0}
+.howrun-steps code{background:#fff;padding:1px 6px;border-radius:5px;font-size:12px;border:1px solid var(--line)}
 .quiz-item{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--card)}
 .quiz-item .qrow{display:flex;gap:10px;align-items:flex-start}
 .quiz-item input[type=checkbox]{margin-top:5px;transform:scale(1.15);accent-color:var(--ok);cursor:pointer}
@@ -156,6 +178,9 @@ pre.codeblock{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;
 footer{margin-top:40px;text-align:center;color:var(--muted);font-size:12px}
 .reset{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline}
 .paper-badge{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;margin-right:8px}
+.zhtrans summary{font-size:15px;padding:4px 0}
+.zhtrans[open]{background:#fff}
+.zhtrans img{display:block}
 @media(max-width:640px){.tabs{flex-direction:column}.hero h1{font-size:19px}}
 </style>
 </head>
@@ -188,6 +213,8 @@ function set(k, v){ state[k] = v; save(); renderProgress(); }
 function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function inline(s){
   s = escHtml(s);
+  s = s.replace(/!\[([^\]]*)\]\((data:image[^)]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%;border:1px solid var(--line);border-radius:8px;margin:10px 0">');
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%;border:1px solid var(--line);border-radius:8px;margin:10px 0">');
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -279,12 +306,25 @@ function renderPanes(){
 
     +'<div class="sec"><h2>核心问题 <span class="tag">'+p.qnum+'</span></h2><div class="card md">'+md(p.question)+'</div></div>'
 
+    +'<div class="sec"><h2>中文全文翻译 <span class="tag">精读</span></h2>'
+    +'<details class="card md zhtrans"><summary>点击展开《'+esc(p.name)+'》全文中译（含公式与图表）</summary>'
+    +'<div style="margin-top:14px">'+md(p.zh)+'</div></details></div>'
+
     +'<div class="sec"><h2>精读笔记模板</h2><div class="card md">'+md(p.notes)+'</div>'
     +'<div class="card" style="margin-top:12px"><div class="toolbar"><strong style="font-size:14px">我的精读笔记</strong><span class="save-hint" id="hint-'+p.id+'-note">自动保存</span></div>'
     +'<textarea class="note" data-k="'+noteKey+'" data-hint="hint-'+p.id+'-note" placeholder="在这里写你的精读笔记、公式推导理解、困惑点……">'+esc(note)+'</textarea></div></div>'
 
     +'<div class="sec"><h2>最小复现</h2><div class="card">'
     +'<div class="code-head"><span class="code-file">'+p.code_file+'</span></div>'
+    +'<div class="howrun">'
+    +'<strong style="font-size:14px">如何运行这个实验</strong>'
+    +'<ol class="howrun-steps">'
+    +'<li><b>打开终端</b>，进入代码目录：<code>cd 03-research/paper-deep-dive/code</code></li>'
+    +'<li><b>首次运行先装依赖</b>（只需一次）：<code>pip install -r requirements.txt</code></li>'
+    +'<li><b>运行脚本</b>：点右侧按钮复制命令，粘贴到终端执行</li>'
+    +'<li>等待训练（CPU 几分钟），看终端打印的指标变化</li>'
+    +'<li>生成的图保存在脚本同目录（如 <code>output.png</code> / <code>samples.png</code>）</li>'
+    +'</ol></div>'
     +'<div class="cmdline"><code>$ '+p.run_cmd+'</code><button class="copy" data-cmd="'+p.run_cmd+'">复制命令</button></div>'
     +'<pre class="codeblock"><code>'+esc(p.code)+'</code></pre>'
     +'<div class="result-banner">预期结果：'+esc(p.result)+'</div>'
