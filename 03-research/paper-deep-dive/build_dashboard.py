@@ -49,6 +49,7 @@ PAPERS = [
         "run_cmd": "python3 resnet/plain_vs_residual.py",
         "code_lang": "python",
         "result": "梯度比 residual/plain = 1.79e+11：plain 浅层梯度趋近 0，残差连接保住梯度通路。",
+        "prereq": read("papers/resnet/前置知识.md"),
         "zh": inline_images(read("papers/resnet/中文翻译.md"), "resnet"),
     },
     {
@@ -67,6 +68,7 @@ PAPERS = [
         "run_cmd": "python3 transformer/tiny_attention.py",
         "code_lang": "python",
         "result": "loss 2.48 → 1.99；注意力矩阵上三角全 0（因果掩码生效）。",
+        "prereq": read("papers/transformer/前置知识.md"),
         "zh": inline_images(read("papers/transformer/中文翻译.md"), "transformer"),
     },
     {
@@ -85,6 +87,7 @@ PAPERS = [
         "run_cmd": "python3 ddpm/simple_ddpm.py",
         "code_lang": "python",
         "result": "mse 0.095 → 0.056；从纯噪声生成出数字形态。",
+        "prereq": read("papers/ddpm/前置知识.md"),
         "zh": inline_images(read("papers/ddpm/中文翻译.md"), "ddpm"),
     },
 ]
@@ -303,6 +306,8 @@ function renderPanes(){
     +'</div></div>'
 
     +'<div class="sec"><h2>学习进度自检</h2><div class="card">'+sectionChecklist(p)+'</div></div>'
+
+    +'<div class="sec"><h2>前置知识 <span class="tag">先读我</span></h2><div class="card md">'+md(p.prereq)+'</div></div>'
 
     +'<div class="sec"><h2>核心问题 <span class="tag">'+p.qnum+'</span></h2><div class="card md">'+md(p.question)+'</div></div>'
 
