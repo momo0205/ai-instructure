@@ -184,6 +184,15 @@ footer{margin-top:40px;text-align:center;color:var(--muted);font-size:12px}
 .zhtrans summary{font-size:15px;padding:4px 0}
 .zhtrans[open]{background:#fff}
 .zhtrans img{display:block}
+details.deep-dive{border:1px solid #c9dbfb;border-radius:10px;background:#f8faff;margin:16px 0;padding:0}
+details.deep-dive>summary{padding:12px 18px;cursor:pointer;font-weight:600;color:var(--accent);font-size:14px;list-style:none;user-select:none}
+details.deep-dive>summary::-webkit-details-marker{display:none}
+details.deep-dive>summary::before{content:'▸ ';margin-right:6px}
+details.deep-dive[open]>summary::before{content:'▾ '}
+details.deep-dive[open]>summary{border-bottom:1px solid #e3e7ec}
+details.deep-dive .dd-body{padding:16px 20px}
+details.deep-dive .dd-body h4{margin-top:1em;font-size:14.5px;color:var(--ink)}
+details.deep-dive .dd-body pre{background:#0f172a;color:#e2e8f0;margin:10px 0}
 @media(max-width:640px){.tabs{flex-direction:column}.hero h1{font-size:19px}}
 </style>
 </head>
@@ -236,9 +245,11 @@ function md(src){
     if(/^### /.test(line)){ html+='<h3>'+inline(line.slice(4))+'</h3>'; i++; continue; }
     if(/^> ?/.test(line)){ html+='<blockquote>'+inline(line.replace(/^> ?/,''))+'</blockquote>'; i++; continue; }
     if(/^<details/.test(line)){ let buf=[line]; i++; while(i<lines.length && !/<\/details>/.test(lines[i])){buf.push(lines[i]);i++;} if(i<lines.length)buf.push(lines[i]); i++;
-      let inner=buf.join('\\n'); inner=inner.replace(/<details><summary>(.*?)<\/summary>/s,'<details><summary>'+inline('$1')+'</summary>');
-      inner=inner.replace(/<\/summary>([\s\S]*)<\/details>/, (m,g)=>'</summary><div>'+inline(g.trim())+'</div></details>');
-      html+=inner; continue; }
+      let inner=buf.join('\\n');
+      let mm=inner.match(/<details[^>]*><summary>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/);
+      if(mm){ html+='<details class="deep-dive"><summary>'+inline(mm[1])+'</summary><div class="dd-body">'+md(mm[2])+'</div></details>'; }
+      else { html+='<p>'+inline(inner)+'</p>'; }
+      continue; }
     if(/^\|/.test(line)){ let rows=[]; while(i<lines.length && /^\|/.test(lines[i])){rows.push(lines[i]);i++;}
       if(rows.length>=2){ let head=rows[0].split('|').slice(1,-1).map(c=>c.trim()); let body=rows.slice(2);
         html+='<table><thead><tr>'+head.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'
