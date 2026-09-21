@@ -3,7 +3,9 @@ from dataclasses import asdict, replace
 import random
 import pandas as pd
 
+from strategy.application.progress import report_progress
 from strategy.application.simulation import run_simulation
+from strategy.backtesting.engine import BacktestEngine
 from strategy.strategies.fixed import FixedAssetStrategy
 
 VERSION = 'fixed-timing-controls-v1'
@@ -48,10 +50,13 @@ def compare_effectiveness(plan, symbol, observed, *, trials=TRIALS, seed=SEED):
         return dict(status='unavailable',reason_code='INSUFFICIENT_SESSIONS',message='至少需要 3 个交易日，才能按次日开盘买入并在期末卖出。')
     holding = plan.engine_options['holding_period_days']
     rng = random.Random(seed)
+    report_progress('preparing_controls',0,1)
+    prepared = BacktestEngine(**plan.engine_options).prepare_market(plan.market)
     # 保留完整市场输入及全部执行选项，只替换计划与持有期。
     def simulate(signals, period):
         return run_simulation(replace(plan, strategy=ScheduledFixedAsset(symbol, signals),
-                                      engine_options={**plan.engine_options, 'holding_period_days':period}))
+                                      engine_options={**plan.engine_options, 'holding_period_days':period}), prepared=prepared)
+    report_progress('benchmark',0,1)
     benchmark = simulate([dates[0]], len(dates)-2)
     benchmark_payload = dict(metrics=asdict(benchmark.metrics),
                              equity=[asdict(p) for p in benchmark.result.equity],
@@ -66,7 +71,8 @@ def compare_effectiveness(plan, symbol, observed, *, trials=TRIALS, seed=SEED):
                                 message='原策略没有完成交易，仅展示买入持有基准；随机择时没有可匹配的交易笔数。'),
                     limitations=['买入持有从次日开盘买入，期末开盘计划卖出；沿用本次资金、费用及数据近似，可能因交易约束未成交。'])
     samples = []
-    for _ in range(trials):
+    report_progress('random',0,trials)
+    for trial in range(trials):
         signals = [dates[i] for i in schedule_indices(len(dates), holding, count, rng)]
         outcome = simulate(signals, holding)
         samples.append(dict(signal_dates=[d.isoformat() for d in signals],
@@ -75,6 +81,7 @@ def compare_effectiveness(plan, symbol, observed, *, trials=TRIALS, seed=SEED):
                             trade_count=outcome.metrics.trade_count,
                             cash_ratio=outcome.metrics.cash_ratio,
                             open_position=bool(outcome.result.equity[-1].position_value)))
+        report_progress('random',trial+1,trials)
     returns = [s['cumulative_return'] for s in samples]
     actual = observed['metrics']['cumulative_return']
     percentile = 100 * sum((x < actual) + .5 * (x == actual) for x in returns) / trials

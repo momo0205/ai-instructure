@@ -16,6 +16,8 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     web = sub.add_parser('serve', help='Start the local browser workbench')
     web.add_argument('--port', type=int, default=8765)
+    web.add_argument('--experiment-python', help='Python executable with MLflow installed; enables experiment sync')
+    web.add_argument('--experiment-ui-url', default='http://127.0.0.1:5000')
     web.add_argument('--project-root', default=str(Path(__file__).resolve().parents[4]))
     market_download = sub.add_parser('download-market', help='Download Tencent index and ETF daily bars')
     market_download.add_argument('--start', required=True)
@@ -43,7 +45,8 @@ def main(argv=None) -> int:
     try:
         if args.command == 'serve':
             from strategy.interfaces.web.server import serve
-            serve(Path(args.project_root), args.port)
+            serve(Path(args.project_root), args.port, experiment_python=args.experiment_python,
+                  experiment_ui_url=args.experiment_ui_url)
             return 0
         if args.command == 'download-market':
             from strategy.market_data.tencent import download_market

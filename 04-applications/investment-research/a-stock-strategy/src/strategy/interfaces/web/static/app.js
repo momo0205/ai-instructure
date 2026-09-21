@@ -1,7 +1,7 @@
 /* 页面只负责输入与展示。策略定义和参数校验的最终依据来自服务器目录。 */
 'use strict';
 const $ = id => document.getElementById(id);
-const state = {strategies: [], datasets: [], jobs: [], downloads: [], selected: null, compared: new Set(), busy: false};
+const state = {strategies: [], datasets: [], jobs: [], downloads: [], selected: null, compared: new Set(), busy: false, experiments: {enabled:false,ui_url:null}};
 const statuses = {queued:'排队中',running:'运行中',succeeded:'已完成',failed:'失败',cancelled:'已取消',interrupted:'已中断'};
 const fmt = n => n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2});
 const pct = n => n == null ? '—' : `${fmt(Number(n)*100)}%`;
@@ -32,14 +32,14 @@ function strategyFields(values={}) {
     if(field.role==='instrument') {
       input=el('select');input.multiple=field.type==='array';
       const selected=Array.isArray(value)?value:[value];
-      const items=InstrumentChoices.available(state.datasets.find(d=>d.id===$('dataset').value));
+      const items=globalThis.ResearchInputs?.enabled()?ResearchInputs.instruments():InstrumentChoices.available(state.datasets.find(d=>d.id===$('dataset').value));
       if(!input.multiple) input.append(new Option('请选择已准备的标的',''));
       for(const item of items) {
         const option=new Option(`${item.name} · ${item.symbol}`,item.symbol);
         option.selected=selected.includes(item.symbol);input.append(option);
       }
       if(input.multiple) {input.size=Math.min(6,Math.max(3,items.length));}
-      input.onchange=()=>updateCoverage();
+      input.onchange=()=>{globalThis.ResearchInputs?.sources();updateCoverage();};
       if(input.multiple) label.append(el('small','可多选，按住 Ctrl / Command 选择多个标的','hint'));
     }
     else if(field.type==='boolean') {input=el('input');input.type='checkbox';input.checked=value;}
@@ -52,6 +52,7 @@ function strategyFields(values={}) {
     input.dataset.parameter=field.name;input.dataset.type=field.type;input.dataset.role=field.role||'';input.required=field.type!=='boolean';label.append(input);container.append(label);
     if(field.description)container.append(el('p',field.description,'hint'));
   }
+  globalThis.ResearchInputs?.sources();
   updateCoverage();
 }
 function selectedSymbols() {
@@ -66,7 +67,7 @@ function updateCoverage() {
   if(!spec?.parameters.some(p=>p.role==='instrument' && ['string','array'].includes(p.type))) {
     $('submit').disabled=true;$('coverage-info').textContent='该策略尚未配置页面标的选择，请通过接口执行或完善策略定义。';return null;
   }
-  const range=InstrumentChoices.coverage(d,selectedSymbols());
+  const range=InstrumentChoices.coverage(globalThis.ResearchInputs?.dataset()||d,selectedSymbols());
   $('submit').disabled=!range;
   $('coverage-info').textContent=range?`所选标的共同可用区间：${range.start} — ${range.end}；区间内缺失数据会在提交时校验。`:'请选择有共同数据区间的可回测标的。';
   if(range) for(const key of ['start','end']) {
@@ -76,7 +77,9 @@ function updateCoverage() {
   return range;
 }
 function datasetFields(reset=true) {
+  if(reset)globalThis.ResearchInputs?.cancelRestore();
   const d=state.datasets.find(x=>x.id===$('dataset').value);if(!d)return;
+  if(reset)state.snapshotJobId=d.snapshotJobId||null;
   $('dataset-info').textContent=`${d.sample?'样例数据 · 不代表真实市场':'真实历史数据'}\n覆盖日期：${d.start} — ${d.end} · ${d.adjustment||'未声明复权'}\n行情来源：${d.market_source||'未知'}\n广度来源：${(d.source||[]).join('、')||'未知'}\n${(d.symbols||[]).join(' / ')} ${(d.warnings||[]).join('；')}`;
   for(const key of ['start','end']) {$(key).min=d.start;$(key).max=d.end;if(reset)$(key).value=d[key];}
 }
@@ -97,9 +100,12 @@ function requestFromForm() {
   for(const key of ['initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps'])request[key]=Number($(key).value);
   // 页面用百分数，后端用小数；只在边界转换一次，避免 1% 与 0.01% 混淆。
   request.effectiveness=$('strategy').value==='fixed_asset'&&$('effectiveness').checked;
-  request.trigger_return_threshold/=100;request.commission_rate/=100;return request;
+  request.trigger_return_threshold/=100;request.commission_rate/=100;if(state.snapshotJobId)request.snapshot_job_id=state.snapshotJobId;return request;
 }
-function copyRequest(request) {
+function copyRequest(request,restored=false) {
+  if(!restored)globalThis.ResearchInputs?.cancelRestore();
+  if(request.snapshot_job_id&&!restored&&globalThis.ResearchInputs){ResearchInputs.restore(request).catch(e=>notice(e.message));return;}
+  state.snapshotJobId=request.snapshot_job_id||null;
   if(!state.datasets.some(d=>d.id===request.dataset_id)) {notice('原任务数据集已不可用，无法复制参数。');return;}
   $('strategy').value=request.strategy_id;$('dataset').value=request.dataset_id;datasetFields(false);strategyFields(request.parameters);
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
@@ -114,6 +120,7 @@ function renderJobs() {
     check.onchange=()=>{check.checked?state.compared.add(job.id):state.compared.delete(job.id);renderComparison().catch(e=>notice(e.message));};row.append(check);
     const button=el('button');button.type='button';button.append(el('span',strategyName(job.request?.strategy_id),'job-title'));
     button.append(el('span',`${job.request?.start||''} → ${job.request?.end||''} · ${job.id.slice(0,8)}`,'job-meta'));
+    button.append(el('span',experimentStatus(job),'job-meta'));
     button.onclick=()=>showJob(job.id).then(()=>{configurePanel(false);activateTab('research');$('detail').scrollIntoView({behavior:'smooth',block:'start'});}).catch(e=>notice(e.message));row.append(button,el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(row);
   }
 }
@@ -143,12 +150,42 @@ function noTradeMessage(result) {
   if(insufficient)return `本次没有买入成交：${insufficient} 次买入因资金不足取消。请检查初始资金是否足够支付最小买入数量及费用；股票按 100 股整手买入。可复制参数、调整模拟初始资金后重跑。当前收益与回撤仅表示账户未发生交易，不能据此评价策略。`;
   return '本次没有完成交易，胜率暂无样本。请检查触发条件、数据预热和成交取消记录；旧任务还需检查期末未平仓说明。';
 }
+function progressText(progress) {
+  const labels={preparing:'准备数据',factors:'Qlib 计算因子',strategy:'运行原策略',preparing_controls:'准备对照数据',benchmark:'计算买入持有',random:'随机择时',saving:'保存结果'};
+  const rounds=progress.stage==='random'?` · ${progress.completed} / ${progress.total} 轮`:'';
+  return `${labels[progress.stage]||'运行中'}${rounds} · 已用时 ${fmt(progress.elapsed_seconds)} 秒`;
+}
+function renderProgress(box,progress) {
+  const section=el('div',null,'task-progress');section.append(el('p',progressText(progress)));
+  const bar=el('progress');bar.setAttribute('aria-label','当前阶段进度');bar.max=Math.max(1,progress.total);
+  if(progress.stage==='random')bar.value=progress.completed;
+  section.append(bar);box.append(section);
+}
+const experimentStatuses={disabled:'实验同步未启用',not_recorded:'实验未记录',pending:'实验同步中',synced:'实验已同步',failed:'实验同步失败'};
+function experimentStatus(job) {return experimentStatuses[job.experiment?.status||'disabled']||'实验未记录';}
+function jobNeedsRefresh(job) {return ['running','queued'].includes(job.status)||job.experiment?.status==='pending';}
+function renderExperiment(box,job) {
+  const section=el('div',null,'experiment-sync'),record=job.experiment||{status:'disabled'};
+  section.append(el('span',experimentStatus(job),'hint'));
+  if(record.status==='synced')section.append(el('p',`记录 ID：${record.run_id} · 实验 ID：${record.experiment_id}`,'hint'));
+  if(record.status==='failed')section.append(el('p',record.message||'实验同步失败，请重试。','hint'));
+  if(state.experiments.enabled&&job.status==='succeeded'&&['not_recorded','failed'].includes(record.status)) {
+    const button=el('button',record.status==='failed'?'重试实验同步':'同步到实验库');button.type='button';
+    button.onclick=async()=>{
+      button.disabled=true;
+      try {await api(`/api/jobs/${encodeURIComponent(job.id)}/experiment`,{});await refresh();if(state.selected===job.id)await showJob(job.id);}
+      catch(e){notice(e.message);button.disabled=false;}
+    };section.append(button);
+  }
+  box.append(section);
+}
 async function showJob(id) {
   state.selected=id;const job=await api(`/api/jobs/${id}`);if(state.selected!==id)return;
   const box=$('detail');box.replaceChildren();const title=el('div',null,'section-title');title.append(el('h2',strategyName(job.request?.strategy_id)),el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(title);
   const actions=el('div',null,'actions');const copy=el('button','复制参数重跑');copy.onclick=()=>copyRequest(job.request);actions.append(copy);
   if(['queued','running'].includes(job.status)){const cancel=el('button','取消任务');cancel.onclick=async()=>{try{await api(`/api/jobs/${id}/cancel`,{});await refresh();await showJob(id);}catch(e){notice(e.message);}};actions.append(cancel);}
-  box.append(actions);
+  box.append(actions);renderExperiment(box,job);
+  if(job.status==='running'&&job.progress)renderProgress(box,job.progress);
   if(job.status!=='succeeded') {box.append(el('p',(job.diagnostic?diagnosticText(job.diagnostic):job.error)||(['running','queued'].includes(job.status)?'后台处理中，可关闭页面后再回来查看。':'此任务未产生回测结果。'),'hint'));return;}
   const r=job.result;if(!r){box.append(el('p','结果文件不可用','warnings'));return;}
   const exportButton=el('button','导出结果 JSON');exportButton.onclick=()=>download(r,id);actions.append(exportButton);
@@ -198,6 +235,7 @@ async function refreshData() {
   const datasets=await api('/api/datasets');
   // 等待网络期间用户可能已经切换数据集，保留响应到达时的实际选择。
   const previous=$('dataset').value;
+  if(state.snapshotJobId){const frozen=state.datasets.find(d=>d.taskSnapshot);if(frozen&&!datasets.some(d=>d.id===frozen.id))datasets.push(frozen);}
   state.datasets=datasets;state.downloads=downloads;
   // 后台轮询只刷新目录，不重置用户正在编辑的策略参数和日期。
   $('dataset').replaceChildren(...datasets.map(d=>new Option(d.name,d.id)));
@@ -226,15 +264,15 @@ $('download-form').onsubmit=async event=>{
   } catch(e) {$('download-notice').textContent=e.message;}
   finally {$('download-submit').disabled=!state.datasets.some(d=>d.id==='real');}
 };
-$('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>{datasetFields();strategyFields();};$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
-$('run-form').onsubmit=async event=>{event.preventDefault();notice('');try{const request=requestFromForm();$('submit').disabled=true;const job=await api('/api/jobs',request);await refresh();await showJob(job.id);configurePanel(false);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{updateCoverage();}};
+$('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>{state.snapshotJobId=null;datasetFields();strategyFields();};$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
+$('run-form').onsubmit=async event=>{event.preventDefault();notice('');try{const request=requestFromForm();$('submit').disabled=true;const job=await (globalThis.ResearchInputs?ResearchInputs.submit(request):api('/api/jobs',request));await refresh();await showJob(job.id);configurePanel(false);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{updateCoverage();}};
 async function init() {
-  [state.strategies,state.datasets]=await Promise.all([api('/api/strategies'),api('/api/datasets')]);
+  [state.strategies,state.datasets,state.experiments]=await Promise.all([api('/api/strategies'),api('/api/datasets'),api('/api/experiments')]);
   state.strategies.forEach(s=>$('strategy').append(new Option(s.name,s.id)));state.datasets.forEach(d=>$('dataset').append(new Option(d.name,d.id)));
   datasetFields();strategyFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
   await refresh();await refreshData();
   // 串行轮询，避免长任务或慢磁盘时叠加请求。只自动更新尚未结束的详情。
-  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&['running','queued'].includes(j.status));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status)))await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
+  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&jobNeedsRefresh(j));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status)))await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
 }
 init().catch(e=>notice(e.message));
 

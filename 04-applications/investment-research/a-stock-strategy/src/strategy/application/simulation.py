@@ -25,8 +25,9 @@ class SimulationOutcome:
     metrics: Metrics
 
 
-def run_simulation(plan: SimulationPlan) -> SimulationOutcome:
+def run_simulation(plan: SimulationPlan, *, prepared=None) -> SimulationOutcome:
     """集中构造引擎、执行和评估；旧配置差异必须由适配器显式提供。"""
     engine = BacktestEngine(**plan.engine_options)
-    result = engine.run(plan.market, plan.strategy, start=plan.start, end=plan.end)
+    result = (engine.run(plan.market, plan.strategy, start=plan.start, end=plan.end) if prepared is None
+              else engine.run_prepared(prepared, plan.strategy, start=plan.start, end=plan.end))
     return SimulationOutcome(engine, result, evaluate(result))

@@ -5,6 +5,8 @@ from typing import Callable
 
 from strategy.strategies.fixed import FixedAssetStrategy
 from strategy.strategies.rank import CrossSectionalRankStrategy
+from strategy.strategies.momentum import MomentumStrategy
+from strategy.strategies.qlib_momentum import QlibMomentumStrategy
 from strategy.validation import numeric
 
 
@@ -23,6 +25,8 @@ class StrategyDefinition:
     constructor: Callable
     symbol_selector: Callable
     warmup: Callable = lambda parameters: 0
+    provenance: dict | None = None
+    prepare: Callable = lambda strategy, market, output_dir: strategy
 
     def normalize_parameters(self, parameters):
         schema = {p['name']: p for p in self.parameters}
@@ -57,8 +61,11 @@ class StrategyDefinition:
         return self.constructor(**parameters)
 
     def catalog_entry(self):
-        return deepcopy(dict(id=self.id, name=self.name, description=self.description,
-                             version=self.version, parameters=self.parameters))
+        result = dict(id=self.id, name=self.name, description=self.description,
+                      version=self.version, parameters=self.parameters)
+        if self.provenance:
+            result['provenance'] = self.provenance
+        return deepcopy(result)
 
 
 class RankStrategyDefinition(StrategyDefinition):
@@ -117,4 +124,34 @@ register_strategy(StrategyDefinition(**_BUILTINS[0], symbol_selector=lambda p: [
 register_strategy(RankStrategyDefinition(
     **_BUILTINS[1], symbol_selector=lambda p: p['candidate_symbols'],
     warmup=lambda p: max(p[k] for k in ('momentum_window', 'reversal_window', 'volatility_window', 'volume_window')),
+))
+
+register_strategy(StrategyDefinition(
+    id='price_momentum', name='动量择强（价格规则适配）', version='1',
+    description='市场条件触发后，按过去 N 个交易日涨幅选一只达到门槛的标的。参考 Qlib v0.9.7 ROC 因子，独立实现；非 Qlib 引擎或完整轮动策略。沿用下一日开盘及固定持有期。',
+    constructor=MomentumStrategy,
+    parameters=[
+        dict(name='candidate_symbols', label='候选标的', type='array', role='instrument', default=['588000.SH','510300.SH','159915.SZ']),
+        _number('lookback', '动量回看交易日', 20, 1, 252),
+        _number('minimum_momentum', '最低动量（小数，0.05 表示 5%）', 0, -1, 100, 'number', .01),
+    ],
+    symbol_selector=lambda p: p['candidate_symbols'], warmup=lambda p: p['lookback'],
+    provenance=dict(reference_project='Qlib', reference_version='v0.9.7',
+        url='https://github.com/microsoft/qlib/blob/v0.9.7/qlib/contrib/data/loader.py',
+        reference_license='MIT', integration='independent mathematical rule adaptation; no Qlib runtime',
+        formula='momentum = 1 / Alpha158 ROC(N) - 1',
+        execution='local market trigger, top 1, next open, fixed holding period'),
+))
+
+register_strategy(StrategyDefinition(
+    id='qlib_momentum', name='Qlib 动量择强（独立因子引擎）', version='1',
+    description='实际调用 Qlib 0.9.7 计算价格动量；市场触发、次日开盘与持有期由本系统执行。需要独立 Qlib 环境，窗口行情缺失则跳过。首次计算会增加运行时间。',
+    constructor=QlibMomentumStrategy,
+    parameters=deepcopy(get_strategy_definition('price_momentum').parameters),
+    symbol_selector=lambda p:p['candidate_symbols'], warmup=lambda p:p['lookback'],
+    prepare=lambda strategy,market,output_dir:strategy.prepare(market,output_dir),
+    provenance=dict(reference_project='Qlib',reference_version='v0.9.7',reference_license='MIT',
+        url='https://qlib.readthedocs.io/en/latest/component/data.html',
+        integration='Qlib D.features in isolated worker; local execution engine',
+        formula='$close/Ref($close, N)-1'),
 ))

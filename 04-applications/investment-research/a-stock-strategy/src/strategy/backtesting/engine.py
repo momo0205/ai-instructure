@@ -24,6 +24,19 @@ class BacktestResult:
     execution_events: list[dict] = field(default_factory=list)
 
 
+@dataclass(frozen=True, slots=True)
+class PreparedMarket:
+    """只供同一批模拟复用的已校验副本；调用方不能修改其中的行情。
+
+    市场状态只依赖行情和触发配置，不依赖现金、持有期和随机计划。
+    策略仍接收独立的历史副本，不能修改这份共享准备结果。
+    """
+    frame: pd.DataFrame
+    daily: dict
+    states: dict
+    trigger_key: tuple
+
+
 class BacktestEngine:
     def __init__(self, initial_cash: float, holding_period_days: int = 1,
                  commission_rate: float = 0.0003, stamp_duty_rate: float = 0.001,
@@ -70,8 +83,11 @@ class BacktestEngine:
         self.trigger_level, self.trigger_return_threshold = trigger_values
 
     def run(self, market_data: pd.DataFrame, strategy: Any, *, start: date | None = None, end: date | None = None) -> BacktestResult:
-        # Validate before sorting or simulating so callers cannot bypass the
-        # daily/duplicate/positive-price data contract.
+        frame = self._normalize_market(market_data)
+        return self._run_frame(frame, strategy, start=start, end=end)
+
+    def _normalize_market(self, market_data):
+        # 普通入口和批量入口必须经过相同数据契约校验。
         frame = self._validation_frame(market_data)
         required = set(REQUIRED_MARKET_COLUMNS)
         missing = required - set(frame.columns)
@@ -81,6 +97,24 @@ class BacktestEngine:
         frame = frame.copy()
         frame["date"] = pd.to_datetime(frame["date"]).dt.date
         frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
+        return frame
+
+    def _trigger_key(self):
+        return (self.index_symbol, self.trigger_level, self.trigger_return_threshold, self.min_declining_count)
+
+    def prepare_market(self, market_data):
+        """一次校验/排序/市场状态计算供任务内多轮使用，不做全局缓存。"""
+        frame = self._normalize_market(market_data)
+        daily = {day: rows for day, rows in frame.groupby('date', sort=False)}
+        states = {day: self._market_state_with_warning(frame, day) for day in daily}
+        return PreparedMarket(frame, daily, states, self._trigger_key())
+
+    def run_prepared(self, prepared, strategy, *, start=None, end=None):
+        if not isinstance(prepared, PreparedMarket) or prepared.trigger_key != self._trigger_key():
+            raise ValueError('prepared market trigger configuration mismatch')
+        return self._run_frame(prepared.frame, strategy, start=start, end=end, prepared=prepared)
+
+    def _run_frame(self, frame, strategy, *, start=None, end=None, prepared=None):
         # 起始日前的数据保留给指标预热，但不产生交易、信号或净值。
         dates = [day for day in frame["date"].drop_duplicates()
                  if (start is None or day >= start) and (end is None or day <= end)]
@@ -97,8 +131,8 @@ class BacktestEngine:
         peak = self.initial_cash
 
         for day_index, day in enumerate(dates):
-            today = frame[frame["date"] == day]
-            market, market_warning = self._market_state_with_warning(frame, day)
+            today = prepared.daily[day] if prepared is not None else frame[frame["date"] == day]
+            market, market_warning = prepared.states[day] if prepared is not None else self._market_state_with_warning(frame, day)
             events.append(asdict(market) | {"warning": market_warning})
             if market_warning and market_warning not in warning_set:
                 warnings.append(market_warning)

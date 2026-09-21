@@ -20,6 +20,10 @@
 
 访问 `http://127.0.0.1:8765`。页面支持选择现有策略、按策略定义生成参数表单、执行回测、保存任务历史、查看净值/回撤/交易/触发记录、复制参数重跑及多任务指标对比。服务只监听本机回环地址；任务使用 SQLite 和独立目录保存在 `reports/workbench/`，关闭浏览器不会终止任务。
 
+可选的 [实验记录与比较](docs/experiment-tracking.md) 已接入 MLflow：使用独立环境记录成功任务，页面显示同步状态并支持失败重试；不需要 Qlib、RQAlpha 或大模型 API Key。
+
+「实验研究」支持批量验证 2–8 个持有期：先在前段比较并锁定候选，再只对该候选运行后段；批次进度、结果和历史均可在中文页面查看。
+
 新增后端策略时，在 `src/strategy/strategies/registry.py` 显式注册 `StrategyDefinition`，声明参数、构造器、标的提取与预热需求；工作台通过同一合同执行，不再判断具体策略名。参数目录保持兼容。扩展示例与尚未拆分的边界见 [后端模块说明](docs/backend-architecture.md)。当前执行模型是日频、100 份整数手、单持仓和固定持有期；组合持仓、盘中撮合及用户上传 Python 策略不在第一版范围内。
 
 从腾讯下载上证指数与 ETF 日线：
@@ -243,3 +247,13 @@ launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backt
 ```
 
 该入口与网页共用校验、快照、执行和result.json格式。旧 `--config` 继续支持，其历史触发、成本和报告格式由兼容适配器保留，内部也调用共用运行服务。任务存储接口与schema驱动参数说明见 [后端架构](docs/backend-architecture.md)。
+
+新增「动量择强（价格规则适配）」：可配置候选标的、回看天数和最低动量，复用市场触发与现有执行规则。参考来源、适配边界和用法见 [策略适配说明](docs/strategy-adapters.md)；不是 Qlib 运行时集成。
+
+可选「Qlib 动量择强（独立因子引擎）」实际使用隔离 Qlib 0.9.7 计算因子，现有引擎负责成交。安装、用法和范围见 [Qlib 因子引擎](docs/qlib-runtime.md)。
+
+从头到尾的人工验收步骤、参数和通过标准见 [交互式 HTML 验收教程](docs/platform-acceptance.html)（含跨版本选证券、验收记录与导出），或 [Markdown 版教程](docs/platform-acceptance.md)。
+
+跨扩展版本的证券可在「数据管理 → 组合研究数据集」组合后共同回测，见 [组合说明](docs/composed-datasets.md)。
+
+真实行情回测默认支持[直接跨版本选择研究证券](docs/direct-research-inputs.md)，提交时自动冻结任务输入，无需手动组合，也不会增加全局组合数据集。

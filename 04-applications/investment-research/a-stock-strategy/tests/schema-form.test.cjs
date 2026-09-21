@@ -78,3 +78,8 @@ test('return histogram retains every sample including equal returns',()=>{
  const bins=run('returnHistogram([0,0,0],0)');assert.equal(bins.counts.reduce((a,b)=>a+b,0),3);assert.ok(bins.high>bins.low);
  const spread=run('returnHistogram([-0.1,0,0.1],0.2)');assert.equal(spread.counts.reduce((a,b)=>a+b,0),3);assert.ok(spread.high>=0.2);
 });
+
+test('running progress identifies stage and completed random rounds',()=>{
+ const {run}=page();assert.match(run("progressText({stage:'random',completed:37,total:100,elapsed_seconds:4.5})"),/37 \/ 100.*4.5/);
+ assert.match(run("progressText({stage:'preparing_controls',completed:0,total:1,elapsed_seconds:1})"),/准备对照/);
+});
