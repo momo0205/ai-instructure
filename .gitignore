@@ -22,3 +22,12 @@ target/
 04-applications/investment-research/a-stock-strategy/data/managed_*/
 04-applications/investment-research/a-stock-strategy/data/real/
 04-applications/investment-research/a-stock-strategy/data/real_baidu/
+
+# Eclipse/Gradle IDE 残留
+.classpath
+.project
+.settings/
+.gradle/
+
+# Mem0 记忆系统（整个目录不进 git，按 AGENTS.md 约定只保留代码引用）
+.memory/
