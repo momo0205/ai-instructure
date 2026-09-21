@@ -7,7 +7,7 @@ from strategy.registry import catalog
 ROOT = Path(__file__).resolve().parents[1]
 
 def test_catalog_and_sample_execution(tmp_path):
-    assert {x['id'] for x in catalog()} == {'fixed_asset', 'cross_sectional_rank'}
+    assert {x['id'] for x in catalog()} == {'fixed_asset', 'cross_sectional_rank', 'price_momentum', 'qlib_momentum'}
     ds = next(x for x in workbench.datasets(ROOT) if x['id'] == 'mvp_sample')
     result = workbench.execute(ROOT, {'dataset_id':'mvp_sample','start':'2024-02-01'}, tmp_path)
     assert result['equity'] and all(x['date'] >= '2024-02-01' for x in result['equity'])

@@ -140,3 +140,30 @@ details.setup { margin: 0; padding: 0; border: 1px solid var(--line); background
 @media(max-width:1100px) { .config-grid { gap: 18px; padding: 18px; }.config-block + .config-block { padding-left: 18px; }.metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }.metric strong { font-size: 24px; } }
 @media(max-width:760px) { .config-grid { grid-template-columns: 1fr; gap: 20px; }.config-block + .config-block { padding-left: 0; border-left: 0; border-top: 1px solid #edf0f4; padding-top: 18px; }.configuration-title { padding: 16px 18px; }.configuration-title small { display: none; }.tabs { gap: 12px; }.tabs button { padding: 13px 0; }.run-actions { padding: 14px 18px; flex-direction: column; gap: 8px; }.run-actions .primary { width: 100%; }.metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }.metric { padding: 14px; }#detail { padding: 18px; }#effectiveness-result { padding: 12px; }main { padding-top: 20px; }.empty { padding: 30px 10px; } }
 @media(prefers-reduced-motion:reduce) { [role="tabpanel"]:not([hidden]) { animation: none; } }
+
+.task-progress{padding:16px 20px;background:#eef6f4;border:1px solid #d8e9e3;border-radius:10px;margin:16px 0}.task-progress p{font-size:13px;margin:0 0 10px;color:#286359}.task-progress progress{display:block;width:100%;height:8px;accent-color:var(--accent)}
+
+.experiment-sync{margin:12px 0;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.experiment-sync button{margin:0 10px}.experiment-link{display:inline-block;margin:6px 0;font-size:13px}.experiment-sync .experiment-link{margin-left:12px}
+
+/* 实验页复用现有表格与面板，仅补充筛选、编辑与差异强调。 */
+.research-help{background:#f4f8f7;padding:12px 16px;border-radius:8px}.research-help li{margin:8px 0}#research-list .experiment-row-actions{min-width:80px;flex-direction:column}#research-comparison .scroll{max-height:none}
+.research-filters{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0}.research-filters label{min-width:220px;flex:1}.experiment-row-actions{display:flex;gap:6px;flex-wrap:wrap;min-width:165px}.experiment-editor{padding:16px;background:#f8faf8;border:1px solid var(--line);border-radius:8px;margin:16px 0}.experiment-editor button{margin-right:8px}.parameter-changed{font-weight:700;color:#9c5b19}#research-list td{max-width:260px;overflow-wrap:anywhere}#research-list td p{white-space:pre-wrap}#research-comparison{margin-top:24px}#research-advanced a{display:inline-block;margin:12px 0}
+
+.study-section{margin-top:28px;padding-top:20px;border-top:1px solid var(--line)}.study-group{display:block;text-align:left;margin:8px 0;max-width:100%;overflow-wrap:anywhere}#studies-detail h4{margin:20px 0 6px}#studies-detail{overflow-wrap:anywhere}
+
+/* 页内教程：保持短路线图可扫读，详细解释由原生折叠区按需展开。 */
+.tutorial { margin-bottom: 20px; }
+.tutorial > summary { font-weight: 650; cursor: pointer; }
+.tutorial p, .tutorial li { line-height: 1.8; }
+.tutorial li + li { margin-top: 10px; }
+.tutorial details { margin-top: 14px; }
+.tutorial-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.tutorial-steps h3 { font-size: 16px; }
+.tutorial-steps a { display: inline-block; margin-bottom: 10px; }
+@media (max-width: 720px) { .tutorial-steps { grid-template-columns: 1fr; gap: 0; } }
+
+/* 长版本名称允许在窄屏内缩放，证券与来源仍保持一一对应。 */
+.composition-row { display:grid; grid-template-columns:minmax(160px,1fr) minmax(0,3fr); gap:12px; margin:12px 0; align-items:center; }
+.composition-row select { width:100%; min-width:0; }
+@media(max-width:720px){.composition-row{grid-template-columns:minmax(0,1fr);}}
+#composition-status, #composition-preview { overflow-wrap:anywhere; }

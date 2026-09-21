@@ -4,6 +4,9 @@ from collections import Counter
 from strategy.validation import UserError
 
 CATALOG = {
+    'QLIB_UNAVAILABLE': ('Qlib 运行环境不可用', '安装独立 reports/qlib-env 环境，或设置 A_STOCK_QLIB_PYTHON 后重启服务。也可选择不依赖 Qlib 的本地策略。'),
+    'QLIB_FAILED': ('Qlib 因子计算失败', '检查任务目录 qlib/worker.log、独立依赖版本及数据；此任务没有自动切换到其他算法。'),
+    'EXPERIMENT_STORE_UNAVAILABLE': ('实验库暂时无法访问', '请稍后刷新，或检查实验运行环境；回测结果仍然保留。'),
     'DATA_COVERAGE_INCOMPLETE': ('数据覆盖不完整', '选择共同覆盖的日期范围，或重新下载缺失行情。'),
     'DATA_VALIDATION_FAILED': ('行情数据验证失败', '重新下载数据；若仍失败，请提供任务编号检查来源及复权方式。'),
     'SYMBOL_NOT_CONFIRMED': ('数据源未确认证券代码', '检查代码，或稍后重试数据源查询。'),

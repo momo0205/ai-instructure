@@ -65,6 +65,11 @@ def datasets(project_root):
             stocks = sum(item['kind'] == 'stock' for item in result[-1]['instruments'])
             result[-1]['name'] = f'基础数据集 · 指数 + {etfs} 只 ETF' + (f' + {stocks} 只股票' if stocks else '')
         elif name.startswith('managed_'):
+            if market_manifest.get('composition'):
+                composition = market_manifest['composition']
+                result[-1]['name'] = f"组合研究数据集 · {len(composition['members'])} 只证券 · {name[-8:]}"
+                result[-1]['composition'] = composition
+                continue
             symbol = market_manifest.get('updated_symbol', '')
             security_name = metadata.get(symbol, {}).get('name', symbol or '证券')
             # 历史版本没有创建时间时，只标下载日期，不使用文件修改时间推测。
