@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from strategy.domain import Selection
 from strategy.strategies.momentum import MomentumStrategy
+from strategy.strategies.decision_evidence import candidate, choose
 from strategy.validation import UserError
 
 
@@ -20,30 +21,51 @@ class QlibMomentumStrategy(MomentumStrategy):
         self.prepared = True
         return self
 
-    def select(self, as_of, market, universe):
+    def evaluate(self, as_of, market, universe):
         if not self.prepared:
             raise UserError('QLIB_FAILED', 'Qlib 因子尚未准备，请通过工作台或 CLI 请求入口执行。')
         if not market.triggered or universe.empty:
-            return None
+            return None, []
         frame = universe.copy()
         frame['date'] = pd.to_datetime(frame.date).dt.date
-        frame = frame[frame.date<=as_of]
+        frame = frame[frame.date <= as_of]
         sessions = sorted(frame.date.unique())[-self.lookback-1:]
-        if len(sessions)!=self.lookback+1:
-            return None
-        selections=[]
-        for symbol in sorted(self.candidate_symbols):
-            score=self.scores.get((as_of.isoformat(),symbol))
-            if score is None or score<self.minimum_momentum:
+        selections, evidence = [], []
+        for symbol in sorted(set(self.candidate_symbols)):
+            row = candidate(symbol)
+            evidence.append(row)
+            if len(sessions) != self.lookback + 1:
                 continue
-            rows=frame[(frame.symbol==symbol)&frame.date.isin(sessions)].sort_values('date')
-            if len(rows)!=len(sessions) or rows.date.duplicated().any() or rows.iloc[-1].date!=as_of:
+            rows = frame[(frame.symbol == symbol) & frame.date.isin(sessions)].sort_values('date')
+            if rows.date.duplicated().any():
+                row['reason'] = 'duplicate_dates'
                 continue
-            prices=pd.to_numeric(rows.close,errors='coerce').to_numpy(dtype=float)
-            if not np.isfinite(prices).all() or (prices<=0).any():
+            if len(rows) != len(sessions):
                 continue
-            if any(bool(rows.iloc[-1].get(flag,False)) for flag in ('is_suspended','limit_up','limit_down')):
+            if rows.iloc[-1].date != as_of:
+                row['reason'] = 'missing_current_bar'
                 continue
+            prices = pd.to_numeric(rows.close,errors='coerce').to_numpy(dtype=float)
+            if not np.isfinite(prices).all() or (prices <= 0).any():
+                row['reason'] = 'invalid_price'
+                continue
+            blocked = next((flag for flag in ('is_suspended','limit_up','limit_down')
+                            if bool(rows.iloc[-1].get(flag,False))), None)
+            if blocked:
+                row['reason'] = blocked
+                continue
+            row.update(reference_date=rows.iloc[0].date.isoformat(),
+                       reference_close=float(prices[0]), current_close=float(prices[-1]))
+            # 解释必须用 Qlib 实际输出，不能用本地重算的分数冒充。
+            score = self.scores.get((as_of.isoformat(),symbol))
+            if score is None:
+                row['reason'] = 'missing_factor'
+                continue
+            row['score'] = score
+            if score < self.minimum_momentum:
+                row['reason'] = 'below_minimum'
+                continue
+            row['status'] = 'eligible'
             selections.append(Selection(symbol,score,{'as_of':as_of.isoformat(),'momentum':score,
                 'lookback':self.lookback,'factor_backend':'qlib'},'highest Qlib momentum above minimum'))
-        return sorted(selections,key=lambda item:(-item.score,item.symbol))[0] if selections else None
+        return choose(selections, evidence)

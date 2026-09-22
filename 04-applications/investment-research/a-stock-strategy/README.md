@@ -257,3 +257,5 @@ launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backt
 跨扩展版本的证券可在「数据管理 → 组合研究数据集」组合后共同回测，见 [组合说明](docs/composed-datasets.md)。
 
 真实行情回测默认支持[直接跨版本选择研究证券](docs/direct-research-inputs.md)，提交时自动冻结任务输入，无需手动组合，也不会增加全局组合数据集。
+
+策略规则卡、逐日候选解释与交易时间线的操作说明见 [看懂策略和每次买卖](docs/strategy-explanations.md)。

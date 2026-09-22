@@ -167,3 +167,13 @@ details.setup { margin: 0; padding: 0; border: 1px solid var(--line); background
 .composition-row select { width:100%; min-width:0; }
 @media(max-width:720px){.composition-row{grid-template-columns:minmax(0,1fr);}}
 #composition-status, #composition-preview { overflow-wrap:anywhere; }
+
+/* 规则和决策解释沿用工作台卡片；长证券代码与小屏表格不会撑开页面。 */
+.strategy-rule{margin:20px 0;padding:16px 20px;background:var(--surface,#f5f8fc);border:1px solid #dce5ef;border-radius:12px;overflow-wrap:anywhere}
+.strategy-rule h3,.strategy-explanations h3{margin:0 0 10px}
+.strategy-rule ul,.strategy-explanations ul{padding-left:20px;line-height:1.8}
+.rule-title{font-weight:600;line-height:1.7}
+.strategy-explanations{min-width:0;margin:20px 0}
+.strategy-explanations .table-wrap{max-width:100%;overflow-x:auto}
+.strategy-explanations .actions{flex-wrap:wrap;margin:12px 0}
+.strategy-explanations select{max-width:100%}

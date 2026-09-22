@@ -38,9 +38,9 @@ def test_cli_default_project_root_survives_move(monkeypatch):
     from strategy.interfaces.cli.main import main
     from strategy.interfaces.web import server
     calls = []
-    monkeypatch.setattr(server, 'serve', lambda root, port: calls.append((root, port)))
+    monkeypatch.setattr(server, 'serve', lambda root, port, **options: calls.append((root, port, options)))
     assert main(['serve']) == 0
-    assert calls == [(ROOT, 8765)]
+    assert calls == [(ROOT, 8765, {'experiment_python': None, 'experiment_ui_url': 'http://127.0.0.1:5000'})]
 
 
 def test_job_freezes_full_nested_source_tree(tmp_path):

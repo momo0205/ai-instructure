@@ -3,6 +3,8 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 class Element {
+ addEventListener(type,handler){(this.listeners??={})[type]=handler;}
+ dispatchEvent(event){this.listeners?.[event.type]?.(event);}
  constructor(tag){this.tagName=tag;this.children=[];this.dataset={};}
  append(...items){this.children.push(...items);}
  replaceChildren(...items){this.children=items;}
@@ -10,6 +12,7 @@ class Element {
 }
 function page(){
  const nodes={};const context=vm.createContext({document:{getElementById:id=>nodes[id]??=new Element('div'),createElement:tag=>new Element(tag)}});
+ vm.runInContext(fs.readFileSync('src/strategy/interfaces/web/static/explanations.js','utf8'),context);
  vm.runInContext(fs.readFileSync('src/strategy/interfaces/web/static/app.js','utf8').replace('init().catch(e=>notice(e.message));',''),context);
  return {nodes,context,run:code=>vm.runInContext(code,context)};
 }

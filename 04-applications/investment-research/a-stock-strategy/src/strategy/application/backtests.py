@@ -73,7 +73,7 @@ def execute(root, request, output_dir):
                     cost_policy=engine.fee_rules.metadata(),
                     tradability_rules_version=TRADABILITY_VERSION,
                     tradability='input flags only; unknown flags assumed executable; no auction order-book evidence')
-    payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
+    payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,decision_events=result.decision_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
     context_file = Path(output_dir)/'study.json'
     if context_file.is_file():
         metadata['study'] = json.loads(context_file.read_text())

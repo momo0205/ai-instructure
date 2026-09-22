@@ -17,7 +17,7 @@ from strategy.application.research import ResearchService, ResearchUnavailable
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
              '/app.js': 'app.js', '/tabs.js': 'tabs.js', '/style.css': 'style.css',
-             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js'}
+             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js'}
     if path not in files:
         raise ValueError('资源不存在')
     return Path(__file__).parent / 'static' / files[path]
