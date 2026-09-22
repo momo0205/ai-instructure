@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
 <body>
 <header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
 <main>
@@ -74,22 +74,32 @@
 </section>
 <section id="panel-data" role="tabpanel" data-tab="data" aria-labelledby="tab-data" hidden>
 <section class="panel data-management" id="data-management">
-<div class="section-title"><h2>标的数据管理</h2><button id="refresh-data" type="button">刷新数据目录</button></div>
-<p class="hint">先准备行情，再选择数据集回测。下载不会启动回测，也不会覆盖已有数据或历史结果。支持三只已验证 ETF 及已识别的普通沪深主板股票（日频近似研究）；ST、退市及其他板块暂不支持。</p>
+<div class="section-title"><h2>数据管理工作台</h2><button id="refresh-data" type="button">刷新数据目录</button></div>
+<p class="hint">独立保存行情，按研究需求检查依赖。下载和更新不会覆盖已有版本或历史实验。</p>
+<div class="data-tabs" role="tablist" aria-label="数据管理导航">
+<button type="button" role="tab" data-data-tab="overview" aria-selected="true" class="active">数据概览</button><button type="button" role="tab" data-data-tab="assets" aria-selected="false">证券与行情</button><button type="button" role="tab" data-data-tab="foundations" aria-selected="false">市场基础数据</button><button type="button" role="tab" data-data-tab="downloads" aria-selected="false">下载与更新任务</button>
+</div>
+<p id="download-notice" role="status" aria-live="polite"></p>
+<section data-data-panel="overview"><div id="data-overview"></div></section>
+<section data-data-panel="assets" hidden>
+<h3>新增或更新行情</h3><p class="hint">可下载供应商可识别的沪深证券日线。回测目前支持三只已验证 ETF 和已识别的普通主板股票；其他证券可保存行情，但不代表交易规则已支持。</p>
 <form id="download-form">
 <div class="two"><label>新增代码<input id="download-symbol" placeholder="例如 002015.SZ" maxlength="9" required></label><p class="hint">上交所使用 .SH，深交所使用 .SZ；系统会校验代码并获取证券名称。</p></div>
 <div class="two"><label>下载开始日期<input id="download-start" type="date" required></label><label>下载结束日期<input id="download-end" type="date" required></label></div>
 <p id="download-coverage" class="hint"></p><button id="download-submit" class="primary" type="submit">新增代码并下载行情</button>
 </form>
-<p id="download-notice" role="status" aria-live="polite"></p>
+<label class="data-search">搜索证券名称或代码<input id="asset-search" type="search" placeholder="例如 茅台 / 600519"></label>
+<div id="data-assets"></div><section id="asset-detail" class="data-detail" hidden></section>
+<h3>历史研究版本</h3><div id="instruments"></div>
 <details class="study-section" aria-label="组合研究数据集"><summary>高级：手动创建组合研究数据集</summary>
 <div class="section-title"><h3>组合研究数据集</h3><button id="composition-refresh" type="button">刷新可组合证券</button></div>
 <p class="hint">已下载的证券在不同扩展版本里？在这里把它们组合成同一个研究版本，例如协鑫能科 + 贵州茅台。每只证券选择一个来源，不拼接同代码历史；只保留共同覆盖区间，缺行情或基线冲突会阻止创建。</p>
 <label>指数与市场广度基线<select id="composition-base"></select></label>
 <div id="composition-members"></div><button id="composition-check" type="button">检查组合</button> <button id="composition-publish" type="button" disabled>创建组合数据集</button>
 <p id="composition-status" role="status" aria-live="polite"></p><div id="composition-preview"></div></details>
-<h3>已准备的数据</h3><div id="instruments"></div>
-<h3>下载记录</h3><div id="downloads"></div>
+</section>
+<section data-data-panel="foundations" hidden><div id="data-foundations"></div></section>
+<section data-data-panel="downloads" hidden><h3>下载与更新任务</h3><p class="hint">完成表示行情已保存；请查看行情详情，确认覆盖与策略依赖。</p><div id="downloads"></div></section>
 </section>
 </section>
 <footer>研究结果取决于数据覆盖与执行假设。每次实验均保留对应的参数、版本及数据说明。</footer>

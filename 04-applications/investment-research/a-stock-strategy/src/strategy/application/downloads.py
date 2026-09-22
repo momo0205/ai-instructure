@@ -2,6 +2,7 @@
 from strategy.validation import UserError
 from strategy.application.diagnostics import task_view, encode_error, exception_diagnostic
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 import logging
 import queue
@@ -36,8 +37,16 @@ class DownloadManager:
             raise UserError('INVALID_REQUEST', 'provider 与旧 downloader/resolver 注入不能同时指定')
         self.provider = provider if provider is not None else (
             CallableMarketDataProvider(downloader or download_market, resolver or resolve_instrument)
-            if downloader is not None or resolver is not None else TencentMarketDataProvider())
-        self.repository = repository if repository is not None else LocalDatasetRepository(self.root)
+            if downloader is not None or resolver is not None else TencentMarketDataProvider(independent=True))
+        # 旧函数注入仍遵守原发布合同；生产默认下载独立行情资产。
+        if repository is not None:
+            self.repository = repository
+        elif downloader is not None or resolver is not None:
+            self.repository = LocalDatasetRepository(self.root)
+        else:
+            from strategy.market_data.assets import AssetRepository
+            self.repository = AssetRepository(self.root)
+        self._progress = {}
         self._lock, self._queue, self._closed = threading.RLock(), queue.Queue(), False
         self.task_repository = task_repository if task_repository is not None else SQLiteTaskRepository(self.state_dir/'downloads.sqlite3', 'downloads')
         self.task_repository.interrupt(('queued', 'running'), '服务重启，请重试')
@@ -46,7 +55,7 @@ class DownloadManager:
 
     def list(self):
         with self._lock:
-            return [task_view(row, 'download') for row in self.task_repository.list()]
+            return [dict(task_view(row, 'download'), progress=self._progress.get(row['id'])) for row in self.task_repository.list()]
 
     def submit(self, request):
         if not isinstance(request, dict) or set(request) != {'symbol','start','end'}:
@@ -58,11 +67,11 @@ class DownloadManager:
                     raise ValueError
         except (ValueError, TypeError):
             raise UserError('INVALID_REQUEST', '下载日期格式应为 YYYY-MM-DD') from None
-        base = next((item for item in self.repository.list() if item['id']=='real'), None)
-        if base is None:
-            raise UserError('INVALID_REQUEST', '需要先准备真实基线数据（data/real）；不允许与合成样例混合')
-        if not base['start'] <= request['start'] <= request['end'] <= base['end']:
-            raise UserError('INVALID_REQUEST', f"下载范围必须位于真实基线 {base['start']} 至 {base['end']}，以匹配指数和市场广度")
+        today = datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
+        if not request['start'] <= request['end'] <= today:
+            raise UserError('INVALID_REQUEST', '下载开始日不能晚于结束日，结束日不能晚于北京时间今天')
+        if date.fromisoformat(request['end']).year-date.fromisoformat(request['start']).year > 30:
+            raise UserError('INVALID_REQUEST', '单次下载最多跨30年，请分段准备')
         identifier = uuid4().hex
         with self._lock:
             if self._closed:
@@ -74,12 +83,18 @@ class DownloadManager:
 
     def _publish(self, identifier, request):
         """任务只协调数据源与仓库，不包含供应商格式或文件合并规则。"""
+        with self._lock:
+            self._progress[identifier] = dict(stage='resolving', message='确认证券身份')
         metadata = self.provider.resolve(request['symbol'])
         if metadata.get('symbol') != request['symbol']:
             raise UserError('INVALID_REQUEST', '证券元数据代码不匹配')
         prepared = self.repository.prepare(identifier)
+        with self._lock:
+            self._progress[identifier] = dict(stage='downloading', message='下载行情与保存来源响应')
         self.provider.download(request['start'], request['end'], prepared.stage/'download',
                                symbols=[request['symbol']], adjustment=prepared.adjustment)
+        with self._lock:
+            self._progress[identifier] = dict(stage='validating', message='校验并发布独立版本')
         return self.repository.publish(prepared, request, metadata)
 
     def _worker(self):
@@ -101,6 +116,7 @@ class DownloadManager:
                 error = encode_error(exception_diagnostic(exception, 'download'))
             with self._lock:
                 self.task_repository.transition(identifier, ('running',), status, error=error, dataset_id=dataset_id)
+                self._progress.pop(identifier, None)
 
     def close(self):
         """关闭时中断未开始任务，等待有限超时的在途网络请求结束。"""

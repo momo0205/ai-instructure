@@ -29,8 +29,9 @@ class MarketDataProvider(Protocol):
 class TencentMarketDataProvider:
     """保留现有腾讯报价解析和日线下载格式；opener 可替换以离线验证。"""
 
-    def __init__(self, opener=None):
+    def __init__(self, opener=None, *, independent=False):
         self._opener = opener or urlopen
+        self._independent = independent
 
     def resolve(self, symbol: str) -> dict:
         validate_symbol(symbol)
@@ -46,7 +47,8 @@ class TencentMarketDataProvider:
         return dict(symbol=symbol, name=fields[1].strip(), kind=kind)
 
     def download(self, start, end, output_dir, symbols=None, adjustment='none'):
-        return download_market(start, end, output_dir, symbols=symbols, adjustment=adjustment)
+        options = {"strict_calendar": False} if self._independent else {}
+        return download_market(start, end, output_dir, symbols=symbols, adjustment=adjustment, **options)
 
 
 class CallableMarketDataProvider:

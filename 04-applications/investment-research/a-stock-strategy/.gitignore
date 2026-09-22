@@ -7,3 +7,7 @@ reports/
 dist/
 build/
 .DS_Store
+# Downloaded market assets and in-flight evidence stay local; source and tests are versioned.
+data/asset_*/
+data/.asset_download_*/
+data/.download_*/

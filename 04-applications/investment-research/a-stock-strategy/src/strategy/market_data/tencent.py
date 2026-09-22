@@ -19,7 +19,7 @@ from strategy.market_data.csv import validate_market_frame
 URL = 'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get'
 
 
-def parse_bars(payload, symbol, start, end, adjustment):
+def parse_bars(payload, symbol, start, end, adjustment, *, allow_empty=False):
     """解析 OHLC 和原始量额：第 6 列为手，第 9 列为万元；第 7 列可能是对象。"""
     content = payload.get('data', {}).get(symbol, {})
     key = 'qfqday' if adjustment == 'qfq' and symbol != 'sh000001' else 'day'
@@ -36,6 +36,8 @@ def parse_bars(payload, symbol, start, end, adjustment):
                             volume=float(row[5])*100, amount=float(row[8])*10000,
                             is_suspended=False, limit_up=False, limit_down=False))
     frame = pd.DataFrame(records)
+    if frame.empty and allow_empty:
+        return frame
     if frame.empty:
         raise ValueError(f'{symbol}: empty requested date range')
     frame = frame.drop_duplicates().sort_values('date').reset_index(drop=True)
@@ -58,7 +60,7 @@ def _request(params):
     return json.JSONDecoder().raw_decode(text[begin:])[0]
 
 
-def download_market(start, end, output_dir, symbols=None, adjustment='none', requester=None):
+def download_market(start, end, output_dir, symbols=None, adjustment='none', requester=None, *, strict_calendar=True):
     """下载指数和 ETF，并要求所有候选与指数日期完全一致。默认不复权执行价格。"""
     first, last = date.fromisoformat(start), date.fromisoformat(end)
     if first > last or last > date.today() or last.year-first.year > 30:
@@ -88,15 +90,20 @@ def download_market(start, end, output_dir, symbols=None, adjustment='none', req
             path = raw/f'{symbol}-{year}.json'
             path.write_text(json.dumps(payload,ensure_ascii=False),encoding='utf-8')
             hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
-            frames.append(parse_bars(payload,prefixed,lo,hi,adjustment))
+            parsed = parse_bars(payload,prefixed,lo,hi,adjustment, allow_empty=not strict_calendar)
+            if not parsed.empty:
+                frames.append(parsed)
+    if not frames:
+        raise ValueError('empty requested date range for all symbols')
     frame = pd.concat(frames).sort_values(['date','symbol']).reset_index(drop=True)
     validate_market_frame(frame)
     sessions = set(frame.loc[frame.symbol=='000001.SH','date'])
-    if any(set(frame.loc[frame.symbol==s,'date']) != sessions for s in symbols):
+    mismatch = any(set(frame.loc[frame.symbol==s,'date']) != sessions for s in symbols)
+    if strict_calendar and mismatch:
         raise ValueError('candidate/index date coverage mismatch; market.csv not published')
     # 已有广度提供第二份交易日集合，可以识别供应商对整段日期的静默截断。
     breadth_path = output/'breadth.csv'
-    if breadth_path.exists():
+    if strict_calendar and breadth_path.exists():
         breadth = pd.read_csv(breadth_path)
         expected = set(breadth.loc[breadth.date.between(start,end),'date'])
         if sessions != expected:
@@ -106,6 +113,8 @@ def download_market(start, end, output_dir, symbols=None, adjustment='none', req
                     volume_unit='shares',amount_unit='CNY',raw_dir=str(raw),raw_sha256=hashes,
                     warnings=['停牌和涨跌停状态未提供；False 只表示未知。',
                               '不复权行情尚未计入分红现金流；前复权价只适合近似研究，不是实际成交价。'])
+    if not strict_calendar and mismatch:
+        manifest['warnings'].append('证券与观测指数日期不一致；行情独立保存，缺失原因尚未验证。')
     temporary = output/'market.csv.tmp'
     frame.to_csv(temporary,index=False)
     manifest['market_sha256'] = hashlib.sha256(temporary.read_bytes()).hexdigest()

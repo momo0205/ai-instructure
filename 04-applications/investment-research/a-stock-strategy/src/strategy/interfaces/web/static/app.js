@@ -222,29 +222,22 @@ async function renderComparison() {
   target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),m.trade_count?pct(m.win_rate):'—',m.trade_count];})));
 }
 async function refresh() {state.jobs=await api('/api/jobs');renderJobs();}
-function renderDownloads() {
-  const target=$('downloads');target.replaceChildren();
-  if(!state.downloads.length) target.append(el('p','尚无下载记录。','hint'));
-  for(const job of state.downloads) {
-    const row=el('div',null,'download-row');
-    row.append(el('strong',`${job.request.symbol} · ${statuses[job.status]||job.status}`),el('p',`${job.request.start} — ${job.request.end}`,'hint'));
-    if(job.error) row.append(el('p',`${job.diagnostic?diagnosticText(job.diagnostic):job.error} · 任务 ${job.id}`,'warnings'));
-    if(job.dataset_id) {
-      const use=el('button','查看此数据集');use.type='button';
-      use.onclick=()=>{$('dataset').value=job.dataset_id;datasetFields();strategyFields();configurePanel(true);activateTab('research');$('run-form').scrollIntoView({behavior:'smooth'});};row.append(use);
-    }
-    if(['failed','interrupted'].includes(job.status)) {
-      const retry=el('button','重试下载');retry.type='button';retry.onclick=async()=>{
-        retry.disabled=true;try{await api('/api/downloads',job.request);await refreshData();}catch(e){$('download-notice').textContent=e.message;}finally{retry.disabled=false;}
-      };row.append(retry);
-    }
-    target.append(row);
-  }
+function selectManagedDataset(id,selection=null) {
+  $('dataset').value=id;
+  // 从资产准备的版本必须带入该证券和可用区间，不能默选原来的 ETF。
+  if(selection)$('cross-version').checked=false;
+  datasetFields();strategyFields(selection?{symbol:selection.symbol,candidate_symbols:[selection.symbol]}:{});
+  if(selection){$('start').value=selection.start;$('end').value=selection.end;updateStrategyRule();}
+  configurePanel(true);activateTab('research');$('run-form').scrollIntoView({behavior:'smooth'});
 }
+const dataManager=globalThis.DataManagement?.create({api,selectDataset:selectManagedDataset,refresh:()=>refreshData()});
+let dataRefreshGeneration=0;
 async function refreshData() {
   // 完成状态写入晚于数据发布；先读状态再读目录，确保成功任务的版本已可见。
+  const generation=++dataRefreshGeneration;
   const downloads=await api('/api/downloads');
-  const datasets=await api('/api/datasets');
+  const [datasets,management]=await Promise.all([api('/api/datasets'),api('/api/data-management')]);
+  if(generation!==dataRefreshGeneration)return;
   // 等待网络期间用户可能已经切换数据集，保留响应到达时的实际选择。
   const previous=$('dataset').value;
   if(state.snapshotJobId){const frozen=state.datasets.find(d=>d.taskSnapshot);if(frozen&&!datasets.some(d=>d.id===frozen.id))datasets.push(frozen);}
@@ -253,28 +246,16 @@ async function refreshData() {
   $('dataset').replaceChildren(...datasets.map(d=>new Option(d.name,d.id)));
   if(datasets.some(d=>d.id===previous)) $('dataset').value=previous;
   else {datasetFields();strategyFields();}
-  const rows=datasets.flatMap(d=>(d.instruments||[]).map(i=>[
-    d.name,`${i.name} · ${i.symbol}`,i.kind,`${i.start} — ${i.end}`,
-    i.backtest_supported?(i.kind==='stock'?'可回测 · 近似研究':'可回测'):`仅行情：${i.reason||'交易规则尚未支持'}`,
-  ]));
-  $('instruments').replaceChildren(rows.length?table(['数据集','标的','类型','覆盖区间','状态'],rows):el('p','暂无已准备数据','hint'));
-  const base=datasets.find(d=>d.id==='real');
-  $('download-submit').disabled=!base;
-  $('download-coverage').textContent=base?`当前市场广度基线：${base.start} — ${base.end}，下载区间需在此范围内。`:'请先通过 CLI 准备真实行情与市场广度，合成样例不能作为下载基线。';
-  if(base) for(const key of ['start','end']) {
-    const input=$(`download-${key}`);input.min=base.start;input.max=base.end;
-    if(!input.value)input.value=base[key];
-  }
-  renderDownloads();
+  dataManager?.render(management,downloads);
 }
 $('refresh-data').onclick=()=>refreshData().catch(e=>{$('download-notice').textContent=e.message;});
 $('download-form').onsubmit=async event=>{
   event.preventDefault();$('download-submit').disabled=true;$('download-notice').textContent='';
   try {
     const request={symbol:$('download-symbol').value.trim().toUpperCase(),start:$('download-start').value,end:$('download-end').value};
-    await api('/api/downloads',request);$('download-notice').textContent='下载任务已提交。完成后会生成独立数据集；请在回测区选择使用。';await refreshData();
+    await api('/api/downloads',request);$('download-notice').textContent='下载任务已提交。行情独立保存；完成后查看实际覆盖和策略依赖。';await refreshData();dataManager?.select('downloads');
   } catch(e) {$('download-notice').textContent=e.message;}
-  finally {$('download-submit').disabled=!state.datasets.some(d=>d.id==='real');}
+  finally {$('download-submit').disabled=false;}
 };
 $('strategy').onchange=()=>strategyFields();$('dataset').onchange=()=>{state.snapshotJobId=null;datasetFields();strategyFields();};$('refresh').onclick=()=>refresh().catch(e=>notice(e.message));
 $('run-form').onsubmit=async event=>{event.preventDefault();notice('');try{const request=requestFromForm();$('submit').disabled=true;const job=await (globalThis.ResearchInputs?ResearchInputs.submit(request):api('/api/jobs',request));await refresh();await showJob(job.id);configurePanel(false);$('detail').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice(e.message);}finally{updateCoverage();}};

@@ -259,3 +259,5 @@ launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/com.example.astock-backt
 真实行情回测默认支持[直接跨版本选择研究证券](docs/direct-research-inputs.md)，提交时自动冻结任务输入，无需手动组合，也不会增加全局组合数据集。
 
 策略规则卡、逐日候选解释与交易时间线的操作说明见 [看懂策略和每次买卖](docs/strategy-explanations.md)。
+
+独立行情下载、版本详情与研究依赖说明见 [数据管理工作台](docs/data-management.md)。近期行情可先入库；策略仍需对应日期的指数和广度。
