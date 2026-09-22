@@ -10,7 +10,7 @@ test('refresh reads downloads before datasets and preserves selection made durin
   const gate=new Promise(resolve=>{release=resolve;});
   const calls=[];
   const nodes={dataset:{value:'real',replaceChildren(){this.value='real';}}};
-  const context={state:{},$:id=>nodes[id]??={replaceChildren(){},value:''},
+  const context={dataRefreshGeneration:0,dataManager:{render(){}},state:{},$:id=>nodes[id]??={replaceChildren(){},value:''},
     Option:function(name,id){this.value=id;},el:()=>({}),table:()=>({}),
     datasetFields(){throw new Error('must preserve selected dataset');},strategyFields(){},renderDownloads(){},
     api:async path=>{calls.push(path);if(path==='/api/downloads'){await gate;return [{status:'succeeded',dataset_id:'managed_new'}];}
@@ -20,6 +20,6 @@ test('refresh reads downloads before datasets and preserves selection made durin
   const pending=context.refreshData();
   assert.deepEqual(calls,['/api/downloads']);
   nodes.dataset.value='managed_new';release();await pending;
-  assert.deepEqual(calls,['/api/downloads','/api/datasets']);
+  assert.deepEqual(calls,['/api/downloads','/api/datasets','/api/data-management']);
   assert.equal(nodes.dataset.value,'managed_new');
 });
