@@ -61,7 +61,17 @@ function selectedSymbols() {
     .filter(input=>input.dataset.role==='instrument')
     .flatMap(input=>input.multiple?[...input.selectedOptions].map(o=>o.value):[input.value].filter(Boolean)))];
 }
+function updateStrategyRule() {
+  const parameters={};
+  for(const input of $('strategy-parameters').querySelectorAll('[data-parameter]')) {
+    parameters[input.dataset.parameter]=input.multiple?[...input.selectedOptions].map(o=>o.value):input.value;
+  }
+  StrategyExplanations.renderRule($('strategy-rule'),{strategy_id:$('strategy').value,parameters,
+    holding_period_days:$('holding_period_days').value,min_declining_count:$('min_declining_count').value,
+    trigger_return_threshold:Number($('trigger_return_threshold').value)/100},'这组参数会怎样交易');
+}
 function updateCoverage() {
+  updateStrategyRule();
   const d=state.datasets.find(x=>x.id===$('dataset').value);
   const spec=state.strategies.find(s=>s.id===$('strategy').value);
   if(!spec?.parameters.some(p=>p.role==='instrument' && ['string','array'].includes(p.type))) {
@@ -111,6 +121,7 @@ function copyRequest(request,restored=false) {
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
   for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
   $('effectiveness').checked=request.effectiveness===true&&!$('effectiveness').disabled;
+  updateStrategyRule();
   configurePanel(true);activateTab('research');notice('已复制参数。调整后点击“开始回测”会创建一个新任务。');$('run-form').scrollIntoView({behavior:'smooth'});
 }
 function renderJobs() {
@@ -195,6 +206,7 @@ async function showJob(id) {
   const metrics=el('div',null,'metrics');for(const [label,key,isPct] of [['累计收益','cumulative_return',true],['最大回撤','max_drawdown',true],['胜率','win_rate',true],['交易次数','trade_count',false]]){
     const card=el('div',null,'metric');card.append(el('small',label),el('strong',key==='win_rate'&&!r.trades?.length?'—':isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
   if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));const details=el('details');details.append(el('summary','数据、模型与执行详细说明'),warnings);box.append(details);}
+  StrategyExplanations.renderResult(box,r,job.request);
   renderEffectiveness(box,r.effectiveness);
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
@@ -306,3 +318,7 @@ function renderEffectiveness(box, result) {
   for(const text of result.buy_and_hold.warnings||[])details.append(el('p',`买入持有说明：${text}`,'hint'));
   details.append(table(['随机轮次','收益','回撤','完整交易笔数','持仓日占比','期末持仓'],r.samples.map((s,i)=>[i+1,pct(s.cumulative_return),pct(s.max_drawdown),s.trade_count,pct(1-s.cash_ratio),s.open_position?'有':'无'])));section.append(details);box.append(section);
 }
+
+// 委托表单事件，动态生成的策略参数也能立即更新规则说明。
+$('run-form').addEventListener('input',updateStrategyRule);
+$('run-form').addEventListener('change',updateStrategyRule);

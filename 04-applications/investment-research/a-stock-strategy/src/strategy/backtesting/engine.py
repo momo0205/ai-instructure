@@ -11,6 +11,7 @@ import pandas as pd
 from strategy.market_data.csv import BOOL_COLUMNS, REQUIRED_MARKET_COLUMNS, validate_market_frame
 from strategy.domain import EquityPoint, MarketState, Trade
 from strategy.backtesting.fees import FeeRules
+from strategy.backtesting.decisions import close_decision
 from strategy.backtesting.signals import market_state, MarketTrigger
 from strategy.backtesting.tradability import DailyBarStatusProvider, StatusProvider, execution_block
 
@@ -22,6 +23,7 @@ class BacktestResult:
     warnings: list[str]
     events: list[dict] = field(default_factory=list)
     execution_events: list[dict] = field(default_factory=list)
+    decision_events: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +127,7 @@ class BacktestEngine:
         trades: list[Trade] = []
         events = []
         execution_events = []
+        decision_events = []
         warnings: list[str] = []
         warning_set: set[str] = set()
         equity: list[EquityPoint] = []
@@ -143,6 +146,11 @@ class BacktestEngine:
                 kind = self._instrument_type(symbol, day)
                 row = self._row(today, symbol)
                 pending_entry = None
+                # 计划退出日按原有成交日索引计算；超出样本不能推算未来日历。
+                exit_idx = day_index + self.holding_period_days
+                planned_exit = dates[exit_idx] if exit_idx < len(dates) else None
+                entry_context = dict(signal_date=signal_day, entry_date=day,
+                                     planned_exit_date=planned_exit)
                 # The close is not known at next-open execution; only the open
                 # and tradability flags can gate entry (future-data cutoff).
                 reason = self._execution_block(row, "buy", kind)
@@ -167,8 +175,7 @@ class BacktestEngine:
                                     "entry_fees": commission + transfer, "entry_commission": commission,
                                     "entry_transfer": transfer, "last_close": initial_close,
                                     "missing_price_warned": False}
-                        exit_idx = day_index + self.holding_period_days
-                        pending_exit_date = dates[exit_idx] if exit_idx < len(dates) else None
+                        pending_exit_date = planned_exit
                     else:
                         warnings.append(f"entry not executed for {symbol} on {day} (insufficient cash)")
                         # 诊断使用撮合同一费率，前端无需复制预算规则。
@@ -180,7 +187,15 @@ class BacktestEngine:
                                      required_cash=notional + self.fee_rules.calculate(notional, day, kind, 'buy').total if lot else None)
                         execution_events.append(event)
 
+                # 取消的买单没有实际入场/持有计划，只保留计划买入日。
+                if execution_events[-1]['status'] != 'filled':
+                    entry_context.update(entry_date=None, planned_exit_date=None)
+                entry_context['planned_entry_date'] = day
+                execution_events[-1].update(entry_context)
+
             if position is not None and pending_exit_date is not None and day >= pending_exit_date:
+                exit_context = dict(signal_date=position['signal_date'], entry_date=position['entry_date'],
+                                    planned_exit_date=pending_exit_date)
                 row = self._row(today, position["symbol"])
                 kind = self._instrument_type(position["symbol"], day)
                 reason = self._execution_block(row, "sell", kind)
@@ -205,6 +220,8 @@ class BacktestEngine:
                     position = None
                     pending_exit_date = None
 
+                execution_events[-1].update(exit_context)
+
             mark = 0.0
             if position is not None:
                 row = self._row(today, position["symbol"])
@@ -222,23 +239,21 @@ class BacktestEngine:
             peak = max(peak, total)
             equity.append(EquityPoint(day, cash, mark, total, (total / peak - 1) if peak else 0.0))
 
-            # Signal is evaluated only after this day's data is complete.
-            if position is None and pending_entry is None and day_index + 1 < len(dates):
-                universe = frame[frame["date"] <= day].copy()
-                selection = strategy.select(day, market, universe)
-                if selection is not None:
-                    self._instrument_type(selection.symbol, day)
-                    pending_entry = (dates[day_index + 1], selection.symbol, day)
-            elif position is None and pending_entry is None and day_index == len(dates) - 1:
-                # A final-day signal cannot be executed within the supplied data.
-                selection = strategy.select(day, market, frame[frame["date"] <= day].copy())
-                if selection is not None:
-                    self._instrument_type(selection.symbol, day)
+            # 收盘时留下真实决策：不为了展示而在持仓日重复择股。
+            next_day = dates[day_index + 1] if day_index + 1 < len(dates) else None
+            history = frame[frame["date"] <= day].copy() if position is None else None
+            selection, decision = close_decision(strategy, day, market, history, position, next_day, market_warning)
+            decision_events.append(decision)
+            if selection is not None:
+                self._instrument_type(selection.symbol, day)
+                if next_day is not None:
+                    pending_entry = (next_day, selection.symbol, day)
+                else:
                     warnings.append(f"incomplete trade: signal on {day} has no next trading day")
 
         if position is not None:
             warnings.append(f"incomplete trade: open position {position['symbol']} has no executable exit")
-        return BacktestResult(trades, equity, warnings, events, execution_events)
+        return BacktestResult(trades, equity, warnings, events, execution_events, decision_events)
 
     def _market_state(self, frame: pd.DataFrame, day: date) -> MarketState:
         return self._market_state_with_warning(frame, day)[0]

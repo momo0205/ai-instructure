@@ -3,6 +3,8 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 class Element {
+ addEventListener(type,handler){(this.listeners??={})[type]=handler;}
+ dispatchEvent(event){this.listeners?.[event.type]?.(event);}
   constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.value='';this.checked=false;}
   append(...children){this.children.push(...children);}
   replaceChildren(...children){this.children=children;}
@@ -13,6 +15,7 @@ class Element {
 }
 function page(){
  const nodes={}; const context=vm.createContext({document:{getElementById:id=>nodes[id]??=new Element('div'),createElement:tag=>new Element(tag)},Option:class extends Element{constructor(label,value){super('option');this.textContent=label;this.value=value;}},InstrumentChoices:require('../src/strategy/interfaces/web/static/instrument-options.js'),setInterval(){}});
+ vm.runInContext(fs.readFileSync('src/strategy/interfaces/web/static/explanations.js','utf8'),context);
  let source=fs.readFileSync('src/strategy/interfaces/web/static/app.js','utf8');
  vm.runInContext(source.replace('init().catch(e=>notice(e.message));',''),context);
  vm.runInContext(`state.datasets=[{id:'sample',start:'2024-01-01',end:'2024-12-31',instruments:[{symbol:'X',backtest_supported:true,start:'2024-01-01',end:'2024-12-31'}]}];state.strategies=[{id:'third',parameters:[{name:'assets',type:'array',role:'instrument',default:['X']},{name:'enabled',type:'boolean',default:true},{name:'style',type:'string',options:['fast','slow'],default:'fast'},{name:'limits',type:'object',default:{a:2}},{name:'levels',type:'array',default:[1,2]},{name:'history',type:'integer',default:3}]}];$('strategy').value='third';$('dataset').value='sample';strategyFields();`,context);

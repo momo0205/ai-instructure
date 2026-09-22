@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
 <body>
 <header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
 <main>
@@ -66,7 +66,7 @@
 <section class="config-block"><div class="block-label"><span>03</span> 执行与对照</div><details><summary>交易成本与执行</summary><div class="two"><label>佣金率（%）<input id="commission_rate" type="number" value="0.03" step="0.01" min="0" required></label><label>最低佣金（元）<input id="minimum_commission" type="number" value="5" step="1" min="0" required></label></div><label>单边滑点（基点；1 基点 = 0.01%）<input id="slippage_bps" type="number" value="2" min="0" step="1" required></label><p class="hint">收盘确认信号，下一个交易日开盘买入。按 100 股／份买入，持有期结束后开盘卖出。股票另计卖出印花税及双边过户费，按成交日期适用规则；ETF 两项均为零。</p></details>
 <label class="comparison-toggle"><input id="effectiveness" type="checkbox"> 同时进行策略有效性对照</label><p id="effectiveness-hint" class="hint">固定标的：买入持有 + 100 轮随机择时，运行时间较长。历史对照不能替代样本外验证。</p>
 <details><summary>研究与成交假设</summary><p class="hint">日频近似研究：未知停牌、涨跌停状态按可成交假设处理；前复权价格并非实际成交价。股票支持 2022-07-01 起的区间。</p></details></section>
-</div><div class="run-actions"><button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
+</div><section id="strategy-rule" class="strategy-rule" aria-live="polite"></section><div class="run-actions"><button type="submit" id="submit" class="primary">开始回测 →</button><p class="hint">每次运行独立保存参数与数据快照。已有结果不会被覆盖。</p>
 </div></form></details>
 <div class="results-column"><section class="panel" id="detail"><div class="empty"><div class="empty-icon">↗</div><h2>等待第一份研究结果</h2><p>执行回测后，这里会展示净值、回撤和逐笔交易。</p><p class="hint">亏损、零交易和运行失败会分别显示。</p></div></section></div>
 </div>
