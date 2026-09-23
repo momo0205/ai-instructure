@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/timeline.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
 <body>
 <header><div class="brand">研<span>·</span>策 <small>A 股策略研究台</small></div><div class="local">● 本机研究环境</div></header>
 <main>
@@ -77,10 +77,11 @@
 <div class="section-title"><h2>数据管理工作台</h2><button id="refresh-data" type="button">刷新数据目录</button></div>
 <p class="hint">独立保存行情，按研究需求检查依赖。下载和更新不会覆盖已有版本或历史实验。</p>
 <div class="data-tabs" role="tablist" aria-label="数据管理导航">
-<button type="button" role="tab" data-data-tab="overview" aria-selected="true" class="active">数据概览</button><button type="button" role="tab" data-data-tab="assets" aria-selected="false">证券与行情</button><button type="button" role="tab" data-data-tab="foundations" aria-selected="false">市场基础数据</button><button type="button" role="tab" data-data-tab="downloads" aria-selected="false">下载与更新任务</button>
+<button type="button" role="tab" data-data-tab="overview" aria-selected="true" class="active">数据概览</button><button type="button" role="tab" data-data-tab="timeline" aria-selected="false">覆盖时间轴</button><button type="button" role="tab" data-data-tab="assets" aria-selected="false">证券与行情</button><button type="button" role="tab" data-data-tab="foundations" aria-selected="false">市场基础数据</button><button type="button" role="tab" data-data-tab="downloads" aria-selected="false">下载与更新任务</button>
 </div>
 <p id="download-notice" role="status" aria-live="polite"></p>
 <section data-data-panel="overview"><div id="data-overview"></div></section>
+<section data-data-panel="timeline" hidden><div id="coverage-timeline"></div></section>
 <section data-data-panel="assets" hidden>
 <h3>新增或更新行情</h3><p class="hint">可下载供应商可识别的沪深证券日线。回测目前支持三只已验证 ETF 和已识别的普通主板股票；其他证券可保存行情，但不代表交易规则已支持。</p>
 <form id="download-form">
@@ -100,11 +101,12 @@
 </section>
 <section data-data-panel="foundations" hidden>
 <div class="data-security"><h3>更新市场基础数据</h3>
-<p class="hint">同时获取上证指数和全市场涨跌家数，校验日期一致后发布新版本。已保存的行情、研究版本和回测结果保留。</p>
+<p class="hint">优先复用已有上证指数和市场广度，只下载缺失日期，校验后发布完整版本。已保存的行情、研究版本和回测结果保留。</p>
 <form id="foundation-form" class="form-grid">
 <label>起始日期<input id="foundation-start" type="date" required></label>
 <label>结束日期<input id="foundation-end" type="date" required></label>
 <label>Tushare 临时 token<input id="foundation-token" type="password" autocomplete="off" maxlength="512" placeholder="服务器已配置时可留空"></label>
+<button id="foundation-preview" type="button">检查覆盖与缺口</button>
 <button id="foundation-submit" type="submit">更新指数与市场广度</button>
 </form><p id="foundation-credentials" class="hint"></p>
 <p class="hint">凭据仅用于本次后台任务，不写入任务记录或行情文件。广度逐日限速下载，较长区间可能需要数分钟；结束日期最多为昨天。</p>

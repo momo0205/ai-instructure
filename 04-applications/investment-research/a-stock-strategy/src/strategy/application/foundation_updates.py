@@ -14,9 +14,10 @@ from strategy.validation import UserError
 class FoundationUpdateManager:
     def __init__(self, root, state_dir, *, updater=None):
         self.root = Path(root)
+        self._uses_plan = updater is None
         if updater is None:
-            from strategy.market_data.foundations import update_foundation
-            updater = update_foundation
+            from strategy.application.foundation_planning import update_missing
+            updater = update_missing
         self.updater = updater
         self.repository = SQLiteTaskRepository(Path(state_dir)/'foundations.sqlite3', 'downloads')
         self.repository.interrupt(('queued','running'), '服务重启，请重新提交基础更新')
@@ -45,15 +46,23 @@ class FoundationUpdateManager:
         if (end-start).days>1096:
             raise UserError('INVALID_REQUEST','单次基础更新最多三年，请分段准备')
         token=request.get('token') or os.environ.get('TUSHARE_TOKEN')
-        if not isinstance(token,str) or not token.strip():
+        needs_token = True
+        if self._uses_plan:
+            from strategy.market_data.coverage import CoverageIndex
+            plan = CoverageIndex(self.root).plan(start.isoformat(),end.isoformat())
+            if plan['conflicts']:
+                raise UserError('DATA_VALIDATION_FAILED','请求区间存在数据冲突，请先核对来源')
+            needs_token = bool(plan['breadth_missing'])
+        if needs_token and (not isinstance(token,str) or not token.strip()):
             raise UserError('INVALID_REQUEST','请提供临时 Tushare token，或在启动服务前设置 TUSHARE_TOKEN')
-        if len(token)>512: raise UserError('INVALID_REQUEST','Tushare token 长度不合法')
+        if token is not None and not isinstance(token,str): raise UserError('INVALID_REQUEST','Tushare token 格式不合法')
+        if token and len(token)>512: raise UserError('INVALID_REQUEST','Tushare token 长度不合法')
         identifier=uuid4().hex
         with self._lock:
             if self._closed: raise UserError('INVALID_REQUEST','基础更新服务已关闭')
             # 不序列化原始 request：其中可能含用户凭据。
             self.repository.create(identifier,dict(start=start.isoformat(),end=end.isoformat()),datetime.now(timezone.utc).isoformat())
-            self._queue.put((identifier,token.strip()))
+            self._queue.put((identifier,token.strip() if token else None))
             return self.repository.get(identifier)
 
     def _worker(self):
@@ -76,7 +85,7 @@ class FoundationUpdateManager:
                 status='succeeded'
             except Exception as exc:
                 # 不记录供应商异常堆栈，避免第三方异常将请求凭据写入日志。
-                message=str(exc).replace(token,'[REDACTED]') if isinstance(exc,ValueError) else '基础数据更新失败，请检查连接或数据源权限后重试'
+                message=(str(exc).replace(token,'[REDACTED]') if token else str(exc)) if isinstance(exc,ValueError) else '基础数据更新失败，请检查连接或数据源权限后重试'
                 error=encode_error(diagnostic('DOWNLOAD_FAILED',message=message))
                 status='failed'
             finally:

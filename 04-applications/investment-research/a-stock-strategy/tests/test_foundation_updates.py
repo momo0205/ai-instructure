@@ -70,3 +70,15 @@ def test_catalog_reads_task_state_before_listing_published_versions(tmp_path,mon
     status,_=dispatch('GET','/api/data-management',None,tmp_path,None,foundations=Tasks())
     assert status==200
     assert calls==['tasks','catalog']
+
+
+def test_covered_foundation_reuses_without_credentials(tmp_path,monkeypatch):
+    from test_foundation_planning import seed
+    monkeypatch.delenv('TUSHARE_TOKEN',raising=False)
+    seed(tmp_path,['2026-01-05','2026-01-06'])
+    manager=module.FoundationUpdateManager(tmp_path,tmp_path/'state')
+    try:
+        manager.submit(dict(start='2026-01-05',end='2026-01-06'))
+        row=terminal(manager)
+        assert row['status']=='succeeded',row
+    finally:manager.close()

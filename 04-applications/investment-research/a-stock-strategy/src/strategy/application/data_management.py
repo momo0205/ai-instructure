@@ -22,6 +22,8 @@ def today_cn():
 class DataManagementService:
     def __init__(self, root):
         self.root = Path(root)
+        from strategy.market_data.coverage import CoverageIndex
+        self.coverage_index = CoverageIndex(self.root)
 
     def _foundation(self, identifier='real'):
         """分别读取指数和广度，不把指数末日误当成广度末日。"""
@@ -62,13 +64,27 @@ class DataManagementService:
         return [self._foundation(name) for name in names]
 
     def _select_readiness(self, asset, foundations=None):
+        from strategy.application.asset_coverage import asset_coverage
+        asset['coverage'] = asset_coverage(self.root,asset,self.coverage_index,(today_cn()-timedelta(days=1)).isoformat())
+        # 旧导入的非标准来源保留原来单版本验证；生产标准来源统一使用累计覆盖。
+        if not self.coverage_index.breadth.empty or self.coverage_index.conflicts:
+            intervals=asset['coverage']['research']
+            if not intervals:
+                return dict(status='blocked',start=None,end=None,foundation_id=None,reasons=['累计基础数据与行情没有连续两个交易日的共同覆盖；请查看时间轴中的缺口或冲突'])
+            best=max(intervals,key=lambda x:x['days'])
+            return dict(status='ready' if best['start']==asset['start'] and best['end']==asset['end'] else 'partial',
+                        start=best['start'],end=best['end'],foundation_id='cumulative',
+                        reasons=[] if len(intervals)==1 else ['存在多个独立可研究区间，默认选择最长区间；可在时间轴选择其他区间'])
         candidates = []
         for foundation in foundations or self._foundations():
             ready = self._readiness(asset, foundation)
             ready['foundation_id'] = foundation[0]['id']
             days = 0 if ready['status']=='blocked' else len(foundation[1].loc[foundation[1].date.between(ready['start'],ready['end'])])
             candidates.append((days, ready))
-        return max(candidates, key=lambda item:item[0])[1]
+        ready=max(candidates, key=lambda item:item[0])[1]
+        if ready['status']!='blocked':
+            asset['coverage']['research']=[dict(start=ready['start'],end=ready['end'],days=max(candidates,key=lambda item:item[0])[0])]
+        return ready
 
     def _readiness(self, asset, foundation):
         desc, index, breadth = foundation
@@ -120,21 +136,56 @@ class DataManagementService:
         except (ValueError,OSError,KeyError) as exc:
             legacy = []
             errors.append(f'旧研究版本目录不可用：{exc}')
-        return dict(today=today_cn().isoformat(), assets=assets, foundations=[f[0] for f in foundations], legacy_versions=legacy, errors=errors)
+        timeline_assets=list(assets)
+        from strategy.application.asset_coverage import asset_coverage
+        for version in legacy:
+            for instrument in version.get('instruments',[]):
+                if not instrument.get('backtest_supported'): continue
+                item=dict(instrument,id=version['id']+'::'+instrument['symbol'],dataset_id=version['id'],adjustment=version['adjustment'])
+                try:
+                    item['coverage']=asset_coverage(self.root,item,self.coverage_index,(today_cn()-timedelta(days=1)).isoformat())
+                    timeline_assets.append(item)
+                except (ValueError,OSError,KeyError) as exc:
+                    errors.append(f"{item['id']}：{exc}")
+        return dict(timeline_assets=timeline_assets,coverage=self.coverage_index.summary(),today=today_cn().isoformat(), assets=assets, foundations=[f[0] for f in foundations], legacy_versions=legacy, errors=errors)
 
     def detail(self, identifier):
         item = detail_asset(self.root,identifier)
         item['readiness'] = self._select_readiness(item)
         return item
 
-    def prepare_research(self, identifier):
+    def prepare_research(self, identifier, *, start=None, end=None):
         """显式准备共同覆盖的研究版本；源资产和旧任务永不修改。"""
-        asset = self.detail(identifier)
+        return self._prepare_asset(self.detail(identifier),start=start,end=end)
+
+    def prepare_legacy(self, dataset_id, symbol, *, start=None, end=None):
+        """旧研究版本也通过同一组装流程，不能将累计覆盖误用于旧冻结输入。"""
+        version=next((v for v in datasets(self.root) if v['id']==dataset_id and not v['sample']),None)
+        if version is None: raise UserError('INVALID_REQUEST','研究数据版本不存在')
+        instrument=next((i for i in version['instruments'] if i['symbol']==symbol and i['backtest_supported']),None)
+        if instrument is None: raise UserError('INVALID_REQUEST','该版本未包含可研究证券')
+        asset=dict(instrument,id=dataset_id,dataset_id=dataset_id,adjustment=version['adjustment'],source=version['market_source'],warnings=version['warnings'])
+        asset['readiness']=self._select_readiness(asset)
+        return self._prepare_asset(asset,start=start,end=end)
+
+    def _prepare_asset(self, asset, *, start=None, end=None):
+        identifier=asset['id']
         ready = asset['readiness']
         if ready['status']=='blocked':
             raise UserError('DATA_COVERAGE_INCOMPLETE','；'.join(ready['reasons']))
+        if start is not None or end is not None:
+            try:
+                valid=isinstance(start,str) and isinstance(end,str) and start<end and any(span['start']<=start<=end<=span['end'] for span in asset['coverage']['research'])
+                if not valid: raise ValueError
+                if pd.Timestamp(start).date().isoformat()!=start or pd.Timestamp(end).date().isoformat()!=end: raise ValueError
+            except (ValueError,TypeError):
+                raise UserError('DATA_COVERAGE_INCOMPLETE','所选区间不在连续可研究覆盖内') from None
+            ready=dict(ready,start=start,end=end)
         request = dict(symbol=asset['symbol'],start=ready['start'],end=ready['end'])
-        repository = LocalDatasetRepository(self.root, baseline_id=ready['foundation_id'])
+        baseline=ready['foundation_id']
+        if baseline=='cumulative':
+            baseline=self.coverage_index.snapshot(ready['start'],ready['end'])
+        repository = LocalDatasetRepository(self.root, baseline_id=baseline)
         prepared = repository.prepare(uuid4().hex)
         try:
             source = self.root/'data'/identifier
