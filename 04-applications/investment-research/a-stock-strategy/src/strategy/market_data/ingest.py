@@ -94,7 +94,7 @@ def _write_csv(frame, path):
 
 
 def download_tushare_daily(start, end, output_dir, token=None, requester=None, *,
-                           sleeper=time.sleep, min_daily_records=4000):
+                           sleeper=time.sleep, min_daily_records=4000, progress=None):
     """Download daily cross sections with raw caches and publish breadth + manifest.
 
     requester(payload) returns a Tushare response dict. Tokens are read from
@@ -115,6 +115,8 @@ def download_tushare_daily(start, end, output_dir, token=None, requester=None, *
     requester = requester or _request
     frames, empty_dates, hashes = [], [], {}
     day, stop = datetime.fromisoformat(first), datetime.fromisoformat(last)
+    total = len(pd.bdate_range(first, last))
+    completed = 0
     while day <= stop:
         date = day.date().isoformat()
         day += timedelta(days=1)
@@ -162,6 +164,10 @@ def download_tushare_daily(start, end, output_dir, token=None, requester=None, *
             empty_dates.append(date)
         else:
             frames.append(daily)
+        completed += 1
+        if progress:
+            progress(dict(stage='breadth', date=date, completed=completed, total=total,
+                          message=f'全市场截面 {completed}/{total} 个工作日，已处理 {date}'))
     combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=_REQUIRED)
     breadth = build_breadth(combined, 'tushare.daily', min_daily_records=min_daily_records)
     manifest = {'source': 'tushare.daily', 'source_url': 'https://tushare.pro/document/2?doc_id=27',

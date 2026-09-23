@@ -134,3 +134,13 @@ def test_download_rejects_wrong_day_and_does_not_publish(tmp_path):
     with pytest.raises(ValueError, match='日期'):
         download('20240102', '20240102', tmp_path, token='secret', requester=lambda _: response([['20240103', '600000.SH', -1]]), sleeper=lambda _: None, min_daily_records=1)
     assert not (tmp_path / 'breadth.csv').exists()
+
+
+def test_download_reports_completed_days_without_secrets(tmp_path):
+    _, download = api()
+    updates=[]
+    download('2024-01-05','2024-01-08',tmp_path,token='private-test',
+             requester=lambda _:response([]),sleeper=lambda _:None,progress=updates.append)
+    assert updates[-1]['completed']==updates[-1]['total']==2
+    assert updates[-1]['date']=='2024-01-08'
+    assert 'private-test' not in json.dumps(updates)

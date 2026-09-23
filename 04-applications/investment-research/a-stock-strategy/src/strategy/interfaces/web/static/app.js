@@ -265,7 +265,7 @@ async function init() {
   datasetFields();strategyFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
   await refresh();await refreshData();
   // 串行轮询，避免长任务或慢磁盘时叠加请求。只自动更新尚未结束的详情。
-  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&jobNeedsRefresh(j));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status)))await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
+  setInterval(async()=>{if(state.busy)return;state.busy=true;try{const pending=state.jobs.some(j=>j.id===state.selected&&jobNeedsRefresh(j));await refresh();if(pending)await showJob(state.selected);if(state.downloads.some(j=>['queued','running'].includes(j.status))||dataManager?.hasPending())await refreshData();}catch(e){notice(`连接中断：${e.message}`);}finally{state.busy=false;}},2000);
 }
 init().catch(e=>notice(e.message));
 

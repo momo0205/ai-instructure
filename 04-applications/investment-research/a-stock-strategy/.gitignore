@@ -11,3 +11,6 @@ build/
 data/asset_*/
 data/.asset_download_*/
 data/.download_*/
+
+data/foundation_*/
+data/.foundation_*/

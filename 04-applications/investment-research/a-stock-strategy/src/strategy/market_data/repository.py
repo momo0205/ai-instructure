@@ -22,9 +22,15 @@ def verify_manifests(folder):
         ('manifest.json', 'breadth.csv', 'breadth_sha256'),
     ):
         path = folder/manifest_name
+        if folder.name.startswith('foundation_') and not path.is_file():
+            raise UserError('DATA_VALIDATION_FAILED', '基础数据缺少必需清单')
         if path.is_file():
             manifest = json.loads(path.read_text())
+            if not isinstance(manifest, dict):
+                raise UserError('DATA_VALIDATION_FAILED', '数据清单必须为对象')
             expected = manifest.get(field)
+            if folder.name.startswith('foundation_') and not re.fullmatch(r'[0-9a-f]{64}', str(expected or '')):
+                raise UserError('DATA_VALIDATION_FAILED', '基础数据清单缺少必需哈希')
             if expected is not None and expected != hashlib.sha256((folder/filename).read_bytes()).hexdigest():
                 raise UserError('DATA_VALIDATION_FAILED', f'{filename} hash mismatch：数据正在更新或清单已过期，请重新下载后重试')
 
@@ -99,8 +105,11 @@ class DatasetRepository(Protocol):
 
 
 class LocalDatasetRepository:
-    def __init__(self, root):
+    def __init__(self, root, baseline_id='real'):
+        if not isinstance(baseline_id, str) or not re.fullmatch(r'real|foundation_[0-9a-f]+', baseline_id):
+            raise UserError('DATA_VALIDATION_FAILED', 'invalid baseline identifier')
         self.root = Path(root)
+        self.baseline_id = baseline_id
 
     def list(self):
         return datasets(self.root)
@@ -109,7 +118,7 @@ class LocalDatasetRepository:
         """冻结基线并准备提供方输出目录，尚不暴露可回测版本。"""
         if not isinstance(identifier, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', identifier):
             raise UserError('DATA_VALIDATION_FAILED', 'invalid dataset identifier')
-        base = self.root/'data'/'real'
+        base = self.root/'data'/self.baseline_id
         verify_manifests(base)
         stage = self.root/'data'/('.download_'+identifier)
         stage.mkdir(parents=True)
@@ -121,6 +130,15 @@ class LocalDatasetRepository:
         if any(hashlib.sha256((base/name).read_bytes()).hexdigest()!=digest or hashlib.sha256((stage/name).read_bytes()).hexdigest()!=digest for name,digest in hashes.items()):
             raise UserError('DATA_VALIDATION_FAILED', '基线数据在复制时变化，请重试')
         verify_manifests(stage)
+        # 新基础版本的证据路径相对于基础目录；研究版本只复制表格，
+        # 因此显式保留指向不可变来源的引用，避免重命名后留下悬空路径。
+        breadth_path = stage/'manifest.json'
+        if breadth_path.is_file():
+            breadth_manifest = json.loads(breadth_path.read_text())
+            if breadth_manifest.get('raw_dir_base') == 'dataset_root' and breadth_manifest.get('raw_dir'):
+                breadth_manifest['raw_dir'] = str((base/breadth_manifest['raw_dir']).resolve())
+                breadth_manifest['raw_dir_base'] = 'absolute'
+                breadth_path.write_text(json.dumps(breadth_manifest, ensure_ascii=False, indent=2))
         old_manifest = json.loads((stage/'market_manifest.json').read_text()) if (stage/'market_manifest.json').exists() else {}
         config_path = self.root/'configs'/'real_breadth.toml'
         config = tomllib.loads(config_path.read_text()) if config_path.is_file() else {}
@@ -137,7 +155,7 @@ class LocalDatasetRepository:
         """合并已下载文件并原子发布。调用方负责获取数据，仓库负责其合同。"""
         identifier, stage = prepared.identifier, prepared.stage
         hashes, old_manifest, adjustment = prepared.hashes, prepared.old_manifest, prepared.adjustment
-        base, download = self.root/'data'/'real', stage/'download'
+        base, download = self.root/'data'/self.baseline_id, stage/'download'
         if metadata.get('symbol') != request['symbol']:
             raise UserError('DATA_VALIDATION_FAILED', '证券元数据代码不匹配')
         downloaded_manifest = json.loads((download/'market_manifest.json').read_text())
@@ -194,11 +212,11 @@ class LocalDatasetRepository:
                 parent_provenance['raw_dir_base'] = 'unknown'
         manifest = dict(old_manifest, created_at=datetime.now(timezone.utc).isoformat(), source='managed baseline + '+downloaded_manifest.get('source', 'unknown'), adjustment=adjustment,
                         market_sha256=hashlib.sha256((stage/'market.csv').read_bytes()).hexdigest(),
-                        parent_dataset='real', parent_hashes=hashes, download=downloaded_manifest,
+                        parent_dataset=self.baseline_id, parent_hashes=hashes, download=downloaded_manifest,
                         parent_provenance=parent_provenance,
                         instruments={**old_manifest.get('instruments', {}), request['symbol']:metadata}, updated_symbol=request['symbol'],
                         symbols=sorted(merged.symbol.unique().tolist()), rows=len(merged),
-                        symbol_sources={symbol: downloaded_manifest if symbol==request['symbol'] else {'dataset':'real','market_sha256':hashes['market.csv']} for symbol in merged.symbol.unique()},
+                        symbol_sources={symbol: downloaded_manifest if symbol==request['symbol'] else {'dataset':self.baseline_id,'market_sha256':hashes['market.csv']} for symbol in merged.symbol.unique()},
                         warnings=list(old_manifest.get('warnings', []))+list(downloaded_manifest.get('warnings', []))+['新增证券只覆盖下载区间；同代码旧行情整段移除，避免前复权基准拼接。',
                             '支持范围由当前交易规则目录决定。基线与新增行情分别保留来源；历史基线量额单位可能未经验证，成交量因子结果须谨慎解读。'])
         # 混合版本不能把某一次下载的量额单位冒充为整个数据集的统一声明。

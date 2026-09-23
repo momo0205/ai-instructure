@@ -23,9 +23,9 @@ class DataManagementService:
     def __init__(self, root):
         self.root = Path(root)
 
-    def _foundation(self):
+    def _foundation(self, identifier='real'):
         """分别读取指数和广度，不把指数末日误当成广度末日。"""
-        folder = self.root/'data'/'real'
+        folder = self.root/'data'/identifier
         index, breadth, errors = pd.DataFrame(), pd.DataFrame(), []
         try:
             verify_manifests(folder)
@@ -41,10 +41,14 @@ class DataManagementService:
         manifest = {}
         try:
             path = folder/'market_manifest.json'
-            if path.exists(): manifest = json.loads(path.read_text())
+            if path.exists():
+                manifest = json.loads(path.read_text())
+                if not isinstance(manifest, dict):
+                    manifest = {}
+                    raise ValueError('数据清单必须为对象')
         except (ValueError, OSError) as exc:
             errors.append(f'基线清单不可用：{exc}')
-        descriptor = dict(id='real', name='现有市场研究基线', adjustment=manifest.get('adjustment'),
+        descriptor = dict(id=identifier, name='现有市场研究基线' if identifier=='real' else '市场基础版本 · '+identifier[-8:], adjustment=manifest.get('adjustment'),
                           index_start=None,index_end=None,breadth_start=None,breadth_end=None,
                           calendar_status='由现有指数日期观察，尚无独立交易日历服务', errors=errors)
         for prefix, frame in [('index',index),('breadth',breadth)]:
@@ -52,6 +56,19 @@ class DataManagementService:
                 descriptor[prefix+'_start'] = pd.Timestamp(frame.date.min()).date().isoformat()
                 descriptor[prefix+'_end'] = pd.Timestamp(frame.date.max()).date().isoformat()
         return descriptor, index, breadth
+
+    def _foundations(self):
+        names = ['real'] + sorted(p.name for p in (self.root/'data').glob('foundation_*') if p.is_dir())
+        return [self._foundation(name) for name in names]
+
+    def _select_readiness(self, asset, foundations=None):
+        candidates = []
+        for foundation in foundations or self._foundations():
+            ready = self._readiness(asset, foundation)
+            ready['foundation_id'] = foundation[0]['id']
+            days = 0 if ready['status']=='blocked' else len(foundation[1].loc[foundation[1].date.between(ready['start'],ready['end'])])
+            candidates.append((days, ready))
+        return max(candidates, key=lambda item:item[0])[1]
 
     def _readiness(self, asset, foundation):
         desc, index, breadth = foundation
@@ -85,8 +102,8 @@ class DataManagementService:
                     reasons=[f'仅共同区间可运行；其余日期仍缺少指数、广度或终盘确认'] if partial else [])
 
     def catalog(self):
-        foundation = self._foundation()
-        errors = list(foundation[0]['errors'])
+        foundations = self._foundations()
+        errors = [f"{f[0]['id']}：{error}" for f in foundations for error in f[0]['errors']]
         assets = []
         # 各资产隔离处理：一份坏文件不使整个数据页面失效。
         for folder in sorted((self.root/'data').glob('asset_*')):
@@ -95,7 +112,7 @@ class DataManagementService:
                 item = detail_asset(self.root,folder.name)
                 item.pop('preview',None)
                 item.pop('manifest',None)
-                item['readiness'] = self._readiness(item,foundation)
+                item['readiness'] = self._select_readiness(item,foundations)
                 assets.append(item)
             except (ValueError,OSError,KeyError) as exc:
                 errors.append(f'{folder.name}：{exc}')
@@ -103,11 +120,11 @@ class DataManagementService:
         except (ValueError,OSError,KeyError) as exc:
             legacy = []
             errors.append(f'旧研究版本目录不可用：{exc}')
-        return dict(today=today_cn().isoformat(), assets=assets, foundations=[foundation[0]], legacy_versions=legacy, errors=errors)
+        return dict(today=today_cn().isoformat(), assets=assets, foundations=[f[0] for f in foundations], legacy_versions=legacy, errors=errors)
 
     def detail(self, identifier):
         item = detail_asset(self.root,identifier)
-        item['readiness'] = self._readiness(item,self._foundation())
+        item['readiness'] = self._select_readiness(item)
         return item
 
     def prepare_research(self, identifier):
@@ -117,7 +134,7 @@ class DataManagementService:
         if ready['status']=='blocked':
             raise UserError('DATA_COVERAGE_INCOMPLETE','；'.join(ready['reasons']))
         request = dict(symbol=asset['symbol'],start=ready['start'],end=ready['end'])
-        repository = LocalDatasetRepository(self.root)
+        repository = LocalDatasetRepository(self.root, baseline_id=ready['foundation_id'])
         prepared = repository.prepare(uuid4().hex)
         try:
             source = self.root/'data'/identifier
