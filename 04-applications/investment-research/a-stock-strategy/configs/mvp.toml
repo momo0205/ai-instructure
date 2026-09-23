@@ -1,0 +1,35 @@
+# Synthetic example. Calendar includes weekdays, not an exchange calendar.
+[data]
+source = "synthetic-fixture"
+path = "../data/mvp_sample/market.csv"
+adjustment = "none"
+[strategy]
+name = "fixed_asset"
+[strategy.parameters]
+symbol = "588000.SH"
+candidate_symbols = ["588000.SH", "510300.SH", "159915.SZ"]
+momentum_window = 20
+reversal_window = 3
+volatility_window = 20
+volume_window = 5
+weights = { momentum = 0.0, reversal = 1.0, volatility = -0.25, volume = 0.0 }
+[backtest]
+initial_cash = 100000.0
+holding_period_days = 1
+lot_size = 100
+[market]
+index_symbol = "000001.SH"
+min_declining_count = 4000
+trigger_return_threshold = -0.01
+breadth_path = "../data/mvp_sample/breadth.csv"
+[costs]
+commission_rate = 0.0003
+stamp_duty_rate = 0.0
+minimum_commission = 5.0
+slippage_bps = 2.0
+[metadata]
+source = "synthetic-fixture-NOT-real-market"
+sample = true
+offline = true
+llm_enabled = false
+warnings = ["SYNTHETIC DATA: returns only validate software, not this strategy.", "Dynamic ranking uses candidate ETF price features, not sector-level stock breadth."]

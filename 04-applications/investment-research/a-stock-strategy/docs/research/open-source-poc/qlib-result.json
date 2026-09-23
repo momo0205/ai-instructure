@@ -1,0 +1,19 @@
+{
+  "qlib_version": "0.9.7",
+  "sessions": 485,
+  "feature_rows": 1455,
+  "recorder_id": "1722c265c50a4659834acb555ff2cf64",
+  "metrics": {
+    "feature_rows": 1455.0,
+    "sessions": 485.0,
+    "backtest_sessions": 447.0,
+    "final_account": 133504.06639056624
+  },
+  "data_and_factor_verified": true,
+  "artifact_roundtrip_verified": true,
+  "builtin_backtest_verified": true,
+  "limitations": [
+    "No model training or engine equivalence checked",
+    "qfq factor placeholder; volume units unverified"
+  ]
+}
