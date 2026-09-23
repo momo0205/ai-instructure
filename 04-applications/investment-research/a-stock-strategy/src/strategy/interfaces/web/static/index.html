@@ -98,7 +98,18 @@
 <div id="composition-members"></div><button id="composition-check" type="button">检查组合</button> <button id="composition-publish" type="button" disabled>创建组合数据集</button>
 <p id="composition-status" role="status" aria-live="polite"></p><div id="composition-preview"></div></details>
 </section>
-<section data-data-panel="foundations" hidden><div id="data-foundations"></div></section>
+<section data-data-panel="foundations" hidden>
+<div class="data-security"><h3>更新市场基础数据</h3>
+<p class="hint">同时获取上证指数和全市场涨跌家数，校验日期一致后发布新版本。已保存的行情、研究版本和回测结果保留。</p>
+<form id="foundation-form" class="form-grid">
+<label>起始日期<input id="foundation-start" type="date" required></label>
+<label>结束日期<input id="foundation-end" type="date" required></label>
+<label>Tushare 临时 token<input id="foundation-token" type="password" autocomplete="off" maxlength="512" placeholder="服务器已配置时可留空"></label>
+<button id="foundation-submit" type="submit">更新指数与市场广度</button>
+</form><p id="foundation-credentials" class="hint"></p>
+<p class="hint">凭据仅用于本次后台任务，不写入任务记录或行情文件。广度逐日限速下载，较长区间可能需要数分钟；结束日期最多为昨天。</p>
+<p id="foundation-notice" role="status"></p><div id="foundation-updates"></div></div>
+<div id="data-foundations"></div></section>
 <section data-data-panel="downloads" hidden><h3>下载与更新任务</h3><p class="hint">完成表示行情已保存；请查看行情详情，确认覆盖与策略依赖。</p><div id="downloads"></div></section>
 </section>
 </section>

@@ -41,13 +41,21 @@ def check_write_request(headers, port: int) -> None:
         raise ValueError('请求大小不合法（上限 64 KB）')
 
 
-def dispatch(method, path, payload, root, manager, downloads=None, studies=None):
+def dispatch(method, path, payload, root, manager, downloads=None, studies=None, foundations=None):
     """返回 (HTTP 状态码, JSON 对象)，便于脱离网络测试业务路由。"""
     try:
         if method == 'GET':
+            if path == '/api/foundation-updates' and foundations is not None:
+                return 200, foundations.list()
             if path == '/api/data-management':
                 from strategy.application.data_management import DataManagementService
-                return 200, DataManagementService(root).catalog()
+                import os
+                # 先读取任务状态，避免目录扫描后恰好完成发布而提前停止轮询。
+                updates = foundations.list() if foundations is not None else []
+                result = DataManagementService(root).catalog()
+                result['foundation_updates'] = updates
+                result['foundation_credentials_configured'] = bool(os.environ.get('TUSHARE_TOKEN','').strip())
+                return 200, result
             if path.startswith('/api/data-assets/') and path.count('/') == 3:
                 from strategy.application.data_management import DataManagementService
                 return 200, DataManagementService(root).detail(path.split('/')[3])
@@ -81,6 +89,8 @@ def dispatch(method, path, payload, root, manager, downloads=None, studies=None)
         if method == 'POST':
             if not isinstance(payload, dict):
                 return 400, error_response(diagnostic('INVALID_REQUEST'))
+            if path == '/api/foundation-updates' and foundations is not None:
+                return 202, foundations.submit(payload)
             if path.startswith('/api/data-assets/') and path.endswith('/research') and path.count('/') == 4:
                 from strategy.application.data_management import DataManagementService
                 if payload:
@@ -127,6 +137,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None, *,
     manager = None
     downloads = None
     studies = None
+    foundations = None
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, data, content_type='application/json; charset=utf-8'):
@@ -145,7 +156,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None, *,
                 check_host(self.headers, self.server.server_port)
                 path = urlsplit(self.path).path
                 if path.startswith('/api/'):
-                    self.send(*dispatch('GET', path, None, root, manager, downloads, studies))
+                    self.send(*dispatch('GET', path, None, root, manager, downloads, studies, foundations))
                 else:
                     resource = static_file(path)
                     mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[resource.suffix]
@@ -157,7 +168,7 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None, *,
             try:
                 check_write_request(self.headers, self.server.server_port)
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-                self.send(*dispatch('POST', urlsplit(self.path).path, payload, root, manager, downloads, studies))
+                self.send(*dispatch('POST', urlsplit(self.path).path, payload, root, manager, downloads, studies, foundations))
             except (ValueError, UnicodeDecodeError) as error:
                 self.send(400, error_response(diagnostic('INVALID_REQUEST')))
 
@@ -171,6 +182,8 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None, *,
         studies = StudyManager(manager)
         from strategy.application.downloads import DownloadManager
         downloads = DownloadManager(root, state_dir or root / 'reports' / 'workbench')
+        from strategy.application.foundation_updates import FoundationUpdateManager
+        foundations = FoundationUpdateManager(root, state_dir or root / 'reports' / 'workbench')
         print(f'回测工作台：http://127.0.0.1:{server.server_port}', flush=True)
         server.serve_forever()
     except KeyboardInterrupt:
@@ -184,3 +197,5 @@ def serve(root: Path, port: int = 8765, state_dir: Path | None = None, *,
             manager.close()
         if downloads is not None:
             downloads.close()
+        if foundations is not None:
+            foundations.close()
