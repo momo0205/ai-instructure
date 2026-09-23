@@ -17,7 +17,7 @@ from strategy.application.research import ResearchService, ResearchUnavailable
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
              '/app.js': 'app.js', '/tabs.js': 'tabs.js', '/style.css': 'style.css',
-             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js'}
+             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js', '/timeline.js': 'timeline.js'}
     if path not in files:
         raise ValueError('资源不存在')
     return Path(__file__).parent / 'static' / files[path]
@@ -89,13 +89,20 @@ def dispatch(method, path, payload, root, manager, downloads=None, studies=None,
         if method == 'POST':
             if not isinstance(payload, dict):
                 return 400, error_response(diagnostic('INVALID_REQUEST'))
+            if path == '/api/foundation-updates/preview':
+                from strategy.application.foundation_planning import preview_update
+                return 200, preview_update(root,payload)
             if path == '/api/foundation-updates' and foundations is not None:
                 return 202, foundations.submit(payload)
             if path.startswith('/api/data-assets/') and path.endswith('/research') and path.count('/') == 4:
                 from strategy.application.data_management import DataManagementService
-                if payload:
-                    raise ValueError('研究准备不接受额外参数，请使用资产共同覆盖区间')
-                return 201, DataManagementService(root).prepare_research(path.split('/')[3])
+                if set(payload) not in (set(),{'start','end'}):
+                    raise ValueError('研究准备仅接受 start、end 区间')
+                return 201, DataManagementService(root).prepare_research(path.split('/')[3],**payload)
+            if path.startswith('/api/datasets/') and path.endswith('/research') and path.count('/')==4:
+                from strategy.application.data_management import DataManagementService
+                if set(payload)!={'symbol','start','end'}: raise ValueError('需要证券代码及研究区间')
+                return 201, DataManagementService(root).prepare_legacy(path.split('/')[3],**payload)
             if path == '/api/jobs/from-selection':
                 from strategy.application.direct_inputs import submit_selection
                 return 202, submit_selection(manager,payload)
