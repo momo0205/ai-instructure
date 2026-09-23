@@ -159,6 +159,15 @@ class CoverageIndex:
                     conflicts=[c for c in self.conflicts if start<=c['date']<=end],
                     reused_index_days=len(expected&index),reused_breadth_days=len(expected&breadth))
 
+    def snapshot_key(self,start,end):
+        """实际选中表格及其来源语义的摘要，不依赖新生成的目录名。"""
+        payload=dict(start=start,end=end,
+            index=self.index[self.index.date.between(start,end)].to_csv(index=False),
+            breadth=self.breadth[self.breadth.date.between(start,end)].to_csv(index=False),
+            sources=self.sources,empty_dates=sorted(d for d in self.closed_dates if start<=d<=end),
+            adjustment='qfq',universe='SH_SZ_BJ',schema=1)
+        return hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
     def snapshot(self,start,end,identifier=None,*,reusable=False):
         plan=self.plan(start,end); start,end=plan['start'],plan['end']
         if plan['index_missing'] or plan['breadth_missing'] or plan['conflicts']:
@@ -169,6 +178,30 @@ class CoverageIndex:
         # observed closure. Research snapshots still require two sessions.
         if (not reusable and len(index)<2) or _dates(index.date)!=_dates(breadth.date):
             raise UserError('DATA_VALIDATION_FAILED','基础数据需要至少两个完整交易日')
+        # 内容与依赖语义共同决定身份；日期相同并不足以复用。
+        reuse_key=self.snapshot_key(start,end)
+        warnings=list(dict.fromkeys([warning for source in self.sources for manifest in source.get('manifests',{}).values() for warning in manifest.get('warnings',[])]+[
+            '全市场广度完整性未经独立验证；停牌证券可能不包含在每日截面中。',
+            '休市仅依据已留存的空响应推断，未使用独立交易日历验证。']))
+        common=dict(snapshot_key=reuse_key,warnings=warnings,complete_universe_verified=False,
+                    calendar_status='observed_empty_responses_not_independent_calendar',coverage_snapshot=not reusable,start=start,end=end,sources=self.sources,
+                    coverage_dates=sorted(_dates(index.date)),empty_dates=sorted(d for d in self.closed_dates if start<=d<=end))
+        if identifier is None and not reusable:
+            from strategy.market_data.repository import verify_manifests
+            for candidate in sorted((self.root/'data').glob('foundation_*')):
+                try:
+                    market=json.loads((candidate/'market_manifest.json').read_text())
+                    breadth_manifest=json.loads((candidate/'manifest.json').read_text())
+                    expected_market=dict(common,foundation_id=candidate.name,source='cumulative.index',adjustment='qfq',symbols=['000001.SH'],
+                        market_sha256=hashlib.sha256(index.to_csv(index=False).encode()).hexdigest())
+                    expected_breadth=dict(common,foundation_id=candidate.name,source='tushare.daily',universe='SH_SZ_BJ',
+                        breadth_sha256=hashlib.sha256(breadth.to_csv(index=False).encode()).hexdigest())
+                    if market!=expected_market or breadth_manifest!=expected_breadth:
+                        continue
+                    verify_manifests(candidate)
+                    return candidate.name
+                except (ValueError,OSError,KeyError,TypeError):
+                    continue
         identifier=identifier or uuid.uuid4().hex
         if not isinstance(identifier,str) or not re.fullmatch('[0-9a-f]+',identifier): raise ValueError('invalid foundation identifier')
         data=self.root/'data'; data.mkdir(parents=True,exist_ok=True)
@@ -177,15 +210,9 @@ class CoverageIndex:
         stage.mkdir()
         try:
             index.to_csv(stage/'market.csv',index=False); breadth.to_csv(stage/'breadth.csv',index=False)
-            warnings=list(dict.fromkeys([warning for source in self.sources for manifest in source.get('manifests',{}).values() for warning in manifest.get('warnings',[])]+[
-                '全市场广度完整性未经独立验证；停牌证券可能不包含在每日截面中。',
-                '休市仅依据已留存的空响应推断，未使用独立交易日历验证。']))
-            common=dict(warnings=warnings,complete_universe_verified=False,
-                        calendar_status='observed_empty_responses_not_independent_calendar',coverage_snapshot=not reusable,foundation_id=final.name,start=start,end=end,sources=self.sources,
-                        coverage_dates=sorted(_dates(index.date)),empty_dates=sorted(d for d in self.closed_dates if start<=d<=end))
             for name,file,field,extra in [('market_manifest.json','market.csv','market_sha256',dict(source='cumulative.index',adjustment='qfq',symbols=['000001.SH'])),
                                           ('manifest.json','breadth.csv','breadth_sha256',dict(source='tushare.daily',universe='SH_SZ_BJ'))]:
-                manifest=dict(common,**extra,**{field:hashlib.sha256((stage/file).read_bytes()).hexdigest()})
+                manifest=dict(common,foundation_id=final.name,**extra,**{field:hashlib.sha256((stage/file).read_bytes()).hexdigest()})
                 (stage/name).write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
             stage.rename(final)
         except Exception:

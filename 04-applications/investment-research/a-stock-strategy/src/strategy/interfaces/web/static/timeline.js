@@ -7,11 +7,8 @@
     if(![start,end,a,b].every(Number.isFinite)||end<start||b<a)return null;
     return {x:(a-start)/(end-start+1)*1000,width:(b-a+1)/(end-start+1)*1000};
   }
-  function groupAssets(assets){
-    const groups=new Map();
-    for(const asset of assets||[]){const key=asset.symbol||asset.id;if(!groups.has(key))groups.set(key,{symbol:key,name:asset.name||'',versions:[]});groups.get(key).versions.push(asset);}
-    return [...groups.values()];
-  }
+  const versions=root.DataVersions||(typeof require==='function'?require('./data-versions.js'):null);
+  const groupAssets=versions.groupAssets;
   function create({onResearch,onFill,onMarketFill}={}){
     let disclosures=[];
     const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
@@ -42,12 +39,16 @@
       if(coverage.calendar_status&&coverage.calendar_status!=='ready')host.append(el('p','休市日期根据已保留的数据源空响应判断，尚未通过独立交易日历验证。','hint'));
       for(const error of coverage.errors||[])host.append(el('p',typeof error==='string'?error:JSON.stringify(error),'hint'));
       function disclosure(parent,key,label){const d=el('details',undefined,'timeline-disclosure');d.open=opened.get(key)||false;d.append(el('summary',label));disclosures.push([key,d]);parent.append(d);return d;}
+      function assetRows(parent,asset){const c=asset.coverage||{};
+        row(parent,'行情覆盖',c.market?.length?c.market:(asset.start&&asset.end?[{start:asset.start,end:asset.end}]:[]),'market');
+        row(parent,'可研究区间',versions.research(asset),'research',onResearch?{label:'研究此区间',run:i=>onResearch(asset.id,i.start,i.end)}:null);
+        const missing=(c.missing||[]).filter(i=>i.reason!=='缺少证券行情');if(missing.length)row(parent,'缺失基础数据',missing,'missing',onFill?{label:'补齐基础数据',run:i=>onFill(i.start,i.end)}:null);
+        const quoteGaps=(c.missing||[]).filter(i=>i.reason==='缺少证券行情');if(quoteGaps.length)row(parent,'行情缺口',quoteGaps,'missing',onMarketFill?{label:'重新下载行情',run:i=>onMarketFill(asset.id,i.start,i.end)}:null);
+        const info=disclosure(parent,'asset:'+asset.id,'来源与校验详情');info.append(el('p',asset.id,'hint'));for(const warning of c.warnings||[])info.append(el('p',typeof warning==='string'?warning:JSON.stringify(warning),'hint'));
+      }
       for(const group of groupAssets(assets)){
-        const section=disclosure(host,'symbol:'+group.symbol,group.symbol+' '+group.name+' · '+group.versions.length+' 个行情版本');
-        for(const asset of group.versions){const version=disclosure(section,'asset:'+asset.id,'行情版本 '+asset.id+' · '+(asset.start||'—')+' 至 '+(asset.end||'—'));const c=asset.coverage||{};
-          row(version,'行情覆盖',c.market,'market');row(version,'可研究区间',c.research,'research',onResearch?{label:'研究此区间',run:i=>onResearch(asset.id,i.start,i.end)}:null);row(version,'缺失基础数据',(c.missing||[]).filter(i=>i.reason!=='缺少证券行情'),'missing',onFill?{label:'补齐基础数据',run:i=>onFill(i.start,i.end)}:null);const quoteGaps=(c.missing||[]).filter(i=>i.reason==='缺少证券行情');if(quoteGaps.length)row(version,'行情缺口',quoteGaps,'missing',onMarketFill?{label:'重新下载行情',run:i=>onMarketFill(asset.id,i.start,i.end)}:null);
-          for(const warning of c.warnings||[])version.append(el('p',typeof warning==='string'?warning:JSON.stringify(warning),'hint'));
-        }
+        const section=el('section',undefined,'timeline-security');section.append(el('h3',(group.name&&group.name!==group.symbol?group.name+' · ':'')+group.symbol),el('span','推荐数据','status'));host.append(section);assetRows(section,group.recommended);
+        if(group.alternatives.length){const history=disclosure(section,'symbol:'+group.symbol,'其他与历史版本（'+group.alternatives.length+'）');for(const asset of group.alternatives){const version=disclosure(history,'history:'+asset.id,(asset.start||'—')+' 至 '+(asset.end||'—'));assetRows(version,asset);}}
       }
       if(!assets.length)host.append(el('p','暂无证券行情版本。','hint'));
     }
