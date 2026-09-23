@@ -1,6 +1,9 @@
 /* 只切换面板可见性，不重建表单；后台刷新不改变用户当前标签页。 */
 (function(root){
   function createTabs(buttons,panels){
+    // 主导航只处理自身 data-tab，不改变数据模块的独立子导航。
+    buttons=buttons.filter(b=>typeof b.dataset.tab==='string');
+    panels=panels.filter(p=>typeof p.dataset.tab==='string');
     const ids=buttons.map(b=>b.dataset.tab);
     function select(id,focus=false){
       if(!ids.includes(id))return false;

@@ -13,3 +13,4 @@ test('tabs preserve panels and synchronize selection, visibility and focus',()=>
  tabs.keydown('data',{key:'Home',preventDefault(){}});assert.equal(panels[0].hidden,false);
  assert.equal(tabs.select('invalid'),false);assert.equal(panels[0].hidden,false);
 });
+test('main tabs never change nested data navigation',()=>{const {buttons,panels}=fixture();const nested={dataset:{dataTab:'assets'},attrs:{'aria-selected':'true'},setAttribute(k,v){this.attrs[k]=v;}};const tabs=createTabs([...buttons,nested],panels);tabs.select('history');assert.equal(nested.attrs['aria-selected'],'true');assert.equal(nested.onclick,undefined);});
