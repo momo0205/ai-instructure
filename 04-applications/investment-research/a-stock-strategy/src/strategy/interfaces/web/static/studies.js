@@ -5,6 +5,7 @@
   const labels={queued:'排队中',selecting:'前段筛选中',validating:'后段验证中',completed:'已完成',failed:'失败',cancelled:'已取消',interrupted:'已中断',no_candidate:'无合格候选',succeeded:'已完成',running:'运行中'};
   const supportsGrid=base=>['price_momentum','qlib_momentum'].includes(base.request?.strategy_id);
   function parseStudy(base,text,validationStart,windowText=''){
+    if(base.request?.exit_policy&&base.request.exit_policy.id!=='fixed_holding')throw new Error('批量验证目前仅支持固定持有期退出，指标退出暂不支持。');
     const tokens=text.split(/[,，]/).map(x=>x.trim());
     if(tokens.length<2||tokens.length>8||tokens.some(x=>!/^\d+$/.test(x)))throw new Error('请填写 2 至 8 个不同的整数持有期，用逗号分隔。');
     const periods=tokens.map(Number);
@@ -72,6 +73,7 @@
       }
     }
     function openForm(base){
+      if(base.request?.exit_policy&&base.request.exit_policy.id!=='fixed_holding'){message('批量验证目前仅支持固定持有期退出，指标退出暂不支持。');nodes.form.replaceChildren();return;}
       const form=el('form',null,'experiment-editor'),periods=el('input'),split=el('input'),windows=el('input');periods.type='text';periods.value='1,3,5';periods.required=true;
       split.type='date';split.required=true;split.max=base.request.end;
       const first=new Date(`${base.request.start}T00:00:00Z`);first.setUTCDate(first.getUTCDate()+1);split.min=first.toISOString().slice(0,10);

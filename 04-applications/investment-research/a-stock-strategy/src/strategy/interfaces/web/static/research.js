@@ -1,6 +1,8 @@
 /* 中文实验研究页：只按需读实验索引；回测执行与参数复制继续使用原页面入口。 */
 (function(root){
   'use strict';
+  const exits=root.ExitPolicies||(typeof module!=='undefined'?require('./exit-policies.js'):null);
+  const exitLabel=request=>exits?.label(request)||`固定持有 ${request?.holding_period_days??'—'} 个交易日`;
   const percentKeys=new Set(['cumulative_return','max_drawdown','win_rate','annualized_return','buy_hold_return','random_median_return','random_percentile']);
   function metric(values,key){
     const value=values?.[key];
@@ -35,7 +37,7 @@
       return [...new Set(values)].join('、')||'—';
     }
     function datasetLabel(item){return item.request?.dataset_id==='mvp_sample'?'合成样例':item.request?.dataset_id||'未标明数据集';}
-    function title(item){return item.name||`${strategyName(item.request?.strategy_id)} · ${symbols(item)} · 持有 ${item.request?.holding_period_days??'—'} 天`;}
+    function title(item){return item.name||`${strategyName(item.request?.strategy_id)} · ${symbols(item)} · ${!item.request?.exit_policy||item.request.exit_policy.id==='fixed_holding'?`持有 ${item.request?.holding_period_days??'—'} 天`:exitLabel(item.request)}`;}
     function grid(headers,rows){
       const wrap=el('div',null,'scroll'),t=el('table'),head=el('thead'),tr=el('tr');headers.forEach(h=>tr.append(el('th',h)));head.append(tr);t.append(head);
       const body=el('tbody');for(const row of rows){const r=el('tr');for(const value of row){const cell=el('td');if(value&&typeof value==='object'&&value.tagName)cell.append(value);else cell.textContent=value??'—';r.append(cell);}body.append(r);}t.append(body);wrap.append(t);return wrap;
@@ -57,12 +59,12 @@
       nodes.comparison.append(el('h3',`实验比较（${chosen.length}/4）`));
       if(chosen.length<2){nodes.comparison.append(el('p','勾选 2 至 4 条实验，查看指标和参数变化。','hint'));return;}
       for(const warning of comparisonWarnings(chosen))nodes.comparison.append(el('p',warning,'warnings'));
-      const rows=[['策略',...chosen.map(i=>strategyName(i.request?.strategy_id))],['标的',...chosen.map(symbols)],['区间',...chosen.map(i=>`${i.request?.start||'—'} — ${i.request?.end||'—'}`)],['数据集',...chosen.map(datasetLabel)],['数据版本',...chosen.map(i=>{const v=el('span',i.data_version?i.data_version.slice(0,12):'未记录');v.title=i.data_version||'';return v;})],['初始资金',...chosen.map(i=>i.request?.initial_cash)]];
+      const rows=[['退出规则 / 生效参数',...chosen.map(i=>exitLabel(i.request))],['策略',...chosen.map(i=>strategyName(i.request?.strategy_id))],['标的',...chosen.map(symbols)],['区间',...chosen.map(i=>`${i.request?.start||'—'} — ${i.request?.end||'—'}`)],['数据集',...chosen.map(datasetLabel)],['数据版本',...chosen.map(i=>{const v=el('span',i.data_version?i.data_version.slice(0,12):'未记录');v.title=i.data_version||'';return v;})],['初始资金',...chosen.map(i=>i.request?.initial_cash)]];
       for(const [label,key] of [['累计收益','cumulative_return'],['最大回撤','max_drawdown'],['完整交易笔数','trade_count'],['胜率','win_rate']])rows.push([label,...chosen.map(i=>metric(i.metrics,key))]);
       for(const [label,key] of [['买入持有收益','buy_hold_return'],['随机择时中位收益','random_median_return'],['策略随机百分位','random_percentile']])rows.push([label,...chosen.map(i=>metric(i.controls,key))]);
       const changed=changedParameters(chosen),keys=[...new Set(chosen.flatMap(i=>Object.keys(i.request?.parameters||{})))];
       for(const key of keys){const label=el('span',`${changed.includes(key)?'变化 · ':''}${parameterLabel(chosen[0],key)}`,changed.includes(key)?'parameter-changed':'');rows.push([label,...chosen.map(i=>stable(i.request?.parameters?.[key])??'—')]);}
-      for(const [label,key] of [['持有天数','holding_period_days'],['下跌家数阈值','min_declining_count'],['指数跌幅阈值','trigger_return_threshold'],['佣金比例','commission_rate'],['最低佣金','minimum_commission'],['滑点（基点）','slippage_bps']]){
+      for(const [label,key] of [['下跌家数阈值','min_declining_count'],['指数跌幅阈值','trigger_return_threshold'],['佣金比例','commission_rate'],['最低佣金','minimum_commission'],['滑点（基点）','slippage_bps']]){
         const values=chosen.map(i=>i.request?.[key]);const changed=new Set(values.map(stable)).size>1;
         rows.push([el('span',`${changed?'变化 · ':''}${label}`,changed?'parameter-changed':''),...values.map(value=>['trigger_return_threshold','commission_rate'].includes(key)?metric({cumulative_return:value},'cumulative_return'):value)]);
       }
@@ -79,7 +81,7 @@
         const nameCell=el('div');nameCell.append(el('strong',title(item)),el('p',item.notes||'无备注','hint'));
         nameCell.append(el('p',`${datasetLabel(item)} · ${item.created_at&&!Number.isNaN(Date.parse(item.created_at))?new Date(item.created_at).toLocaleString('zh-CN'):'时间未记录'}`,'hint'));
         const actions=el('div',null,'experiment-row-actions');
-        for(const [label,action] of [['查看详情',async()=>{await showJob(item.job_id);activateTab('research');}],['复制重跑',()=>copyRequest(item.request)],['编辑',()=>openEditor(item)],['批量验证',()=>beginStudy(item)]]){const button=el('button',label);button.type='button';button.onclick=async()=>{try{await action();}catch(error){message(`操作失败：${error.message}`);}};actions.append(button);}
+        for(const [label,action] of [['查看详情',async()=>{await showJob(item.job_id);activateTab('research');}],['复制重跑',()=>copyRequest(item.request)],['编辑',()=>openEditor(item)],['批量验证',()=>beginStudy(item)]]){const button=el('button',label);button.type='button';if(label==='批量验证'&&item.request?.exit_policy&&item.request.exit_policy.id!=='fixed_holding'){button.disabled=true;button.title='批量验证目前仅支持固定持有期退出';}button.onclick=async()=>{try{await action();}catch(error){message(`操作失败：${error.message}`);}};actions.append(button);}
         return [check,nameCell,`${strategyName(item.request?.strategy_id)} / ${symbols(item)}`,`${item.request?.start||'—'} — ${item.request?.end||'—'}`,metric(item.metrics,'cumulative_return'),metric(item.metrics,'max_drawdown'),actions];
       })));
       renderComparison();

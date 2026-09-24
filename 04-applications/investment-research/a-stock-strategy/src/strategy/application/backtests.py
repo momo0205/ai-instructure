@@ -12,6 +12,7 @@ from strategy.market_data.breadth import load_breadth, attach_breadth
 from strategy.application import simulation
 from strategy.market_data.repository import datasets, verify_manifests
 from strategy.application.requests import validate_request
+from strategy.exit_policies import exit_policy_catalog
 from strategy.storage.snapshots import freeze_inputs, write_result
 
 
@@ -45,7 +46,7 @@ def execute(root, request, output_dir):
         if count<needed:
             warnings.append(f'warmup insufficient: {symbol} has {count}/{needed} prior sessions；早期信号可能无法选股')
     engine_keys = ('initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps')
-    options = dict(lot_size=100, stamp_duty_rate=0.0, instrument_types=instrument_types,
+    options = dict(exit_policy=request['exit_policy'],lot_size=100, stamp_duty_rate=0.0, instrument_types=instrument_types,
                    **{k: request[k] for k in engine_keys})
     # 外部因子只准备一次；结束日之后的数据不交给研究运行时。
     strategy = definition.prepare(definition.build(request['parameters']),
@@ -58,6 +59,22 @@ def execute(root, request, output_dir):
     report_progress('strategy',1,1)
     engine, result = outcome.engine, outcome.result
     metadata = dict(dataset_id=request['dataset_id'],hashes=hashes,strategy_version=definition.version,breadth_source=sorted(breadth.source.unique().tolist()),market_source=dataset['market_source'],adjustment=dataset['adjustment'],sample=request['dataset_id']=='mvp_sample',code_provenance='Python source captured for audit; running service uses modules loaded at startup',timing='close signal; next session open execution',stamp_duty_rate=engine.stamp_duty_rate,lot_size=engine.lot_size)
+    exit_definition = next(d for d in exit_policy_catalog() if d['id']==request['exit_policy']['id'])
+    metadata['exit_policy'] = dict(request['exit_policy'],version=exit_definition['version'])
+    if exit_definition.get('indicators'):
+        metadata['exit_indicators'] = exit_definition['indicators']
+    if request['exit_policy']['id'] == 'close_below_sma':
+        from strategy.indicators import simple_moving_average
+        required = request['exit_policy']['parameters']['window'] - 1
+        # 当日收盘提供第 N 个样本；预热仅统计冻结输入中起始日前连续窗口。
+        prior = market[market.date < pd.Timestamp(request['start'])]
+        metadata['exit_warmup'] = {}
+        for symbol in symbols:
+            value = simple_moving_average(prior, symbol, pd.Timestamp(request['start']), required)
+            metadata['exit_warmup'][symbol] = dict(required_prior_sessions=required,
+                available_prior_sessions=value.available, ready_at_start=value.value is not None)
+            if value.value is None:
+                warnings.append(f'退出指标暖机不足：{symbol} 区间前有效行情 {value.available}/{required}；早期均线可能不可用，可补充更早行情。最长持有期兜底仍有效。')
     market_manifest = snapshot/'market_manifest.json'
     if market_manifest.is_file():
         composition = json.loads(market_manifest.read_text()).get('composition')
@@ -73,7 +90,7 @@ def execute(root, request, output_dir):
                     cost_policy=engine.fee_rules.metadata(),
                     tradability_rules_version=TRADABILITY_VERSION,
                     tradability='input flags only; unknown flags assumed executable; no auction order-book evidence')
-    payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,decision_events=result.decision_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
+    payload = dict(metrics=asdict(outcome.metrics),equity=[asdict(x) for x in result.equity],trades=[asdict(x) for x in result.trades],events=result.events,execution_events=result.execution_events,decision_events=result.decision_events,exit_decision_events=result.exit_decision_events,warnings=warnings+result.warnings,metadata=metadata,request=request)
     context_file = Path(output_dir)/'study.json'
     if context_file.is_file():
         metadata['study'] = json.loads(context_file.read_text())

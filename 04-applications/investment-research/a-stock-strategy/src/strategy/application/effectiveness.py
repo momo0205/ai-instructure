@@ -42,6 +42,11 @@ class ScheduledFixedAsset:
 
 def compare_effectiveness(plan, symbol, observed, *, trials=TRIALS, seed=SEED):
     """返回可审计的描述性对照，不将历史百分位当作显著性或未来收益保证。"""
+    # 固定窗口抽样不适用于可变持有期，内部调用也必须拒绝混用口径。
+    from strategy.exit_policies import normalize_exit_policy
+    from strategy.validation import UserError
+    if normalize_exit_policy(plan.engine_options.get('exit_policy'))['id'] != 'fixed_holding':
+        raise UserError('INVALID_REQUEST', '随机择时对照仅支持固定持有期')
     count = len(observed['trades'])
     dates = sorted({pd.Timestamp(d).date() for d in plan.market.date
                     if (plan.start is None or pd.Timestamp(d).date() >= plan.start)
