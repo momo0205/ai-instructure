@@ -17,7 +17,7 @@ from strategy.application.research import ResearchService, ResearchUnavailable
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
              '/app.js': 'app.js', '/tabs.js': 'tabs.js', '/style.css': 'style.css',
-             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js', '/timeline.js': 'timeline.js', '/data-versions.js': 'data-versions.js'}
+             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js', '/timeline.js': 'timeline.js', '/data-versions.js': 'data-versions.js', '/exit-policies.js': 'exit-policies.js'}
     if path not in files:
         raise ValueError('资源不存在')
     return Path(__file__).parent / 'static' / files[path]
@@ -72,6 +72,9 @@ def dispatch(method, path, payload, root, manager, downloads=None, studies=None,
                 return 200, instrument_catalog(root)
             if path == '/api/downloads' and downloads is not None:
                 return 200, downloads.list()
+            if path == '/api/exit-policies':
+                from strategy.exit_policies import exit_policy_catalog
+                return 200, exit_policy_catalog()
             if path == '/api/strategies':
                 from strategy.strategies.registry import catalog
                 return 200, catalog()

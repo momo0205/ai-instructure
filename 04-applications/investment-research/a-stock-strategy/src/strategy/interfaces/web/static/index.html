@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/explanations.js" defer></script><script src="/data-versions.js" defer></script><script src="/timeline.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/exit-policies.js" defer></script><script src="/explanations.js" defer></script><script src="/data-versions.js" defer></script><script src="/timeline.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
 <body>
 <a class="skip-link" href="#workspace-content">跳到工作台内容</a>
 <header><div class="brand"><span class="brand-mark">研</span><span class="brand-name">研策</span><small>A 股投资研究</small></div><div class="local">● 本机研究环境</div></header>
@@ -61,6 +61,7 @@
 <div id="strategy-parameters" class="fields"></div><details class="source-settings"><summary>查看或调整证券来源</summary><div id="research-sources"></div></details><p id="coverage-info" class="hint" role="status"></p><a href="#panel-data" data-tab-target="data" class="inline-link">管理数据 / 新增代码 →</a>
 </section>
 <section class="config-block"><div class="block-label"><span>02</span> 区间与触发条件</div><div class="two"><label>开始日期<input type="date" id="start" required></label><label>结束日期<input type="date" id="end" required></label></div>
+<label>退出规则<select id="exit-policy"><option value="fixed_holding">固定持有期</option></select></label><p id="exit-description" class="hint"></p><div id="exit-parameters" class="two"></div>
 <div class="two"><label>初始资金（元）<input id="initial_cash" type="number" value="100000" min="1000" step="1000" required></label><label>持有交易日<input id="holding_period_days" type="number" value="1" min="1" max="252" step="1" required></label></div>
 <details open><summary>市场触发条件</summary><div class="two"><label>最少下跌家数<input id="min_declining_count" type="number" value="4000" min="0" step="1" required></label><label>指数日收益 ≤（%）<input id="trigger_return_threshold" type="number" value="-1" step="0.1" required></label></div></details>
 </section>
