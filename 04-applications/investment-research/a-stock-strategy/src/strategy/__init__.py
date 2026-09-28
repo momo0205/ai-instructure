@@ -1,4 +1,4 @@
-from .config import (
+from strategy.application.configuration import (
     BacktestConfig,
     BacktestSettings,
     CostConfig,
@@ -7,16 +7,24 @@ from .config import (
     StrategyConfig,
     load_config,
 )
-from .data import CsvMarketDataProvider, REQUIRED_MARKET_COLUMNS, validate_market_frame
-from .data_sources import AStockDataProvider, BaiduKlineFetcher, normalize_daily_bars
-from .domain import EquityPoint, MarketState, Selection, Trade
-from .evaluation import Metrics, evaluate
+from strategy.market_data.csv import CsvMarketDataProvider, REQUIRED_MARKET_COLUMNS, validate_market_frame
+from strategy.market_data.sources import (
+    AStockDataProvider,
+    BaiduKlineFetcher,
+    MootdxBarFetcher,
+    MootdxIndexFetcher,
+    normalize_daily_bars,
+)
+from strategy.domain import EquityPoint, MarketState, Selection, Trade
+from strategy.backtesting.evaluation import Metrics, evaluate
 
 __all__ = [
     "BacktestConfig",
     "BacktestSettings",
     "AStockDataProvider",
     "BaiduKlineFetcher",
+    "MootdxBarFetcher",
+    "MootdxIndexFetcher",
     "CostConfig",
     "CsvMarketDataProvider",
     "DataConfig",
@@ -33,3 +41,8 @@ __all__ = [
     "evaluate",
     "validate_market_frame",
 ]
+
+# 历史导入集中映射到规范模块，同一对象保证旧插件与monkeypatch语义不变。
+from ._compat import install as _install_legacy_imports
+_install_legacy_imports()
+del _install_legacy_imports

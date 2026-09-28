@@ -1,0 +1,6 @@
+{
+  "version": "6.3.0",
+  "result_available": false,
+  "exception_type": "CustomException",
+  "message": "bundle path /private/tmp/a-stock-open-source/rqalpha-output/missing-bundle not exist"
+}

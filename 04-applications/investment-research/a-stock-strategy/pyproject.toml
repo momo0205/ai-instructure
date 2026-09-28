@@ -16,9 +16,15 @@ dependencies = [
 dev = [
   "pytest>=8.0",
 ]
+live = [
+  "mootdx>=0.11.7,<0.12",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"strategy.interfaces.web" = ["static/*.html", "static/*.js", "static/*.css"]
