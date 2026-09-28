@@ -16,3 +16,9 @@
 [submodule "05-mobile/mira-flutter"]
 	path = 05-mobile/mira-flutter
 	url = https://github.com/momo0205/mira-flutter.git
+[submodule "03-research/jev-decision-lab"]
+	path = 03-research/jev-decision-lab
+	url = https://github.com/momo0205/jev-decision-lab.git
+[submodule "04-applications/agent-evidence-lab"]
+	path = 04-applications/agent-evidence-lab
+	url = https://github.com/momo0205/agent-evidence-lab.git

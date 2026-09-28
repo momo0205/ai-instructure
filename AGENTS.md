@@ -4,7 +4,7 @@
 
 ## 项目性质
 
-这是一个 **AI 工具集合空间**，不是单一代码仓库。每个子目录是一个独立项目，有各自的技术栈和构建方式。项目的全局索引见 [INDEX.md](INDEX.md)。
+这是一个 **AI 工具集合空间**，不是单一代码仓库。每个子目录是一个独立项目，有各自的技术栈和构建方式。项目的全局索引见 [README.md](README.md)。
 
 ## Superpowers 技能体系
 
@@ -45,3 +45,80 @@
 3. **先测试后实现** — TDD: RED → GREEN → REFACTOR
 4. **验证后声称完成** — 先跑测试确认，再声称完成
 5. **子项目独立** — 每个子项目有自己的 git 仓库、构建系统、测试体系，不要混淆
+
+## 跨 Agent 记忆系统 (Mem0)
+
+本项目使用 Mem0 实现跨 Agent 共享记忆，确保在不同机器、不同 Agent（Claude Code / Codex / CodeWhale）之间无缝衔接。
+
+### 环境准备（一次性）
+
+```bash
+pip3 install mem0ai sentence-transformers qdrant-client
+echo DEEPSEEK_API_KEY=sk-xxxx > .env    # key 从项目所有者获取
+```
+
+### SOP：Agent 生命周期
+
+**启动时（必须执行）**：
+
+```bash
+# 1. 拉取最新记忆（包括其他 Agent 的更新）
+git pull
+
+# 2. 获取项目上下文
+python3 .memory/mem.py search "项目架构 关键决策"
+python3 .memory/mem.py search "已知问题 踩坑"
+```
+
+**完成任务后（必须执行）**：
+
+```bash
+# 回写记忆（做了什么、关键决策、遇到的问题）
+python3 .memory/mem.py add "【模块/项目名】具体完成了什么。关键决策：xxx。遇到问题：xxx"
+
+# 提交到 git 同步
+git add -A && git commit -m "memory: xxx" && git push
+```
+
+### 记忆规范
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| 前缀 | `【项目名/模块】` 标注归属 | `【IRON Flutter】【mira-server】` |
+| 内容 | 做了什么 + 关键决策 + 踩坑 | 见下方示例 |
+| 格式 | 一段话，不要拆分过细 | 1 条记忆覆盖 1 个任务 |
+
+```
+【IRON Flutter】修复 INTERNET 权限缺失导致无法连接服务器。App 名称改为 IRON，
+默认服务器地址为 https://mira.ironmao.win，收藏系统重构为使用 reportId+serviceId，
+支持收藏弹窗跳转。Keystore 密码改用 key.properties 读取。
+```
+
+### CLI 参考
+
+```bash
+python3 .memory/mem.py add "内容"           # 写入记忆
+python3 .memory/mem.py search "关键词"       # 语义搜索
+python3 .memory/mem.py list                 # 列出所有记忆
+python3 .memory/mem.py reset                # 清空（慎用）
+```
+
+### 架构
+
+```
+┌──────────────┐      ┌──────────────┐
+│  Claude Code  │      │  CodeWhale   │
+│  (机器 A)     │      │  (机器 B)    │
+└──────┬───────┘      └──────┬───────┘
+       │ add/search          │ add/search
+       ▼                     ▼
+   .memory/ (git 仓库内)
+   ├── config.py      # Mem0 配置 (DeepSeek LLM + 本地嵌入)
+   ├── mem.py         # CLI 工具
+   ├── qdrant/        # 向量库 (gitignored)
+   └── history.db     # 历史 (gitignored)
+        │
+        ▼ git push/pull → 跨机器同步
+```
+
+> **注意**：数据文件 (qdrant/、history.db) 不进入 git，通过 git 同步的只有代码和记忆的元数据层。首次在新机器上使用需重新执行 `pip3 install`。

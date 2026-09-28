@@ -11,6 +11,7 @@ class MarketState:
     index_level: float
     index_return_1d: float
     triggered: bool
+    declining_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +34,9 @@ class Trade:
     fees: float = 0.0
     pnl: float = 0.0
     exit_reason: str = ""
+    commission: float = 0.0
+    stamp_duty: float = 0.0
+    transfer_fee: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)

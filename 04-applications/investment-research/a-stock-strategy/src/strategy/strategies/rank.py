@@ -1,7 +1,7 @@
 from datetime import date
 import numpy as np
 import pandas as pd
-from ..domain import MarketState, Selection
+from strategy.domain import MarketState, Selection
 
 
 class CrossSectionalRankStrategy:
