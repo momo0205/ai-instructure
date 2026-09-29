@@ -31,3 +31,6 @@ target/
 
 # Mem0 记忆系统（整个目录不进 git，按 AGENTS.md 约定只保留代码引用）
 .memory/
+
+# Independent finance learning Site repository
+04-applications/investment-research/finance-ironmao/
