@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/exit-policies.js" defer></script><script src="/explanations.js" defer></script><script src="/data-versions.js" defer></script><script src="/timeline.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A 股策略研究台</title><link rel="stylesheet" href="/style.css"><script src="/instrument-options.js" defer></script><script src="/tabs.js" defer></script><script src="/exit-policies.js" defer></script><script src="/explanations.js" defer></script><script src="/data-versions.js" defer></script><script src="/timeline.js" defer></script><script src="/technical-analysis.js" defer></script><script src="/data-management.js" defer></script><script src="/app.js" defer></script><script src="/research.js" defer></script><script src="/studies.js" defer></script><script src="/compositions.js" defer></script><script src="/research-inputs.js" defer></script></head>
 <body>
 <a class="skip-link" href="#workspace-content">跳到工作台内容</a>
 <header><div class="brand"><span class="brand-mark">研</span><span class="brand-name">研策</span><small>A 股投资研究</small></div><div class="local">● 本机研究环境</div></header>
@@ -10,6 +10,7 @@
 <button id="tab-research" role="tab" data-tab="research" aria-controls="panel-research" aria-selected="true">策略回测</button>
 <button id="tab-history" role="tab" data-tab="history" aria-controls="panel-history" aria-selected="false" tabindex="-1">任务历史</button>
 <button id="tab-experiments" role="tab" data-tab="experiments" aria-controls="panel-experiments" aria-selected="false" tabindex="-1">实验研究</button>
+<button id="tab-technical-analysis" role="tab" data-tab="technical-analysis" aria-controls="panel-technical-analysis" aria-selected="false" tabindex="-1">技术分析</button>
 <button id="tab-data" role="tab" data-tab="data" aria-controls="panel-data" aria-selected="false" tabindex="-1">数据管理</button>
 </nav>
 <!-- 教程复用现有标签导航，只解释流程，不自动创建任务或修改用户参数。 -->
@@ -74,6 +75,16 @@
 </div>
 <section id="panel-history" role="tabpanel" data-tab="history" aria-labelledby="tab-history" hidden><section class="panel" id="history"><div class="section-title"><h2>任务历史</h2><button type="button" id="refresh" class="quiet">刷新</button></div><p class="hint">勾选已完成任务查看指标对比；点击任务查看详情。</p><div id="jobs" class="job-list"><p class="muted">正在加载…</p></div><div id="comparison" hidden></div></section>
 </section>
+<section id="panel-technical-analysis" role="tabpanel" data-tab="technical-analysis" aria-labelledby="tab-technical-analysis" class="workspace" hidden>
+<section class="panel" id="ta-panel"><div class="section-title"><h2>技术分析</h2><button id="ta-refresh" type="button">刷新行情版本</button></div>
+<p class="hint">独立查看价格、趋势、波动与量能。指标只表示历史数值，不产生交易信号；无需市场广度数据。</p>
+<form id="ta-form"><div class="ta-setup"><label>证券<select id="ta-symbol" required></select></label><label>行情版本<select id="ta-source" required></select></label><label>显示开始<input id="ta-start" type="date" required></label><label>显示结束<input id="ta-end" type="date" required></label></div><p id="ta-source-info" class="hint"></p>
+<div class="ta-library-layout"><section><h3>指标库</h3><p class="hint">按类别浏览计算口径；源数据随分析自动展示。</p><div id="ta-library"></div></section><section><h3>本次使用的指标</h3><p id="ta-count" class="hint"></p><div id="ta-active"></div></section></div>
+<div class="form-actions"><button id="ta-run" class="primary" type="submit">查看技术分析</button></div></form><p id="ta-status" class="hint" role="status" aria-live="polite"></p></section>
+<section class="panel"><div class="section-title"><h2>价格与量能</h2><button id="ta-export" type="button" disabled>导出当前分析 JSON</button></div><div id="ta-summary" class="ta-summary"></div>
+<div class="ta-chart-controls"><label>显示窗口<select id="ta-window"><option value="30">最近 30 日</option><option value="60">最近 60 日</option><option value="120" selected>最近 120 日</option><option value="250">最近 250 日</option><option value="all">全部日期</option></select></label><label>量能面板<select id="ta-volume-kind"><option value="volume">成交量</option><option value="amount">成交额</option></select></label><label class="ta-range-label">向前移动窗口<input id="ta-range" type="range" min="0" max="0" value="0"></label></div>
+<p class="hint">拖动窗口查看历史；点击或触碰图表定位日期。图表过密时抽样绘制，逐日数值和导出保留完整精度。</p><div id="ta-legend" class="ta-legend"></div><svg id="ta-price-chart" class="chart ta-chart" aria-label="价格图"></svg><svg id="ta-volume-chart" class="chart ta-chart" aria-label="量能图"></svg><div id="ta-inspector" class="ta-inspector" aria-live="polite"></div>
+<h3>逐日数据</h3><div id="ta-table" class="table-wrap"></div><div class="form-actions"><button id="ta-prev" type="button" disabled>上一页</button><span id="ta-page" class="hint"></span><button id="ta-next" type="button" disabled>下一页</button></div></section></section>
 <section id="panel-data" role="tabpanel" data-tab="data" aria-labelledby="tab-data" hidden>
 <section class="panel data-management" id="data-management">
 <div class="section-title"><h2>数据管理工作台</h2><button id="refresh-data" type="button">刷新数据目录</button></div>

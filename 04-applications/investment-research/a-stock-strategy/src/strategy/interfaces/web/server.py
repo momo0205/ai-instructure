@@ -17,7 +17,7 @@ from strategy.application.research import ResearchService, ResearchUnavailable
 def static_file(path: str) -> Path:
     files = {'/': 'index.html', '/index.html': 'index.html',
              '/app.js': 'app.js', '/tabs.js': 'tabs.js', '/style.css': 'style.css',
-             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js', '/timeline.js': 'timeline.js', '/data-versions.js': 'data-versions.js', '/exit-policies.js': 'exit-policies.js'}
+             '/instrument-options.js': 'instrument-options.js', '/research.js': 'research.js', '/studies.js': 'studies.js', '/compositions.js': 'compositions.js', '/research-inputs.js': 'research-inputs.js', '/explanations.js': 'explanations.js', '/data-management.js': 'data-management.js', '/timeline.js': 'timeline.js', '/data-versions.js': 'data-versions.js', '/exit-policies.js': 'exit-policies.js', '/technical-analysis.js': 'technical-analysis.js'}
     if path not in files:
         raise ValueError('资源不存在')
     return Path(__file__).parent / 'static' / files[path]
@@ -45,6 +45,12 @@ def dispatch(method, path, payload, root, manager, downloads=None, studies=None,
     """返回 (HTTP 状态码, JSON 对象)，便于脱离网络测试业务路由。"""
     try:
         if method == 'GET':
+            if path == '/api/indicators':
+                from strategy.indicators import indicator_catalog
+                return 200, indicator_catalog()
+            if path == '/api/technical-analysis/sources':
+                from strategy.application.technical_analysis import TechnicalAnalysisService
+                return 200, TechnicalAnalysisService(root).sources()
             if path == '/api/foundation-updates' and foundations is not None:
                 return 200, foundations.list()
             if path == '/api/data-management':
@@ -92,6 +98,9 @@ def dispatch(method, path, payload, root, manager, downloads=None, studies=None,
         if method == 'POST':
             if not isinstance(payload, dict):
                 return 400, error_response(diagnostic('INVALID_REQUEST'))
+            if path == '/api/technical-analysis':
+                from strategy.application.technical_analysis import TechnicalAnalysisService
+                return 200, TechnicalAnalysisService(root).analyze(payload)
             if path == '/api/foundation-updates/preview':
                 from strategy.application.foundation_planning import preview_update
                 return 200, preview_update(root,payload)
