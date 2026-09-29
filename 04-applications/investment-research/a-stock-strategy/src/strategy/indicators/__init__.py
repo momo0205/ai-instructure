@@ -2,6 +2,9 @@
 from dataclasses import dataclass
 import math
 
+from .catalog import indicator_catalog, normalize_instances
+from .series import calculate_series
+
 SMA_VERSION = 'sma-v1'
 SMA_METADATA = {'id': 'sma', 'version': SMA_VERSION, 'formula': 'sum(close[-N:]) / N',
                 'required_fields': ['close'], 'window': '连续 N 个研究交易日，含当日'}
