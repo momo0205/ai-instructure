@@ -249,14 +249,14 @@ sudo ss -lntp | grep 18080</code></pre></div>
 <p>能完成 TLS 连接并收到 HTTP 响应即可，不要求一定返回 200。若连接失败，先排查服务器出口和 DNS，再创建节点。</p>
 <ol class="actions"><li>在 3X-UI 左侧进入 <strong>入站 / Inbounds</strong>，点击 <strong>添加入站 / Add</strong>。</li><li>填写下面的配置。新版字段可能叫 Target，旧版叫 Dest，含义相同。</li></ol>
 <div class="table-wrap"><table><thead><tr><th>字段</th><th>填写值</th></tr></thead><tbody>
-<tr><td>备注</td><td>ColoCrossing-LA</td></tr><tr><td>协议</td><td>vless</td></tr><tr><td>监听 IP</td><td>留空（节点监听公网；区别于面板回环监听）</td></tr><tr><td>端口</td><td><strong>8443</strong>，把 443 留给网站</td></tr><tr><td>传输</td><td>RAW / TCP</td></tr><tr><td>安全</td><td>Reality</td></tr><tr><td>Target / Dest</td><td>dl.google.com:443</td></tr><tr><td>Server Names / SNI</td><td>dl.google.com</td></tr><tr><td>Min Client Ver（若有）</td><td>0</td></tr><tr><td>公钥 / 私钥</td><td>点击生成，保存新的密钥对</td></tr><tr><td>Short IDs</td><td>点击生成；客户端使用其中一个实际值</td></tr><tr><td>Spider X（若有）</td><td>留空；客户端也保持一致</td></tr></tbody></table></div>
+<tr><td>备注</td><td>ColoCrossing-LA</td></tr><tr><td>协议</td><td>vless</td></tr><tr><td>监听 IP</td><td>留空（节点监听公网；区别于面板回环监听）</td></tr><tr><td>端口</td><td><strong>8443</strong>，把 443 留给网站</td></tr><tr><td>传输</td><td>RAW / TCP</td></tr><tr><td>安全</td><td>Reality</td></tr><tr><td>Target / Dest</td><td>dl.google.com:443</td></tr><tr><td>Server Names / SNI</td><td>dl.google.com</td></tr><tr><td>Min / Max Client Ver（若有）</td><td>留空，不限制客户端版本；不要填数字 0</td></tr><tr><td>公钥 / 私钥</td><td>点击生成，保存新的密钥对</td></tr><tr><td>Short IDs</td><td>点击生成；客户端使用其中一个实际值</td></tr><tr><td>Spider X（若有）</td><td>留空；客户端也保持一致</td></tr></tbody></table></div>
 <p>给该入站添加至少一个客户端。某些版本在入站编辑器的客户端区域添加，某些版本有独立客户端页面：</p>
 <ul><li>UUID：生成新的值。</li><li>Flow：<strong>xtls-rprx-vision</strong>。</li><li>关联入站：选择刚创建的 ColoCrossing-LA。</li><li>到期时间与流量限制：按你的使用需求设置。</li></ul>
 <p>保存后，重启或应用 Xray 配置。在该客户端的二维码/导出链接菜单里保存新的 <code>vless://</code> 分享链接。</p>
 <div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl is-active x-ui
 sudo ss -lntp | grep 8443</code></pre></div>
 <p class="success"><strong>成功条件：</strong>8443 有监听，导出的链接使用当前 VPS IP、端口 8443，UUID/公钥/Short ID/SNI 都来自当前配置。目标站不是速度或可用性的保证，仍需第 10 步实际测试。</p>
-<p class="source">协议依据：<a href="https://xtls.github.io/config/transport.html" target="_blank" rel="noopener noreferrer">Xray 传输配置</a>。目标及兼容项结合工作区的既有故障记录选取。</p>
+<p class="source">协议依据：<a href="https://xtls.github.io/config/transport.html" target="_blank" rel="noopener noreferrer">Xray 传输配置</a>、<a href="https://xtls.github.io/config/transports/reality.html" target="_blank" rel="noopener noreferrer">REALITY 字段说明</a>。版本限制为可选字符串，指定时使用 x.y.z 格式；本教程留空。目标及兼容项结合工作区的既有故障记录选取。</p>
 <label class="done"><input type="checkbox" data-step="9">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-10"><div class="step-top"><span class="step-number">10</span><div><p class="step-subtitle">Mac · Clash Verge Rev；手机可扫码</p><h2>在 Mac 导入节点，先验证网络</h2></div></div>
 <p>已安装 Clash Verge Rev 就继续使用。新安装时打开 <a href="https://github.com/clash-verge-rev/clash-verge-rev/releases" target="_blank" rel="noopener noreferrer">官方 Releases</a>，Apple 芯片 Mac 选择 arm64/aarch64 的 macOS 安装包，Intel Mac 选择 x64/x86_64；以该版本实际文件名为准。</p>
 <p><strong>不要把 <code>vless://</code> 当成 HTTP 订阅 URL</strong> 填入下载框。下面使用本地 YAML 文件，无需向公网开放订阅端口。</p>
