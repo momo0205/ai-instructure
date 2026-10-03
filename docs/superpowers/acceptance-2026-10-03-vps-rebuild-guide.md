@@ -90,3 +90,20 @@
 复核第 9 步时，发现 Min Client Ver 原填数字 0 与官方字段说明不符。Xray REALITY 文档将 minClientVer / maxClientVer 设为可选字符串，指定时格式为 x.y.z，示例默认空字符串：<https://xtls.github.io/config/transports/reality.html>。本次修正表格为两个版本限制均留空，并增加该官方来源；没有改动服务器、节点配置、页面 JavaScript 或部署实现。
 
 验证：现有 7 项 Node 测试通过，整页 DOM 参数 / 复制 / 进度检查通过，HTML 唯一 ID 与内部锚点有效，修正后的字段文本与上述来源一致。新增来源后主教程链接数为 72。本次为文档字段修正，未重复 Caddy 路由和无变化的 shell 命令验证。Mem0 查询和回写仍因缺少 DEEPSEEK_API_KEY 失败，本节记录进度和修正原因，不保存新的面板凭据。
+
+## FlClash 原生订阅与回环地址排查（2026-10-04）
+
+用户明确使用 FlClash，报告入站和客户端已配置，订阅开启、Clash / Mihomo 格式随后开启，订阅端口为 2096。用户随后贴出的生成 URL 使用回环地址和 2096，FlClash 下载报 Connection refused；尚未提供订阅监听、独立隧道、成功导入或代理联网的验证。因此只诊断回环地址作用域与转发前置条件，不将全部错误归因于某个具体应用组件，不宣称节点已可用。实际 URL 路径、Sub ID 与节点凭据不写入文件或记忆。
+
+仅读取本机 FlClash.app 的版本元数据，确认为 0.8.94；没有读取应用订阅配置或密钥。核对固定标签的公开一手资料：
+
+- 3X-UI v3.8.5 [订阅文档](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/docs/content/docs/zh/config/subscription.mdx)：独立订阅服务、subListen / subPort、原始与 JSON / Mihomo 格式、subClashPath 与 /mihomo/ 明确别名。
+- [订阅 controller.go](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/sub/controller.go)：浏览器 Accept:text/html 可返回正常订阅信息页；subClash 的 view=raw 分支明确提供原始 YAML。只读审查发现原先要求浏览器必定下载 YAML 会误判，已独立读取源码并修正文案，保留原格式路径，浏览器检查追加 view=raw。
+- [分享地址解析](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/sub/service.go)与[入站表单](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/frontend/src/pages/inbounds/form/InboundFormModal.tsx)：回环访问时默认地址可能取请求主机；入站自定义分享地址设为 VPS 公网 IP，节点监听地址仍留空。
+- FlClash v0.8.94 [URL / 文件导入](https://github.com/chen08209/FlClash/blob/v0.8.94/lib/views/profiles/add.dart)、[配置副本](https://github.com/chen08209/FlClash/blob/v0.8.94/lib/models/profile.dart)、[端口界面](https://github.com/chen08209/FlClash/blob/v0.8.94/lib/views/config/general.dart)及中文翻译：使用“配置 → 添加 → URL / 文件”、“工具 → 基本配置 → 端口 → 混合端口”，实际运行端口以应用设置为准。[下载请求](https://github.com/chen08209/FlClash/blob/v0.8.94/lib/common/request.dart)和[HTTP 连接选择](https://github.com/chen08209/FlClash/blob/v0.8.94/lib/common/http.dart)作为后续浏览器成功、应用仍失败时的排查依据。
+
+主教程第 1 / 9 / 10 步改为用户现有 FlClash，补全节点与客户端 / UUID / Sub ID 的关系、Mihomo 格式开关、回环 2096、独立 Mac 28081 隧道、生成 URL 仅换本地入口端口、raw YAML / 公网节点地址核对、导入后选中配置和 PROXY 组，以及实际联网测试。本地完整 YAML 留为折叠备选。维护手册增加订阅端口和刷新入口。用户追问设计目的后，明确这是教程回环路线的取舍，面板与订阅可分别配置；建议用已有域名提供正常公网 HTTPS 订阅，仍待 DNS 管理能力确认与现场配置。只读 DNS 查询显示主域名使用 Cloudflare NS，拟用订阅子域名没有返回记录，不等于已取得域名修改权限或已完成配置。
+
+验证：现有 7 项 Node 测试全部通过；整页 DOM 的参数、无效输入保护、复制及 18 步进度检查通过。两份 HTML 标签结构此前用 HTMLParser 核对；最终 DOM 检查确认主教程 34 个唯一 ID、76 个链接、62 个复制按钮、60 个 shell 块，维护手册 10 个唯一 ID、34 个链接、21 个复制按钮、20 个 shell 块；所有复制内容、内部 / 交叉锚点、bash -n 和内嵌 JavaScript 语法均通过，没有外部脚本 / 图片等资源。用 ssh -G -F /dev/null 不联网展开确认 deployer、IdentitiesOnly、ExitOnForwardFailure、30 秒保活与 Mac 28081 → 远端回环 2096。没有改动页面 JavaScript、测试实现、网站发布或 Caddy 配置，也没有连接真实 VPS、改 DNS 或执行 FlClash 配置导入；未进行真实浏览器排版验收。
+
+Mem0 回写仍因 DEEPSEEK_API_KEY 缺失失败，本节保存决策、证据和未完成的现场步骤作为回退记录。只同步本次两份 HTML、计划和验收，不包含其他项目改动。

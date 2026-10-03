@@ -93,3 +93,19 @@
 - [x] 将面板回环绑定、凭据查看与完整教程入口加入维护手册，并继续进行文档验证与只读复核。
 
 - [x] 两份 HTML 补充可直接复制的 28080 备用 SSH 隧道与对应浏览器地址，远端仍为回环 18080；说明默认打开按钮使用 18080，备用地址路径随主教程参数更新。
+
+### Task 8: 按用户现有 FlClash 调整客户端教程（2026-10-04）
+
+用户明确正在使用 FlClash，并要求优先把代理配置完整，补足节点与订阅说明。沿用已批准的 18 步 HTML，主流程使用 3X-UI v3.8.5 原生 Clash / Mihomo 订阅，通过 Mac 28081 → VPS 回环 2096 的 SSH 隧道下载；完整本地 YAML 保留为折叠备选。不新增页面 JavaScript，不切换用户应用或改动真实 VPS。
+
+**Files:**
+- Modify: `01-infrastructure/vps-rebuild/VPS重建与网站部署一步步教程.html`
+- Modify: `01-infrastructure/vps-rebuild/VPS日常登录与维护手册.html`
+- Modify: this plan and `docs/superpowers/acceptance-2026-10-03-vps-rebuild-guide.md`
+
+- [x] 核对本机 FlClash 0.8.94 版本元数据及对应标签源码的 URL / 文件导入、系统代理和混合端口界面；核对 3X-UI 固定版本的独立订阅监听、Mihomo YAML / 明确端点与分享地址解析。
+- [x] 第 1 / 9 / 10 步明确入站 + 客户端就是本机节点，UUID 与 Sub ID 不同；自定义分享地址填公网 IP，避免 SSH 访问生成回环节点地址。使用原生 Clash / Mihomo 订阅，复制已有格式路径时仅替换本地入口端口；没有格式地址时提供 /mihomo/ 明确端点。
+- [x] 提供订阅专用 SSH 隧道、服务器监听检查、浏览器 YAML 内容 / 节点地址核对与 FlClash 当前配置 / PROXY 组选择、启动、系统代理及实际混合端口测试。解释 Connection refused / HTTP 404 / 内容格式错误的不同检查，明确订阅导入成功不能代替代理联网验收。
+- [x] 本地 YAML 文件作为折叠备选，说明应用内副本与重新导入；维护手册增加订阅端口及刷新入口，保留原有 18 步进度、参数逻辑和网站发布流程。
+- [x] 运行现有 7 项 Node 测试、整页 DOM、两份 HTML 锚点 / 链接 / shell 语法检查与 SSH 不联网展开；只读复核发现浏览器 HTML 信息页不能判格式错误，依据固定版本源码修正 view=raw 验收方式，记录尚需用户现场验证的部分。
+- [x] 按 SOP 尝试 Mem0 回写，因 DEEPSEEK_API_KEY 缺失采用验收文档记录；只提交并同步本次教程和记录。
