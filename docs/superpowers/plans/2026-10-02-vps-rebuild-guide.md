@@ -44,3 +44,16 @@
 - [x] 按 `verification-before-completion` 留下验证记录；按工作区 SOP 尝试 Mem0 回写，只有本次文件进入提交与同步，不包含其它项目的改动。
 
 验收证据与工具限制见 `docs/superpowers/acceptance-2026-10-03-vps-rebuild-guide.md`。
+
+### Task 4: 将用户明确选择的彻底重装写入教程（2026-10-03）
+
+用户已明确要求彻底重装，并要求把本轮实际后台操作和 SSH 登录问题更新到 HTML；本任务只修改教程，不执行重装或设置密码。
+
+**Files:**
+- Modify: `01-infrastructure/vps-rebuild/VPS重建与网站部署一步步教程.html`
+- Modify: `docs/superpowers/acceptance-2026-10-03-vps-rebuild-guide.md`
+
+- [x] 将第 2 步改为确认清空范围，旧服务器备份放入可选折叠分支；明确无需旧 root 密码，电脑工作区不受影响。
+- [x] 第 3 步写明真实详情页、Install → Reinstall OS、Select OS、新密码两次填写、Remove old SSH Keys、Reinstall 和 Tasks And Logs。系统列表空白时停止提交，不将其认定为已选系统；新密码和最终提交由用户自行完成。
+- [x] 第 4 步使用 `ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password root@23.94.184.3`，说明 Mac 终端、密码无回显、成功提示，以及认证失败/连接拒绝/指纹变化的不同检查路径。
+- [x] 执行现有 7 项测试、DOM 交互检查、HTML 锚点和命令语法检查；只读复核改动，记录实际 UI 观察与此前非预期重启，不声称已重装；提交并同步本次文件。
