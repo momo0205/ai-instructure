@@ -57,3 +57,39 @@
 - [x] 第 3 步写明真实详情页、Install → Reinstall OS、Select OS、新密码两次填写、Remove old SSH Keys、Reinstall 和 Tasks And Logs。系统列表空白时停止提交，不将其认定为已选系统；新密码和最终提交由用户自行完成。
 - [x] 第 4 步使用 `ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password root@23.94.184.3`，说明 Mac 终端、密码无回显、成功提示，以及认证失败/连接拒绝/指纹变化的不同检查路径。
 - [x] 执行现有 7 项测试、DOM 交互检查、HTML 锚点和命令语法检查；只读复核改动，记录实际 UI 观察与此前非预期重启，不声称已重装；提交并同步本次文件。
+
+### Task 5: 将第 4–5 步的现场问题写回教程（2026-10-04）
+
+用户已完成 SSH 密钥步骤，要求判断并更新 HTML。沿用已经确定的单文件、18 步设计；本次修订限定为第 3–5 步说明与对应故障表，不新增 JavaScript 功能、部署流程或服务器操作。
+
+**Files:**
+- Modify: `01-infrastructure/vps-rebuild/VPS重建与网站部署一步步教程.html`
+- Modify: this plan and `docs/superpowers/acceptance-2026-10-03-vps-rebuild-guide.md`
+
+- [x] 第 4 步按 SSH 提示的主机密钥类型分别给出 RSA / ED25519 的 VNC 读取命令，明确比较完整 SHA256 字符串、位数与备注不参与核对；不将本次指纹写成未来重装的信任值。补充 VNC 未连接时的商家工单核对路径，核对后日常使用 SSH。
+- [x] 第 5 步解释密钥登录和 deployer 的目的，明确保留 root 窗口并用 ⌘N 开 Mac 本地窗口，执行 `echo "$HOME"` 区分 `/Users/...` 与 `/root`。两份密钥都不存在才生成，保持公钥上传、服务器安装和验证的连续顺序。
+- [x] 说明 root 密码 / deployer 密码 / 密钥口令的输入位置；`PreferredAuthentications=password` 是固定认证方式，密码只在交互提示输入。空口令可继续，说明文件保护差异，并给出 Mac 本地 `ssh-keygen -p -f "$HOME/.ssh/ironmao_vps"` 为同一私钥补口令的可选操作。
+- [x] 保留登录与 sudo 成功后才关闭 root / 密码登录的门槛；对应故障表补充本地/服务器窗口混淆和 SCP 参数误填。文案编辑不新增镜像实现的字符串断言测试，运行已有 `node --test 01-infrastructure/vps-rebuild/tests/guide.test.cjs`、整页 DOM 验证、所有命令块 `bash -n`、HTML 锚点与内嵌脚本语法检查，并以 `ssh -G` 不联网检查认证选项。
+- [x] 只读复核改动，按实际结果记录验证与用户确认的进度；尝试 Mem0 回写，只提交并推送本次教程与记录。
+
+### Task 6: 单独提供日常登录与维护手册（2026-10-04）
+
+用户关心关闭 root SSH 后的部署便利性，并要求维护一份以后可查的操作文档。采用与现有教程配套的独立 HTML：保留完整重建教程，同时提供较短的日常操作入口；不自动修改 Mac SSH 配置或真实服务器。核心设计是登录 deployer → 普通操作直接执行 → 管理操作 sudo / sudo -i，关闭 root SSH 不删除 root 账号。服务命令按完成相应安装后的条件使用。
+
+**Files:**
+- Create: `01-infrastructure/vps-rebuild/VPS日常登录与维护手册.html`
+- Modify: rebuild HTML links / step 6 explanation, this plan, acceptance record
+
+- [x] 手册包含当前 IP、deployer 登录命令、可选 SSH 简称配置、sudo / sudo -i 与 exit 的区别、服务检查和重启、SSH 面板隧道、网站发布与回滚及备份入口。密码 / 私钥 / WebBasePath 不写入文档，未来部署任务以完整教程对应步骤为准。
+- [x] 补充系统升级后的重启与密钥重连、常见 SSH 故障与 VNC 救援入口；只列必要的只读检查和已安装服务的维护命令，不将 root SSH 关闭描述成删除 root 或失去管理权限。
+- [x] 两份 HTML 互相链接；检查链接、静态资源、复制功能与命令语法，运行完整教程现有检查；只读复核、记录并同步。
+
+### Task 7: 补充安装凭据位置与隧道账号说明（2026-10-04）
+
+用户继续安装并贴出日志：UFW 规则与 SSH 配置检查已执行，3X-UI v3.8.5 的凭据显示在 Panel Installation Complete 区域，后续 Fail2ban 日志将其顶到上方。只记录字段位置和验证进度，不保存或重复用户名、密码、实际 WebBasePath、API Token 或疑似 root 密码。
+
+- [x] 第 7 步明确凭据区域的位置，说明安装器的 root SSH 示例应替换为第 8 步的 deployer 隧道命令。
+- [x] 核对官方固定版本的安装器字段，为忘记安装输出时提供 `sudo grep -E '^XUI_(USERNAME|PASSWORD|WEB_BASE_PATH)=' /etc/x-ui/install-result.env`，只在用户自己电脑查看。注明初始记录与后续改密不同，API Token 不纳入查看命令。
+- [x] 将面板回环绑定、凭据查看与完整教程入口加入维护手册，并继续进行文档验证与只读复核。
+
+- [x] 两份 HTML 补充可直接复制的 28080 备用 SSH 隧道与对应浏览器地址，远端仍为回环 18080；说明默认打开按钮使用 18080，备用地址路径随主教程参数更新。
