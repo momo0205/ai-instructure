@@ -106,7 +106,10 @@ set -eu
 [ "$(dpkg --print-architecture)" = amd64 ] || {
   echo '停止：需要 amd64 软件包。'; exit 1;
 }
-sudo apt update
+if ! sudo apt update; then
+  echo '停止：软件源更新失败，sing-box 尚未安装完成。先处理下面的软件源故障，再重跑本块；不要继续第 5 步。'
+  exit 1
+fi
 sudo apt install -y ca-certificates curl python3 openssl
 curl --fail --location --output /tmp/sing-box_1.14.2_linux_amd64.deb \
   https://github.com/SagerNet/sing-box/releases/download/v1.14.2/sing-box_1.14.2_linux_amd64.deb
@@ -116,8 +119,31 @@ printf '%s  %s\n' \
 sudo dpkg -i /tmp/sing-box_1.14.2_linux_amd64.deb
 sudo apt-mark hold sing-box
 /usr/bin/sing-box version
+getent passwd sing-box
+getent group sing-box
 sudo systemctl cat sing-box
 SH_INSTALL</code></pre></div>
+<div class="note warn"><strong>已有 Caddy 软件源报 402 Payment Required 时：</strong>本块会在 apt update 处停止，后续下载安装均未执行。这个仓库访问错误不是要求你给 VPS 充值；Caddy 官方仓库也有<a href="https://github.com/caddyserver/dist/issues/100" target="_blank" rel="noopener noreferrer">相同错误记录</a>。若服务器已安装 Caddy，可执行下面的恢复块，暂时停用该更新源；不卸载、不停止 Caddy，也不绕过软件包签名。其他软件源错误不能直接套用此恢复块。</div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 仅 Caddy Cloudsmith 源报 402 时执行</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-source-recovery">bash &lt;&lt;'SH_CADDY_SOURCE'
+set -eu
+source_file=/etc/apt/sources.list.d/caddy-stable.list
+disabled_file=/etc/apt/sources.list.d/caddy-stable.list.disabled
+if [ -f "$source_file" ]; then
+  [ ! -e "$disabled_file" ] || {
+    echo '停止：停用文件已存在，不能覆盖；请先核对这两个源文件。'; exit 1;
+  }
+  grep -Fq 'https://dl.cloudsmith.io/public/caddy/stable/deb/debian' "$source_file" || {
+    echo '停止：源文件不是预期的官方 Caddy Cloudsmith 源，不修改。'; exit 1;
+  }
+  sudo mv "$source_file" "$disabled_file"
+elif [ ! -f "$disabled_file" ]; then
+  echo '停止：未找到预期源文件；先定位 Caddy 的实际 .list / .sources 文件，不猜路径。'
+  exit 1
+fi
+sudo apt update
+sudo systemctl is-active caddy
+SH_CADDY_SOURCE</code></pre></div>
+<p>恢复块成功后，<strong>重新复制本步上方完整安装块</strong>，直到哈希 OK、版本 1.14.2、passwd / group 输出包含 sing-box，才继续第 4 / 5 步。初始备份不用重做。停用期间 Caddy 不会从该源收到更新；仓库恢复后，先确认原 .list 不存在，再将 .disabled 文件改回原名并执行 apt update。APT 只读取 .list / .sources 源文件，改名保留了原始内容。</p>
 <div class="note warn">固定包安装脚本创建系统用户并 reload systemd，<strong>不自动 enable / start</strong>。包内默认配置是 Shadowsocks 8080，必须先替换为第 5 步配置，绝不启动默认配置。</div><p>核对版本 1.14.2，服务文件的 <code>User=sing-box</code> 及其主组 <code>sing-box</code>、<code>CAP_NET_BIND_SERVICE</code>。服务用 <code>-C /etc/sing-box</code> 读取整个目录，备份必须放在 <code>/var/backups/ironmao-proxy</code>。</p><p class="success"><strong>成功条件：</strong>哈希 OK；版本 1.14.2；服务用户与权限符合要求；未启动默认配置。</p></section>
 
 <section class="step" id="step-4"><div class="step-top"><span class="step-number">04</span><div><p class="step-subtitle">窗口 A · VPS 终端 · 检查出口</p><h2>检查 Reality 握手目标</h2></div></div><p>固定目标 <code>dl.google.com:443</code>，两端 SNI 一致。先确认 VPS 本身能访问目标、协商 TLS 1.3 和 h2。</p>
@@ -131,6 +157,13 @@ sni = 'dl.google.com'
 client = pathlib.Path('/home/deployer/ironmao-vps.yaml')
 config_dir = pathlib.Path('/etc/sing-box')
 config = config_dir / 'config.json'
+if not pathlib.Path('/usr/bin/sing-box').is_file():
+    raise SystemExit('停止：sing-box 尚未安装。返回第 3 步，处理软件源错误并完成安装后再生成配置。')
+try:
+    pwd.getpwnam('sing-box')
+    service_group = grp.getgrnam('sing-box').gr_gid
+except KeyError:
+    raise SystemExit('停止：sing-box 服务用户或组缺失。返回第 3 步，完成软件包安装；不要手动创建组跳过安装。')
 if client.exists():
     raise SystemExit('停止：客户端文件已存在。保留凭据，直接下载，不要重新生成。')
 if subprocess.run(['systemctl', 'is-active', '--quiet', 'sing-box']).returncode == 0:
@@ -139,7 +172,6 @@ others = [p for p in config_dir.rglob('*.json') if p != config]
 if others:
     raise SystemExit('停止：配置目录存在其他 JSON，先核对，不能叠加运行。')
 account = pwd.getpwnam('deployer')
-service_group = grp.getgrnam('sing-box').gr_gid
 result = subprocess.run(['/usr/bin/sing-box', 'generate', 'reality-keypair'],
                         check=True, text=True, stdout=subprocess.PIPE)
 keys = dict(line.strip().split(':', 1) for line in result.stdout.splitlines() if ':' in line)
