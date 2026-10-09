@@ -71,3 +71,13 @@ sing-box默认方案还完成1,048,576字节下载，最终HTTP200；重复请�
 ## 最终状态
 
 18项实验工具测试、7项原教程测试、29个Shell块、7个Python heredoc、三份HTML链接与脚本检查均通过。测试容器已全部停止；未停止其它项目容器，所有独立FlClash实验内核退出且监听关闭。Mem0查询与回写均因缺少DEEPSEEK_API_KEY失败，未要求用户补密钥，证据已写入本记录。只同步本任务的3份HTML、实验工具与无凭据结果、计划和验收记录。
+
+## 用户现场跟进：Caddy 仓库 HTTP 402
+
+用户本次日志确认 deployer 密钥登录、sudo、Ubuntu24.04 amd64、NTP同步、TCP443空闲和初始备份成功；目标 TLS1.3 / h2 / verify0 通过。root密码SSH被拒绝符合先前关闭root与密码登录的设置。第3步 `apt update` 遇到 Cloudsmith Caddy 源 HTTP402 返回失败，`set -eu` 因而在下载安装 sing-box 之前退出。第5步的 `grp.getgrnam('sing-box')` 缺组是安装未执行的后果；生成器在此之前未写入节点配置，不应通过手建组绕过。
+
+参考 [Caddy 官方安装说明](https://caddyserver.com/docs/install)中 `caddy-stable.list` 路径和 [同类官方仓库问题 #100](https://github.com/caddyserver/dist/issues/100)。未据历史 issue 认定本次402的具体配额原因，也未绕过签名或让用户付费。
+
+HTML第3步新增手动恢复块：仅匹配预期官方Caddy源并将文件改为 `.disabled`，保留原内容与现有服务；拒绝覆盖已存在的停用文件，未知源路径停止。说明停用期间该源不提供Caddy更新、恢复原名的时机；修复后重跑完整安装块。第5步新增缺二进制 / 缺服务账户的清晰前置检查，安装结束增加passwd/group核对。
+
+局部验证：旧生成器在无安装环境报非指引异常（RED）；新生成器缺二进制及模拟缺账户均明确退出并提示返回第3步，没有Traceback（GREEN）。临时目录、替身sudo/apt/systemctl验证源停用、重复执行、不覆盖旧停用文件、拒绝未知源和缺失源，其他源内容保持原样。30个Shell块bash语法、7个Python heredoc编译、HTML唯一ID/锚点与JS语法通过；未在真实VPS执行修复，软件源恢复及安装成功仍需用户输出确认。Mem0仍因缺少DEEPSEEK_API_KEY不可用。
