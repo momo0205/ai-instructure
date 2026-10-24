@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FAFAF8"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">“本地分析”不等于数据不出机</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">接入前要分开画三条数据流，每一条的去向都要单独确认</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="170" width="1040" height="120" rx="20" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="115" y="212" font-size="21" font-weight="700" fill="#1849A9">第一条：目标文件 → 本地解析器 / 反编译引擎</text>
+    <text x="115" y="246" font-size="18" fill="#344054">通常在本地完成；但如果配置了远端引擎，产物字节可能出机</text>
+    <text x="115" y="272" font-size="16" fill="#667085">要确认：实际用的是哪个引擎、它连不连网</text>
+    <rect x="80" y="315" width="1040" height="120" rx="20" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+    <text x="115" y="357" font-size="21" font-weight="700" fill="#B54708">第二条：分析结果 → 宿主上下文 → 远端模型请求</text>
+    <text x="115" y="391" font-size="18" fill="#344054">只要宿主用远端大模型，工具返回的字符串、伪代码、路径都可能进入请求体</text>
+    <text x="115" y="417" font-size="16" fill="#667085">要确认：模型提供方、数据政策，以及产物里的敏感内容</text>
+    <rect x="80" y="460" width="1040" height="120" rx="20" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="115" y="502" font-size="21" font-weight="700" fill="#B42318">第三条：研究结论 → 公开报告</text>
+    <text x="115" y="536" font-size="18" fill="#344054">原始输出里的内网地址、密钥片段、用户数据，不会因为存成 JSON 就自动脱敏</text>
+    <text x="115" y="562" font-size="16" fill="#667085">要确认：公开前人工审核，gitignore 不是脱敏机制</text>
+  </g>
+  <rect x="200" y="600" width="800" height="50" rx="14" fill="#F2F4F7"/>
+  <text x="290" y="632" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#18212F">第一条留在本地，推不出后两条也留在本地</text>
+</svg>

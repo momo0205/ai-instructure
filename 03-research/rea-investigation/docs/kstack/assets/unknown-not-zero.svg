@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FBFAF7"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">一次真实比较：changed 是 0，unknown 是 1</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">缺陷恰恰藏在 unknown 里——2026-10-14 实跑记录节选</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="165" width="1040" height="130" rx="20" fill="#FFFFFF" stroke="#E4E7EC" stroke-width="2"/>
+    <text x="115" y="205" font-size="20" font-weight="700" fill="#18212F">比较两版“导出结果处理函数”的返回形状</text>
+    <rect x="115" y="228" width="150" height="48" rx="10" fill="#F2F4F7"/>
+    <text x="140" y="259" font-size="19" font-weight="700" fill="#344054">新增：0</text>
+    <rect x="285" y="228" width="150" height="48" rx="10" fill="#F2F4F7"/>
+    <text x="310" y="259" font-size="19" font-weight="700" fill="#344054">删除：0</text>
+    <rect x="455" y="228" width="150" height="48" rx="10" fill="#F2F4F7"/>
+    <text x="480" y="259" font-size="19" font-weight="700" fill="#344054">变化：0</text>
+    <rect x="625" y="228" width="170" height="48" rx="10" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="650" y="259" font-size="19" font-weight="700" fill="#B42318">未知：1</text>
+    <rect x="815" y="228" width="270" height="48" rx="10" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+    <text x="840" y="259" font-size="19" font-weight="700" fill="#B54708">覆盖状态：partial</text>
+  </g>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="340" width="500" height="240" rx="20" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="115" y="385" font-size="22" font-weight="700" fill="#B42318">如果只摘“变化：0”</text>
+    <text x="115" y="425" font-size="18" fill="#344054">报告会写成：两个版本没有变化</text>
+    <text x="115" y="460" font-size="18" fill="#344054">而真相是：缺陷版漏掉了取消分支</text>
+    <text x="115" y="510" font-size="18" font-weight="700" fill="#B42318">结论被严重低估</text>
+    <rect x="620" y="340" width="500" height="240" rx="20" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="655" y="385" font-size="22" font-weight="700" fill="#B42318">如果把 unknown 改写成“已证明删除”</text>
+    <text x="655" y="425" font-size="18" fill="#344054">就夸大了静态结果：</text>
+    <text x="655" y="460" font-size="18" fill="#344054">工具只说“无法配对”，没说“已删除”</text>
+    <text x="655" y="510" font-size="18" font-weight="700" fill="#B42318">结论被严重高估</text>
+  </g>
+  <rect x="170" y="600" width="860" height="50" rx="14" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+  <text x="250" y="632" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#067647">正确读法：unknown 是“这里有个值得核查的位置”，不是零，也不是结论</text>
+</svg>

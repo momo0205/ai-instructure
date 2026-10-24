@@ -1,33 +1,67 @@
+# ============================================================
+# 工作区根 ignore 规则
+# 原则：只跟踪"人写的、需要 review 的、重建代价高"的东西。
+#       依赖、构建产物、发布包、密钥、本机状态一律不入库。
+# ============================================================
+
+# ---------- 操作系统 / IDE ----------
 .DS_Store
-.codeflicker/
-.env
-.worktrees/
-
-# IDE
+Thumbs.db
 .idea/
+.vscode/
+.codeflicker/
+*.swp
+*.swo
+.classpath
+.project
+.settings/
 
-# 构建产物
+# ---------- 密钥 / 环境 ----------
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+key.properties
+
+# ---------- 依赖与构建产物 ----------
+node_modules/
+dist/
+build/
+out/
 target/
+.gradle/
+.dart_tool/
+.pub-cache/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
 *.class
 
-# Mem0 记忆系统数据文件（只同步代码，不同步数据）
+# ---------- 发布产物（走 GitHub Releases，不进 git）----------
+*.apk
+*.aab
+*.ipa
+*.dmg
+
+# ---------- 工作区自身状态 ----------
+.worktrees/
+.superpowers/brainstorm/
 .memory/qdrant/
 .memory/history.db
-.memory/__pycache__/
+.memory/.cache/
 
-# Superpowers brainstorm 会话产物
-.superpowers/brainstorm/
-
+# ---------- 可重新生成的数据 ----------
 # a-stock-strategy 行情与实验数据（可从源头重新生成）
 04-applications/investment-research/a-stock-strategy/data/managed_*/
 04-applications/investment-research/a-stock-strategy/data/real/
 04-applications/investment-research/a-stock-strategy/data/real_baidu/
 
-# Eclipse/Gradle IDE 残留
-.classpath
-.project
-.settings/
-.gradle/
-
-# Mem0 记忆系统（整个目录不进 git，按 AGENTS.md 约定只保留代码引用）
-.memory/
+# 独立的财务学习站点仓库（有自己的 git 与 remote）
+04-applications/investment-research/finance-ironmao/
