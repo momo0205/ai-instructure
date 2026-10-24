@@ -1,0 +1,240 @@
+# ============================================================
+# 工作区项目清单 —— 唯一事实源
+# ------------------------------------------------------------
+# 约定：
+#   path   : 相对工作区根目录
+#   kind   : submodule | local | external
+#            submodule = git 子模块（钉住某个 commit）
+#            local     = 直接跟踪在本仓库里
+#            external  = 独立 git 仓库（有自己的 remote 或待补）
+#   state  : active | maintenance | paused | reference | archived
+#   run    : 在新机器上跑起来的第一条命令（不知道就留空并写 notes）
+# ============================================================
+
+version: 1
+
+workspace:
+  name: ai-instructure
+  remote: git@github-momo0205:momo0205/ai-instructure.git
+  default_branch: main
+  bootstrap: ./bootstrap.sh
+
+projects:
+  # ---------- 05 移动端 ----------
+  - id: mira-flutter
+    name: Mira Flutter 客户端
+    path: 05-mobile/mira-flutter
+    kind: submodule
+    runtime: flutter
+    remote: https://github.com/momo0205/mira-flutter
+    entry: lib/main.dart
+    run: flutter pub get && flutter run
+    state: active
+    notes: 默认服务器 https://mira.ironmao.win；签名读 android/key.properties
+
+  - id: mira-client
+    name: Mira 原生 Android 客户端
+    path: 05-mobile/mira-client
+    kind: local
+    runtime: android-gradle
+    entry: app/src/main
+    run: ./gradlew assembleDebug
+    state: maintenance
+    notes: 无 gradle wrapper，需要系统 gradle
+
+  - id: mira-pwa
+    name: Mira PWA / WebView APK
+    path: 05-mobile/mira-pwa
+    kind: local
+    runtime: web
+    entry: index.html
+    run: python3 -m http.server 8000
+    state: maintenance
+
+  - id: apk-project
+    name: Mira WebView 壳工程
+    path: 05-mobile/apk-project
+    kind: local
+    runtime: android-gradle
+    entry: app/src/main
+    run: ./gradlew assembleRelease
+    state: archived
+    notes: 已被 mira-flutter 取代
+
+  # ---------- 04 应用 ----------
+  - id: mira-server
+    name: Mira HTTP API 服务端
+    path: 04-applications/investment-research/mira-server
+    kind: local
+    runtime: python-fastapi
+    entry: start.sh
+    run: ./start.sh
+    state: maintenance
+    notes: 监听 8080；需要 DEEPSEEK_API_KEY
+
+  - id: mira-automation
+    name: Mira 自有脚本备份
+    path: 04-applications/investment-research/mira-automation
+    kind: local
+    runtime: python
+    entry: README.md
+    state: maintenance
+    notes: 原本写在第三方 Mira/scripts 下，恢复方式见 README
+
+  - id: a-stock-strategy
+    name: A 股日线策略回测
+    path: 04-applications/investment-research/a-stock-strategy
+    kind: local
+    runtime: python-uv
+    entry: MVP.md
+    run: uv sync && .venv/bin/python -m strategy serve
+    state: active
+    notes: 工作台 http://127.0.0.1:8765
+
+  - id: finance-ironmao
+    name: 财务指标学习站
+    path: 04-applications/investment-research/finance-ironmao
+    kind: external
+    runtime: node-next
+    entry: README.md
+    run: npm install && npm run dev
+    state: active
+    notes: 独立仓库但尚未配置 remote，见 README 的待办
+
+  - id: gridbot
+    name: 加密货币网格交易机器人
+    path: 04-applications/gridbot
+    kind: local
+    runtime: python-docker
+    entry: main.py
+    run: docker compose up
+    state: paused
+    notes: OKX 密钥走项目内 .env（见 gridbot/.env.example）
+
+  - id: agent-evidence-lab
+    name: Agent 证据实验室
+    path: 04-applications/agent-evidence-lab
+    kind: submodule
+    runtime: java-maven
+    remote: https://github.com/momo0205/agent-evidence-lab
+    entry: README.md
+    run: ./mvnw test
+    state: active
+
+  - id: mira
+    name: Mira 投研协议（第三方）
+    path: 04-applications/investment-research/Mira
+    kind: submodule
+    runtime: python
+    remote: https://github.com/byteseek/Mira
+    entry: START_HERE.md
+    state: maintenance
+    notes: 上游仓库，不要在此直接改代码；自有脚本见 mira-automation
+
+  - id: a-stock-data
+    name: A 股数据工具包（第三方）
+    path: 04-applications/investment-research/a-stock-data
+    kind: submodule
+    runtime: python
+    remote: https://github.com/simonlin1212/a-stock-data
+    entry: README.md
+    state: maintenance
+
+  # ---------- 03 研究 ----------
+  - id: jev-decision-lab
+    name: JEV 决策实验室
+    path: 03-research/jev-decision-lab
+    kind: submodule
+    runtime: python
+    remote: https://github.com/momo0205/jev-decision-lab
+    entry: docs/
+    run: uv sync && pytest
+    state: active
+
+  - id: paper-deep-dive
+    name: 论文精读工作台
+    path: 03-research/paper-deep-dive
+    kind: local
+    runtime: python-static
+    entry: index.html
+    run: python3 -m http.server 8001
+    state: active
+
+  - id: claude-code-source
+    name: Claude Code 逆向源码
+    path: 03-research/claude-code-source
+    kind: submodule
+    runtime: node-ts
+    remote: https://github.com/momo0205/claude-code-source-code
+    state: reference
+
+  - id: claude-reviews-claude
+    name: Claude 自读源码分析
+    path: 03-research/claude-code-analysis/claude-reviews-claude
+    kind: submodule
+    runtime: docs
+    remote: https://github.com/momo0205/claude-reviews-claude
+    state: reference
+
+  - id: rea-investigation
+    name: REA 逆向工具实跑记
+    path: 03-research/rea-investigation
+    kind: local
+    runtime: docs
+    entry: docs/kstack/rea-ai-reverse-engineering.md
+    state: reference
+
+  # ---------- 02 Agent 工具 ----------
+  - id: drawio-generator
+    name: 自然语言转 draw.io
+    path: 02-agent-tools/drawio-generator
+    kind: local
+    runtime: node-ts
+    entry: README.md
+    run: npm ci && npm run build
+    state: maintenance
+
+  - id: skills-repo
+    name: Agent Skills 仓库
+    path: 02-agent-tools/skills-repo
+    kind: local
+    runtime: docs
+    entry: AGENTS.md
+    state: maintenance
+
+  - id: superpowers
+    name: Superpowers 技能框架
+    path: superpowers
+    kind: submodule
+    runtime: docs-skills
+    remote: https://github.com/momo0205/superpowers
+    entry: skills/
+    state: active
+
+# ---------- 01 基础设施（文档）----------
+resources:
+  - path: 01-infrastructure
+    name: 部署手册（VPN / VPS / MacBook Server / VPS 重建）
+    type: docs
+  - path: docs/superpowers
+    name: 设计文档（specs）与实施计划（plans）
+    type: docs
+  - path: docs/sessions
+    name: 历史 Agent 会话记录
+    type: archive
+  - path: docs/reports
+    name: 工作汇报与一次性产出
+    type: archive
+
+# ---------- 新机器需要人工准备的东西 ----------
+manual_setup:
+  - item: SSH 别名
+    detail: origin 用 github-momo0205 别名 + ~/.ssh/id_ed25519_momo0205；或把 remote 换成 HTTPS
+  - item: DEEPSEEK_API_KEY
+    detail: 写入 .env（记忆系统必需）
+  - item: Android 签名
+    detail: 各 Android 项目需要 key.properties + *.keystore，均在机器本地，不入库
+  - item: TUSHARE_TOKEN
+    detail: 仅 a-stock 相关项目需要
+  - item: Flutter / Android SDK / JDK17 / Docker
+    detail: 按需安装，bootstrap.sh --check 会列出缺失项
