@@ -164,9 +164,9 @@ python3 .memory/mem.py export    # 把旧索引导出进账本
 
 ## 🧾 已知债务
 
-1. **历史体积**：`.git` 约 238 MB，历史里有 50 MB 的 APK、node_modules、旧版 `index.html`。清理需要 `git filter-repo` + 所有机器重新 clone。
+1. **历史已重写**（2026-10-24）：用 `git filter-repo` 清除了历史里的 APK、node_modules、构建产物、keystore 与签名密码，`.git` 从 238 MB 降到 **47 MB**。代价是**所有旧的 clone 必须重新克隆**（commit SHA 全变了）。
 2. **APK 不再入库**：`05-mobile/*.apk` 已从索引移除，文件仍在本地。建议改传 GitHub Releases。
-3. **签名密码曾入库**：`***REMOVED***` 已从构建脚本移除，但仍在历史里。若要公开发布，建议更换签名密钥。
+3. **签名密钥已从历史清除**：`apk-project` 与 `mira-flutter` 的硬编码密码已移除，密钥文件也不再入库。若要公开发布，仍建议更换签名密钥（旧密钥曾在本机明文出现）。
 4. **`finance-ironmao` 无 remote**：925 MB，仅存在于本机，需要建仓推送。
 5. **6 个项目是「独立克隆 + 子模块登记」双形态**：功能可用但语义模糊，长期建议统一为清单克隆（见 `projects.yaml`）。
 6. **DSH 技能**：`AGENTS.md` 引用的 Superpowers 技能尚未注册为 DSH 原生 skill，目前需按文件路径读取。
