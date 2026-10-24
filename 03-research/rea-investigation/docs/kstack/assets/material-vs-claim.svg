@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FBFAF7"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">每种材料，只支持对应强度的声明</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">右边一栏是最容易踩的坑：把材料读超了</text>
+  <g font-family="Arial,sans-serif" font-size="17">
+    <rect x="70" y="160" width="330" height="50" rx="10" fill="#EAF2FF"/>
+    <text x="95" y="191" font-weight="700" fill="#1849A9">工具材料</text>
+    <rect x="415" y="160" width="330" height="50" rx="10" fill="#ECFDF3"/>
+    <text x="440" y="191" font-weight="700" fill="#067647">它能支持的声明</text>
+    <rect x="760" y="160" width="370" height="50" rx="10" fill="#FEF3F2"/>
+    <text x="785" y="191" font-weight="700" fill="#B42318">不能直接推出</text>
+    <g fill="#FFFFFF" stroke="#E4E7EC" stroke-width="1.5">
+      <rect x="70" y="222" width="330" height="76" rx="10"/>
+      <rect x="415" y="222" width="330" height="76" rx="10"/>
+      <rect x="760" y="222" width="370" height="76" rx="10"/>
+      <rect x="70" y="310" width="330" height="76" rx="10"/>
+      <rect x="415" y="310" width="330" height="76" rx="10"/>
+      <rect x="760" y="310" width="370" height="76" rx="10"/>
+      <rect x="70" y="398" width="330" height="76" rx="10"/>
+      <rect x="415" y="398" width="330" height="76" rx="10"/>
+      <rect x="760" y="398" width="370" height="76" rx="10"/>
+      <rect x="70" y="486" width="330" height="76" rx="10"/>
+      <rect x="415" y="486" width="330" height="76" rx="10"/>
+      <rect x="760" y="486" width="370" height="76" rx="10"/>
+      <rect x="70" y="574" width="330" height="76" rx="10"/>
+      <rect x="415" y="574" width="330" height="76" rx="10"/>
+      <rect x="760" y="574" width="370" height="76" rx="10"/>
+    </g>
+    <g fill="#344054">
+      <text x="95" y="254">产物里出现某个字符串</text>
+      <text x="440" y="254">这些字节存在于这个模块</text>
+      <text x="785" y="254">用户这次操作执行了此模块</text>
+      <text x="95" y="342">静态图里存在一条调用候选</text>
+      <text x="440" y="342">存在工具可表达的关系</text>
+      <text x="785" y="342">这次操作必然经过这条路径</text>
+      <text x="95" y="430">一次操作后观察到某结果</text>
+      <text x="440" y="430">这个环境、这个窗口内发生了</text>
+      <text x="785" y="430">它必然由某处静态差异造成</text>
+      <text x="95" y="518">新旧版本某模块结构不同</text>
+      <text x="440" y="518">已覆盖的产物中存在差异</text>
+      <text x="785" y="518">这个差异就是回归的原因</text>
+      <text x="95" y="606">候选实现通过约定测试</text>
+      <text x="440" y="606">它满足这几条已声明条件</text>
+      <text x="785" y="606">已经完整复刻了整个应用</text>
+    </g>
+  </g>
+</svg>

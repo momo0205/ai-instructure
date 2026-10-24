@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FAFAF8"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">同一份样本：Mac 上启动失败，Linux 上分析成功</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">两份结果不能合并成“Mac 已跑通”；环境是结论的一部分</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="165" width="500" height="330" rx="20" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="115" y="210" font-size="24" font-weight="700" fill="#B42318">Mac：分析启动失败</text>
+    <text x="115" y="252" font-size="18" fill="#344054">失败点：进程所有权辅助程序编译</text>
+    <text x="115" y="284" font-size="18" fill="#344054">诊断：本机开发工具链不兼容</text>
+    <text x="115" y="330" font-size="18" font-weight="700" fill="#B42318">留下的东西：</text>
+    <text x="115" y="364" font-size="17" fill="#667085">一条带目标哈希的部分观察记录</text>
+    <text x="115" y="394" font-size="17" fill="#667085">图覆盖不完整，关系为空</text>
+    <text x="115" y="440" font-size="18" font-weight="700" fill="#B42318">不能从“空关系”推断“没有这个行为”</text>
+    <rect x="620" y="165" width="500" height="330" rx="20" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="655" y="210" font-size="24" font-weight="700" fill="#067647">Linux 容器：两次分析成功</text>
+    <text x="655" y="252" font-size="18" fill="#344054">环境：固定的 Node 22 容器，只读挂载样本</text>
+    <text x="655" y="284" font-size="18" fill="#344054">结果：两版各得到一份完整证据</text>
+    <text x="655" y="330" font-size="18" font-weight="700" fill="#067647">关键数字（两版完全相同）：</text>
+    <text x="655" y="364" font-size="17" fill="#667085">解析文件 2 / 2，解析失败 0</text>
+    <text x="655" y="394" font-size="17" fill="#667085">结构图 7 节点、8 边，结构覆盖 complete</text>
+    <text x="655" y="424" font-size="17" fill="#667085">但语义覆盖都是 unknown（42 节点 vs 38 节点）</text>
+    <text x="655" y="460" font-size="18" font-weight="700" fill="#067647">结构“完整”，不等于语义“全懂”</text>
+  </g>
+  <rect x="150" y="545" width="900" height="80" rx="16" fill="#F2F4F7"/>
+  <text x="190" y="578" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#18212F">值得保留的细节：失败时工具没有绕过保护继续硬跑</text>
+  <text x="190" y="607" font-family="Arial,sans-serif" font-size="17" fill="#667085">遇到编译保护失败就停住并如实报告，比悄悄跳过检查、硬产出一份“成功”结果更值得信任</text>
+</svg>
