@@ -50,6 +50,30 @@
 4. **验证后声称完成** — 先跑测试确认，再声称完成
 5. **子项目独立** — 每个子项目有自己的 git 仓库、构建系统、测试体系，不要混淆
 
+## 并发写规则（多 Agent）
+
+父仓 `main` 只接受两类提交：
+
+| 类型 | 规则 |
+|---|---|
+| 代码 / 文档 | 一律走 worktree + 短命分支 + PR，**不直接推 main** |
+| 记忆账本 | 允许直接提交，但必须走 `./scripts/mem-commit.sh`，且只包含 `.memory/ledger.jsonl` |
+
+为什么 ledger 是例外：`.memory/` 属于父仓库，**子模块的 worktree 里没有它**，
+所以任何 Agent 回写记忆都只能落到主检出。这不是谁走错了目录，是结构决定的。
+
+并发安全由机制保证，而不是靠"冲突概率低"：
+
+- `.gitattributes` 给 ledger 配了 `merge=union` —— 两边追加的行自动取并集，不产生冲突；
+- `scripts/mem-commit.sh` 会先 `pull --rebase`、只提交 ledger、推送被拒自动重试。
+
+```bash
+./scripts/mem-commit.sh "memory: 【项目】做了什么 / 关键决策 / 踩坑"
+```
+
+另外：子模块的改动只推到子模块自己的分支，父仓的**子模块指针等合并时一起更新**，
+不要每做一步就单独提交一次指针。
+
 ## 跨 Agent 记忆系统 (Mem0)
 
 本项目使用 Mem0 实现跨 Agent 共享记忆，确保在不同机器、不同 Agent（Claude Code / Codex / CodeWhale）之间无缝衔接。
@@ -83,9 +107,8 @@ python3 .memory/mem.py rebuild
 # 回写记忆（做了什么、关键决策、遇到的问题）
 python3 .memory/mem.py add "【模块/项目名】具体完成了什么。关键决策：xxx。遇到问题：xxx"
 
-# 只提交账本，不要 git add -A（会把构建产物带进来）
-git add .memory/ledger.jsonl
-git commit -m "memory: xxx" && git push
+# 用统一入口提交：自动 rebase、只提交 ledger、推送被拒自动重试
+./scripts/mem-commit.sh "memory: 【模块/项目名】做了什么"
 ```
 
 ### 记忆规范

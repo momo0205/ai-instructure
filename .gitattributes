@@ -1,0 +1,3 @@
+# 记忆账本只追加。多个 Agent 同时回写时，git 默认会在文件末尾产生冲突；
+# merge=union 让两边新增的行直接取并集，不需要人工介入。
+.memory/ledger.jsonl merge=union
