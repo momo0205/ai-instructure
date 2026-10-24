@@ -1,0 +1,73 @@
+name: workspace
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装校验依赖
+        run: pip install --quiet pyyaml
+
+      - name: 清单与脚本语法
+        run: |
+          python - <<'PY'
+          import yaml
+          d = yaml.safe_load(open("projects.yaml", encoding="utf-8"))
+          assert d.get("version") == 1
+          ids = [p["id"] for p in d["projects"]]
+          assert len(ids) == len(set(ids)), "projects.yaml 里有重复 id"
+          for p in d["projects"]:
+              assert p.get("path") and p.get("kind"), f"{p} 缺 path/kind"
+              assert p["kind"] in {"submodule", "local", "external"}, p["kind"]
+          print(f"projects.yaml OK: {len(ids)} 个项目")
+          PY
+          bash -n bootstrap.sh
+          for f in scripts/*.sh; do bash -n "$f"; done
+          echo "shell 语法 OK"
+
+      - name: 禁止构建产物与发布包入库
+        run: |
+          bad="$(git ls-files | grep -E '(^|/)(node_modules|dist|build|__pycache__)/|\.(apk|aab|keystore|jks)$' || true)"
+          if [ -n "$bad" ]; then
+            echo "以下文件不应入库："
+            echo "$bad"
+            exit 1
+          fi
+          echo "无构建产物 / 发布包"
+
+      - name: 记忆账本格式
+        run: |
+          python - <<'PY'
+          import json
+          n = 0
+          with open(".memory/ledger.jsonl", encoding="utf-8") as f:
+              for i, line in enumerate(f, 1):
+                  line = line.strip()
+                  if not line:
+                      continue
+                  rec = json.loads(line)
+                  assert "ts" in rec and "text" in rec, f"第 {i} 行缺字段"
+                  n += 1
+          print(f"ledger OK: {n} 条")
+          PY
+
+      - name: VPS 教程自检
+        run: node --test 01-infrastructure/vps-rebuild/tests/guide.test.cjs
+
+      - name: 敏感字符串
+        run: |
+          if git grep -nI -E '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY)' -- . ; then
+            echo "发现疑似密钥，请立即移除并轮换"
+            exit 1
+          fi
+          echo "未发现疑似密钥"
