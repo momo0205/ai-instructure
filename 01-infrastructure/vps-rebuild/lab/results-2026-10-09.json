@@ -1,0 +1,343 @@
+{
+  "date": "2026-10-09",
+  "client": "Installed FlClash0.8.94 FlClashCore, arm64 macOS",
+  "server_environment": "Ubuntu24.04 linux/amd64 Docker; REALITY dl.google.com:443; native server TCP443 mapped to Mac loopback",
+  "scope": "Isolated actual core handshake and HTTPS transfers; not production VPS migration, GUI import, public ACME, censorship resilience, UDP or TUN",
+  "cases": [
+    {
+      "ok": true,
+      "proxy_port": 28791,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.865543
+        },
+        {
+          "target": "https://speed.cloudflare.com/__down",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 200,
+          "bytes_downloaded": 1048576,
+          "seconds": 1.13522
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box1.14.2-classic"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28794,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.572449
+        }
+      ],
+      "support_x25519mlkem768": true,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box1.14.2-mlkem"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28792,
+      "node_port": 32443,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.63883
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "Xray26.3.27-classic"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28795,
+      "node_port": 32443,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.601418
+        }
+      ],
+      "support_x25519mlkem768": true,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "Xray26.3.27-mlkem"
+    },
+    {
+      "ok": false,
+      "proxy_port": 28793,
+      "node_port": 32543,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": false,
+          "curl_exit": 35,
+          "http_status": 0,
+          "bytes_downloaded": 0,
+          "seconds": 3.944265
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "Xray26.9.9-classic"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28796,
+      "node_port": 32543,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.635673
+        }
+      ],
+      "support_x25519mlkem768": true,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "Xray26.9.9-mlkem"
+    },
+    {
+      "ok": false,
+      "proxy_port": 28797,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": false,
+          "curl_exit": 35,
+          "http_status": 0,
+          "bytes_downloaded": 0,
+          "seconds": 0.217199
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box-wrong-uuid"
+    },
+    {
+      "ok": false,
+      "proxy_port": 28798,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": false,
+          "curl_exit": 35,
+          "http_status": 0,
+          "bytes_downloaded": 0,
+          "seconds": 4.521743
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box-wrong-key"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28791,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.562745
+        },
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.656242
+        },
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.552187
+        },
+        {
+          "target": "https://speed.cloudflare.com/__down",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 200,
+          "bytes_downloaded": 1048576,
+          "seconds": 1.369963
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box-repeat"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28791,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 1.225953
+        },
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.557433
+        },
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.571243
+        },
+        {
+          "target": "https://speed.cloudflare.com/__down",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 200,
+          "bytes_downloaded": 1048576,
+          "seconds": 1.221491
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box-repeat-curlrc-disabled"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28791,
+      "node_port": 32643,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.776149
+        },
+        {
+          "target": "https://speed.cloudflare.com/__down",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 200,
+          "bytes_downloaded": 1048576,
+          "seconds": 1.591882
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "sing-box-final-after-deadline-fix"
+    },
+    {
+      "ok": true,
+      "proxy_port": 28791,
+      "node_port": 32743,
+      "requests": [
+        {
+          "target": "https://www.gstatic.com/generate_204",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 204,
+          "bytes_downloaded": 0,
+          "seconds": 0.760861
+        },
+        {
+          "target": "https://speed.cloudflare.com/__down",
+          "ok": true,
+          "curl_exit": 0,
+          "http_status": 200,
+          "bytes_downloaded": 1048576,
+          "seconds": 1.210399
+        }
+      ],
+      "support_x25519mlkem768": false,
+      "mode": "https_requests",
+      "core_exit": 0,
+      "listener_closed": true,
+      "label": "HTML-generated-server-client"
+    }
+  ],
+  "complete_generated_profile_test": {
+    "requests": [
+      {
+        "target": "https://www.gstatic.com/generate_204",
+        "ok": true,
+        "curl_exit": 0,
+        "http_status": 204,
+        "bytes_downloaded": 0,
+        "seconds": 0.219961
+      },
+      {
+        "target": "https://speed.cloudflare.com/__down",
+        "ok": true,
+        "curl_exit": 0,
+        "http_status": 200,
+        "bytes_downloaded": 1048576,
+        "seconds": 1.567949
+      }
+    ],
+    "dns_txt_rcode": 0,
+    "dns_txt_answers": 2,
+    "core_exit": 0
+  }
+}

@@ -45,6 +45,14 @@ def export(state_dir, key):
         request = result['request']
         metadata = result.get('metadata', {})
         parameters = dict(flatten(request))
+        exit_policy = metadata.get('exit_policy', request.get('exit_policy') or {})
+        if exit_policy:
+            parameters['exit_policy_version'] = exit_policy.get('version', 'unknown')
+        if exit_policy.get('id', 'fixed_holding') != 'fixed_holding':
+            # 旧字段仍保留在请求 artifact，但不冒充当前规则的生效参数。
+            parameters.pop('holding_period_days', None)
+        if metadata.get('exit_indicators'):
+            parameters['exit_indicators'] = metadata['exit_indicators']
         if metadata.get('study'):
             parameters.update(flatten(metadata['study'], 'study'))
             client.set_tag(run_id, 'study_id', metadata['study']['id'])
