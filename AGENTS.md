@@ -56,7 +56,7 @@
 
 | 类型 | 规则 |
 |---|---|
-| 代码 / 文档 | 一律走 worktree + 短命分支 + PR，**不直接推 main** |
+| 代码 / 文档 | 有并发写者时走 worktree + 短命分支 + PR；**同一时间只有一个写者**时可直接推 main |
 | 记忆账本 | 允许直接提交，但必须走 `./scripts/mem-commit.sh`，且只包含 `.memory/ledger.jsonl` |
 
 为什么 ledger 是例外：`.memory/` 属于父仓库，**子模块的 worktree 里没有它**，

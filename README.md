@@ -65,7 +65,7 @@ ai-instructure/
 │       ├── a-stock-strategy/       A 股日线策略回测（uv + 工作台）
 │       ├── mira-server/            Mira HTTP API
 │       ├── mira-automation/        写在 Mira 里的自有脚本备份
-│       └── finance-ironmao/        财务指标学习站（独立仓库，待补 remote）
+│       └── finance-ironmao/        财务指标学习站（独立仓库）
 │
 ├── 05-mobile/                      Mira 客户端各形态
 │   ├── mira-flutter/               [submodule] Flutter App
@@ -96,7 +96,7 @@ ai-instructure/
 | agent-evidence-lab | 子模块 | Java/Maven | 活跃 |
 | jev-decision-lab | 子模块 | Python | 活跃 |
 | paper-deep-dive | 根仓 | 静态站点 | 活跃 |
-| finance-ironmao | 独立仓 | Next.js | 活跃（无 remote） |
+| finance-ironmao | 独立仓 | Next.js | 活跃 |
 | mira-server | 根仓 | FastAPI | 维护 |
 | Mira / a-stock-data | 子模块（第三方） | Python | 维护 |
 | gridbot | 根仓 | Python/Docker | 暂停 |
@@ -167,9 +167,8 @@ python3 .memory/mem.py export    # 把旧索引导出进账本
 1. **历史已重写**（2026-10-24）：用 `git filter-repo` 清除了历史里的 APK、node_modules、构建产物、keystore 与签名密码，`.git` 从 238 MB 降到 **47 MB**。代价是**所有旧的 clone 必须重新克隆**（commit SHA 全变了）。
 2. **APK 不再入库**：`05-mobile/*.apk` 已从索引移除，文件仍在本地。建议改传 GitHub Releases。
 3. **签名密钥已从历史清除**：`apk-project` 与 `mira-flutter` 的硬编码密码已移除，密钥文件也不再入库。若要公开发布，仍建议更换签名密钥（旧密钥曾在本机明文出现）。
-4. **`finance-ironmao` 无 remote**：925 MB，仅存在于本机，需要建仓推送。
-5. **6 个项目是「独立克隆 + 子模块登记」双形态**：功能可用但语义模糊，长期建议统一为清单克隆（见 `projects.yaml`）。
-6. **DSH 技能**：`AGENTS.md` 引用的 Superpowers 技能尚未注册为 DSH 原生 skill，目前需按文件路径读取。
+4. **6 个项目是「独立克隆 + 子模块登记」双形态**：功能可用但语义模糊，长期建议统一为清单克隆（见 `projects.yaml`）。
+5. **DSH 技能**：`AGENTS.md` 引用的 Superpowers 技能尚未注册为 DSH 原生 skill，目前需按文件路径读取。
 
 ---
 

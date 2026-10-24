@@ -96,10 +96,11 @@ projects:
     path: 04-applications/investment-research/finance-ironmao
     kind: external
     runtime: node-next
+    remote: https://github.com/momo0205/finance-ironmao
     entry: README.md
     run: npm install && npm run dev
     state: active
-    notes: 独立仓库但尚未配置 remote，见 README 的待办
+    notes: 独立仓库；父仓 .gitignore 排除，需单独 clone
 
   - id: gridbot
     name: 加密货币网格交易机器人
