@@ -19,11 +19,18 @@ async function api(path, body) {
   catch {throw new Error('[NETWORK_ERROR] 无法连接本地服务，请确认服务已启动并重试。');}
   let result;try {result=await response.json();}catch {throw new Error('[INVALID_RESPONSE] 服务返回了无法读取的结果，请重试并检查服务日志。');} if(!response.ok)throw new Error(result.diagnostic?diagnosticText(result.diagnostic):result.error||'请求失败'); return result;
 }
+let exitEditor=null;
+function initExitEditor(catalog){
+  if(!globalThis.ExitPolicies)return;
+  exitEditor=ExitPolicies.createEditor({catalog,el,nodes:{select:$('exit-policy'),fields:$('exit-parameters'),description:$('exit-description'),holding:$('holding_period_days'),effectiveness:$('effectiveness'),hint:$('effectiveness-hint')},strategy:()=>$('strategy').value,onchange:updateStrategyRule});
+}
+function exitLabel(request){return globalThis.ExitPolicies?.label(request)||`固定持有 ${request?.holding_period_days??'—'} 个交易日`;}
 function strategyName(id) {return state.strategies.find(s=>s.id===id)?.name||id;}
 function strategyFields(values={}) {
   $('effectiveness').disabled=$('strategy').value!=='fixed_asset';
   if($('effectiveness').disabled)$('effectiveness').checked=false;
   $('effectiveness-hint').textContent=$('effectiveness').disabled?'有效性对照目前仅支持固定标的；动态选标的需另行拆分择时与选股影响。':'买入持有 + 100 轮随机择时，运行时间较长。历史对照不能替代样本外验证。';
+  exitEditor?.sync();
   const spec=state.strategies.find(s=>s.id===$('strategy').value); const container=$('strategy-parameters');container.replaceChildren();
   if(!spec)return; $('strategy-description').textContent=spec.description;
   for(const field of spec.parameters) {
@@ -67,7 +74,7 @@ function updateStrategyRule() {
     parameters[input.dataset.parameter]=input.multiple?[...input.selectedOptions].map(o=>o.value):input.value;
   }
   StrategyExplanations.renderRule($('strategy-rule'),{strategy_id:$('strategy').value,parameters,
-    holding_period_days:$('holding_period_days').value,min_declining_count:$('min_declining_count').value,
+    exit_policy:exitEditor?.read(false),holding_period_days:$('holding_period_days').value,min_declining_count:$('min_declining_count').value,
     trigger_return_threshold:Number($('trigger_return_threshold').value)/100},'这组参数会怎样交易');
 }
 function updateCoverage() {
@@ -109,7 +116,8 @@ function requestFromForm() {
   const request={strategy_id:$('strategy').value,parameters,dataset_id:$('dataset').value,start:$('start').value,end:$('end').value};
   for(const key of ['initial_cash','holding_period_days','min_declining_count','trigger_return_threshold','commission_rate','minimum_commission','slippage_bps'])request[key]=Number($(key).value);
   // 页面用百分数，后端用小数；只在边界转换一次，避免 1% 与 0.01% 混淆。
-  request.effectiveness=$('strategy').value==='fixed_asset'&&$('effectiveness').checked;
+  if(exitEditor){exitEditor.sync();request.exit_policy=exitEditor.read();if(request.exit_policy.id!=='fixed_holding')delete request.holding_period_days;}
+  request.effectiveness=$('strategy').value==='fixed_asset'&&(!exitEditor||!$('effectiveness').disabled)&&$('effectiveness').checked;
   request.trigger_return_threshold/=100;request.commission_rate/=100;if(state.snapshotJobId)request.snapshot_job_id=state.snapshotJobId;return request;
 }
 function copyRequest(request,restored=false) {
@@ -117,6 +125,7 @@ function copyRequest(request,restored=false) {
   if(request.snapshot_job_id&&!restored&&globalThis.ResearchInputs){ResearchInputs.restore(request).catch(e=>notice(e.message));return;}
   state.snapshotJobId=request.snapshot_job_id||null;
   if(!state.datasets.some(d=>d.id===request.dataset_id)) {notice('原任务数据集已不可用，无法复制参数。');return;}
+  exitEditor?.restore(request);
   $('strategy').value=request.strategy_id;$('dataset').value=request.dataset_id;datasetFields(false);strategyFields(request.parameters);
   for(const key of ['start','end','initial_cash','holding_period_days','min_declining_count','minimum_commission','slippage_bps'])if(request[key]!=null)$(key).value=request[key];
   for(const key of ['trigger_return_threshold','commission_rate'])if(request[key]!=null)$(key).value=Number(request[key])*100;
@@ -131,6 +140,7 @@ function renderJobs() {
     check.onchange=()=>{check.checked?state.compared.add(job.id):state.compared.delete(job.id);renderComparison().catch(e=>notice(e.message));};row.append(check);
     const button=el('button');button.type='button';button.append(el('span',strategyName(job.request?.strategy_id),'job-title'));
     button.append(el('span',`${job.request?.start||''} → ${job.request?.end||''} · ${job.id.slice(0,8)}`,'job-meta'));
+    button.append(el('span',exitLabel(job.request),'job-meta'));
     button.append(el('span',experimentStatus(job),'job-meta'));
     button.onclick=()=>showJob(job.id).then(()=>{configurePanel(false);activateTab('research');$('detail').scrollIntoView({behavior:'smooth',block:'start'});}).catch(e=>notice(e.message));row.append(button,el('span',statuses[job.status]||job.status,`status ${job.status}`));box.append(row);
   }
@@ -207,10 +217,10 @@ async function showJob(id) {
     const card=el('div',null,'metric');card.append(el('small',label),el('strong',key==='win_rate'&&!r.trades?.length?'—':isPct?pct(r.metrics[key]):fmt(r.metrics[key]),Number(r.metrics[key])<0?'negative':''));metrics.append(card);}box.append(metrics);
   if(r.warnings?.length){const warnings=el('ul',null,'warnings');r.warnings.forEach(w=>warnings.append(el('li',w)));const details=el('details');details.append(el('summary','数据、模型与执行详细说明'),warnings);box.append(details);}
   StrategyExplanations.renderResult(box,r,job.request);
-  renderEffectiveness(box,r.effectiveness);
+  renderEffectiveness(box,r.effectiveness,job.request);
   box.append(chart(r.equity||[],'equity','账户净值（元）'),chart(r.equity||[],'drawdown','回撤',true));
   box.append(el('h2','逐笔交易','subheading'),el('p','成交日期与费用均按本次执行参数计算。','hint'));
-  box.append(table(['信号日','买入日','卖出日','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
+  box.append(table(['买入信号日','买入日','卖出日','退出信号日','退出原因','标的','数量','买入价','卖出价','总费用','佣金','印花税','过户费','盈亏'],(r.trades||[]).map(t=>[t.signal_date,t.entry_date,t.exit_date,globalThis.ExitPolicies?.tradeExitSignal(t,r.execution_events)||'—',globalThis.ExitPolicies?.reason(t.exit_reason)||t.exit_reason||'—',t.symbol,fmt(t.quantity),fmt(t.entry_price),fmt(t.exit_price),fmt(t.fees),t.commission==null?"—":fmt(t.commission),t.stamp_duty==null?"—":fmt(t.stamp_duty),t.transfer_fee==null?"—":fmt(t.transfer_fee),fmt(t.pnl)])));
   // 旧任务没有执行日志，仍可查看原有结果。
   if(r.execution_events){const execution=el('details');execution.append(el('summary','成交、取消与延后记录'));execution.append(table(['日期','标的','方向','状态','原因','价格','数量','佣金','印花税','过户费'],r.execution_events.map(e=>[e.date,e.symbol,e.side==='buy'?'买入':'卖出',({filled:'成交',cancelled:'取消',deferred:'延后'})[e.status]||e.status,e.reason||'—',e.price==null?'—':fmt(e.price),fmt(e.quantity),fmt(e.commission),fmt(e.stamp_duty),fmt(e.transfer_fee)])));box.append(execution);}
   const events=el('details');events.append(el('summary','每日触发记录'));events.append(table(['日期','下跌家数','指数日收益','触发'],(r.events||[]).map(e=>[e.as_of,e.declining_count,pct(e.index_return_1d),e.triggered?'是':'否'])));box.append(events);
@@ -219,7 +229,7 @@ async function showJob(id) {
 async function renderComparison() {
   const target=$('comparison');target.hidden=state.compared.size===0;if(target.hidden)return;
   const jobs=await Promise.all([...state.compared].map(id=>api(`/api/jobs/${id}`)));target.replaceChildren(el('h3','已选任务对比','compare-title'),el('p','不同区间、数据版本或预热情况会影响可比性，请结合各任务说明阅读。','hint'));
-  target.append(table(['策略 / 任务','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),m.trade_count?pct(m.win_rate):'—',m.trade_count];})));
+  target.append(table(['策略 / 任务','退出规则 / 生效参数','区间','累计收益','年化收益','回撤','胜率','笔数'],jobs.filter(j=>j.result).map(j=>{const m=j.result.metrics;return [`${strategyName(j.request.strategy_id)} / ${j.id.slice(0,8)}`,exitLabel(j.request),`${j.request.start} ~ ${j.request.end}`,pct(m.cumulative_return),pct(m.annualized_return),pct(m.max_drawdown),m.trade_count?pct(m.win_rate):'—',m.trade_count];})));
 }
 async function refresh() {state.jobs=await api('/api/jobs');renderJobs();}
 function selectManagedDataset(id,selection=null) {
@@ -262,6 +272,8 @@ $('run-form').onsubmit=async event=>{event.preventDefault();notice('');try{const
 async function init() {
   [state.strategies,state.datasets,state.experiments]=await Promise.all([api('/api/strategies'),api('/api/datasets'),api('/api/experiments')]);
   state.strategies.forEach(s=>$('strategy').append(new Option(s.name,s.id)));state.datasets.forEach(d=>$('dataset').append(new Option(d.name,d.id)));
+  // 旧服务缺少规则目录时保留固定期入口，复制未知规则会明确拒绝。
+  if(globalThis.ExitPolicies){let catalog=[];try{catalog=await api('/api/exit-policies');}catch{}initExitEditor(catalog);}
   datasetFields();strategyFields();if(!state.datasets.length){notice('尚无可用数据集，请先按 README 下载行情和市场广度。');$('submit').disabled=true;}
   await refresh();await refreshData();
   // 串行轮询，避免长任务或慢磁盘时叠加请求。只自动更新尚未结束的详情。
@@ -277,8 +289,9 @@ function returnHistogram(values, actual) {
   for(const v of values)counts[Math.min(11,Math.floor((v-low)/(high-low)*12))]++;
   return {low,high,counts};
 }
-function renderEffectiveness(box, result) {
+function renderEffectiveness(box, result, request={}) {
   const section=el('section');section.id='effectiveness-result';section.append(el('h2','策略有效性对照','subheading'));
+  if(!result&&request.exit_policy&&request.exit_policy.id!=='fixed_holding'){section.append(el('p','当前退出规则暂不支持随机择时有效性对照；固定长度随机窗口与指标退出不具备同口径。','hint'));box.append(section);return;}
   if(!result){section.append(el('p','本次未运行对照。可复制参数，勾选“同时进行策略有效性对照”后重跑。','hint'));box.append(section);return;}
   if(result.status!=='available'){section.append(el('p',result.message,'warnings'));box.append(section);return;}
   const a=result.strategy_metrics,b=result.buy_and_hold.metrics,r=result.random;

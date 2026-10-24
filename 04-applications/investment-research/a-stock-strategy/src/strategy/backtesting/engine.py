@@ -10,6 +10,7 @@ import pandas as pd
 
 from strategy.market_data.csv import BOOL_COLUMNS, REQUIRED_MARKET_COLUMNS, validate_market_frame
 from strategy.domain import EquityPoint, MarketState, Trade
+from strategy.exit_policies import build_exit_policy
 from strategy.backtesting.fees import FeeRules
 from strategy.backtesting.decisions import close_decision
 from strategy.backtesting.signals import market_state, MarketTrigger
@@ -24,6 +25,7 @@ class BacktestResult:
     events: list[dict] = field(default_factory=list)
     execution_events: list[dict] = field(default_factory=list)
     decision_events: list[dict] = field(default_factory=list)
+    exit_decision_events: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +48,8 @@ class BacktestEngine:
                  index_symbol: str = "000001.SH", trigger_level: float = 4000.0,
                  trigger_return_threshold: float = 0.0, min_declining_count=None, lot_size: int = 0,
                  instrument_types: dict[str, str] | None = None,
-                 status_provider: StatusProvider | None = None):
+                 status_provider: StatusProvider | None = None,
+                 exit_policy: dict | None = None):
         self.status_provider = status_provider or DailyBarStatusProvider()
         if instrument_types is not None and any(kind not in {"stock", "etf"} for kind in instrument_types.values()):
             raise ValueError("instrument_types values must be stock or etf")
@@ -69,6 +72,7 @@ class BacktestEngine:
             raise ValueError("cost and slippage parameters must be non-negative")
         self.initial_cash = cash_value
         self.holding_period_days = int(period_value)
+        self.exit_policy = build_exit_policy(exit_policy, self.holding_period_days)
         self.commission_rate, self.stamp_duty_rate, self.minimum_commission, self.slippage_bps = parameters
         self.fee_rules = FeeRules(self.commission_rate, self.minimum_commission, self.stamp_duty_rate)
         self.index_symbol = index_symbol
@@ -128,6 +132,7 @@ class BacktestEngine:
         events = []
         execution_events = []
         decision_events = []
+        exit_decision_events = []
         warnings: list[str] = []
         warning_set: set[str] = set()
         equity: list[EquityPoint] = []
@@ -147,7 +152,7 @@ class BacktestEngine:
                 row = self._row(today, symbol)
                 pending_entry = None
                 # 计划退出日按原有成交日索引计算；超出样本不能推算未来日历。
-                exit_idx = day_index + self.holding_period_days
+                exit_idx = day_index + self.exit_policy.holding_days
                 planned_exit = dates[exit_idx] if exit_idx < len(dates) else None
                 entry_context = dict(signal_date=signal_day, entry_date=day,
                                      planned_exit_date=planned_exit)
@@ -174,7 +179,9 @@ class BacktestEngine:
                                     "signal_date": signal_day, "entry_date": day,
                                     "entry_fees": commission + transfer, "entry_commission": commission,
                                     "entry_transfer": transfer, "last_close": initial_close,
-                                    "missing_price_warned": False}
+                                    "missing_price_warned": False, "entry_index": day_index,
+                                    "exit_signal_date": None, "exit_reason": self.exit_policy.scheduled_reason,
+                                    "max_exit_date": planned_exit, "exit_evidence": None}
                         pending_exit_date = planned_exit
                     else:
                         warnings.append(f"entry not executed for {symbol} on {day} (insufficient cash)")
@@ -195,7 +202,10 @@ class BacktestEngine:
 
             if position is not None and pending_exit_date is not None and day >= pending_exit_date:
                 exit_context = dict(signal_date=position['signal_date'], entry_date=position['entry_date'],
-                                    planned_exit_date=pending_exit_date)
+                                    planned_exit_date=pending_exit_date,
+                                    exit_signal_date=position['exit_signal_date'],
+                                    exit_reason=position['exit_reason'],
+                                    max_holding_reached=day_index - position['entry_index'] >= self.exit_policy.holding_days)
                 row = self._row(today, position["symbol"])
                 kind = self._instrument_type(position["symbol"], day)
                 reason = self._execution_block(row, "sell", kind)
@@ -215,7 +225,7 @@ class BacktestEngine:
                     gross = (price - position["entry_price"]) * position["quantity"]
                     trades.append(Trade(position["signal_date"], position["entry_date"], day,
                                         position["symbol"], position["quantity"], position["entry_price"],
-                                        price, fees, gross - fees, "holding period",
+                                        price, fees, gross - fees, position["exit_reason"],
                                         position["entry_commission"] + commission, tax, position["entry_transfer"] + transfer))
                     position = None
                     pending_exit_date = None
@@ -241,6 +251,30 @@ class BacktestEngine:
 
             # 收盘时留下真实决策：不为了展示而在持仓日重复择股。
             next_day = dates[day_index + 1] if day_index + 1 < len(dates) else None
+            # 待卖信号不可撤销；受阻日只记录原证据，不用反弹价格重算退出。
+            if position is not None:
+                held = day_index - position['entry_index']
+                if position['exit_evidence'] is not None or (pending_exit_date is not None and day >= pending_exit_date):
+                    evidence = dict(position['exit_evidence'] or self.exit_policy.evaluate_close(
+                        frame.iloc[:0], day, position['symbol'], held))
+                    # 等待日不重算指标，也不能把信号日价格冒充成今天的观测值。
+                    evidence.update(date=day, status='pending', reason=position['exit_reason'], held_sessions=held,
+                                    close=None, sma=None, available=None)
+                else:
+                    # 固定期不读取指标历史，避免随机对照每个持仓日重复筛选全行情。
+                    cutoff = None if self.exit_policy.window is None else frame[frame['date'] <= day]
+                    row = self._row(today, position['symbol'])
+                    evidence = self.exit_policy.evaluate_close(cutoff, day, position['symbol'], held,
+                        suspended=self.status_provider.read(row).suspended is True)
+                    if evidence['status'] == 'triggered':
+                        pending_exit_date = next_day
+                        position['exit_signal_date'] = day
+                        position['exit_reason'] = evidence['reason']
+                        position['exit_evidence'] = dict(evidence)
+                evidence.update(planned_exit_date=pending_exit_date,
+                                exit_signal_date=position['exit_signal_date'],
+                                max_holding_reached=held >= self.exit_policy.holding_days)
+                exit_decision_events.append(evidence)
             history = frame[frame["date"] <= day].copy() if position is None else None
             selection, decision = close_decision(strategy, day, market, history, position, next_day, market_warning)
             decision_events.append(decision)
@@ -253,7 +287,7 @@ class BacktestEngine:
 
         if position is not None:
             warnings.append(f"incomplete trade: open position {position['symbol']} has no executable exit")
-        return BacktestResult(trades, equity, warnings, events, execution_events, decision_events)
+        return BacktestResult(trades, equity, warnings, events, execution_events, decision_events, exit_decision_events)
 
     def _market_state(self, frame: pd.DataFrame, day: date) -> MarketState:
         return self._market_state_with_warning(frame, day)[0]

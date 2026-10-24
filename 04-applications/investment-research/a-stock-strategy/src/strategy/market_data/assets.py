@@ -12,7 +12,7 @@ import re
 import shutil
 import pandas as pd
 
-from strategy.market_data.csv import CsvMarketDataProvider
+from strategy.market_data.csv import CsvMarketDataProvider, PRICE_COLUMNS
 from strategy.validation import UserError
 
 
@@ -147,6 +147,28 @@ class AssetRepository:
 
 
 _CACHE = {}
+
+
+def load_asset_market(root, identifier, *, allow_missing_prices=False):
+    """Load one published asset after path and content-hash verification."""
+    _identifier(identifier, published=True)
+    folder = Path(root)/'data'/identifier
+    if folder.is_symlink() or (Path(root)/'data').is_symlink():
+        _fail('行情目录不能是符号链接')
+    market = _safe_file(folder/'market.csv', folder)
+    manifest_path = _safe_file(folder/'market_manifest.json', folder)
+    manifest = json.loads(manifest_path.read_text())
+    if not isinstance(manifest, dict) or manifest.get('market_sha256') != _digest(market):
+        _fail('行情内容哈希不匹配')
+    symbol = manifest.get('updated_symbol')
+    instruments = manifest.get('instruments')
+    warnings = manifest.get('warnings', [])
+    if (not isinstance(symbol, str) or not re.fullmatch(r'\d{6}\.(SH|SZ)', symbol)
+            or not isinstance(instruments, dict) or not isinstance(instruments.get(symbol), dict)
+            or not isinstance(warnings, list) or any(not isinstance(item, str) for item in warnings)):
+        _fail('行情清单结构无效')
+    columns = PRICE_COLUMNS if allow_missing_prices else None
+    return manifest, CsvMarketDataProvider(market).load(allow_nonfinite_price_columns=columns)
 
 
 def detail_asset(root, identifier):

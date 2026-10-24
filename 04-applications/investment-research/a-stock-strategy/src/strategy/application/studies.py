@@ -138,6 +138,9 @@ class StudyManager:
         base = self.jobs.get(payload['base_job_id'])
         if base['status'] != 'succeeded':
             raise UserError('INVALID_REQUEST', '请从成功回测创建批量研究')
+        from strategy.exit_policies import normalize_exit_policy
+        if normalize_exit_policy(base['request'].get('exit_policy'))['id'] != 'fixed_holding':
+            raise UserError('INVALID_REQUEST', '批量持有期研究仅支持固定持有期；指标退出请使用单次回测与实验比较。')
         request = base['request'] | {'effectiveness': False}
         windows = payload.get('lookbacks')
         if 'lookbacks' in payload:

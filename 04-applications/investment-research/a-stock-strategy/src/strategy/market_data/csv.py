@@ -90,7 +90,7 @@ class CsvMarketDataProvider:
     def __init__(self, path: str | Path):
         self.path = Path(path)
 
-    def load(self) -> pd.DataFrame:
+    def load(self, *, allow_nonfinite_price_columns: Collection[str] | None = None) -> pd.DataFrame:
         if not self.path.exists():
             raise FileNotFoundError(self.path)
 
@@ -104,5 +104,5 @@ class CsvMarketDataProvider:
         frame["date"] = pd.to_datetime(frame["date"], errors="raise")
         frame = frame.sort_values(["date", "symbol"], kind="stable").reset_index(drop=True)
         frame = _canonicalize_columns(frame)
-        validate_market_frame(frame)
+        validate_market_frame(frame, allow_nonfinite_price_columns=allow_nonfinite_price_columns)
         return frame
