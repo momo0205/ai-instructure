@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FAFAF8"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">从问题到结论，中间隔着一条证据链</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">观察、解释、因果是三种不同的结论强度，不能跨层声明</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="70" y="185" width="200" height="86" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="100" y="222" font-size="20" font-weight="700" fill="#1849A9">01 提出具体问题</text>
+    <text x="100" y="252" font-size="16" fill="#344054">取消键返回了什么？</text>
+    <rect x="310" y="185" width="200" height="86" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="340" y="222" font-size="20" font-weight="700" fill="#1849A9">02 工具观察</text>
+    <text x="340" y="252" font-size="16" fill="#344054">绑定目标的材料</text>
+    <rect x="550" y="185" width="200" height="86" rx="16" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+    <text x="580" y="222" font-size="20" font-weight="700" fill="#B54708">03 模型解释</text>
+    <text x="580" y="252" font-size="16" fill="#344054">可区分的假设</text>
+    <rect x="790" y="185" width="200" height="86" rx="16" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+    <text x="820" y="222" font-size="20" font-weight="700" fill="#B54708">04 独立验证</text>
+    <text x="820" y="252" font-size="16" fill="#344054">冻结的行为测试</text>
+    <rect x="70" y="330" width="920" height="70" rx="16" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="100" y="372" font-size="20" font-weight="700" fill="#067647">05 有限结论：只在已声明的环境与输入范围内成立，范围外保留 unknown</text>
+  </g>
+  <path d="M270 228h40M510 228h40M750 228h40" stroke="#98A2B3" stroke-width="4"/>
+  <path d="M300 218l16 10-16 10M540 218l16 10-16 10M780 218l16 10-16 10" fill="#98A2B3"/>
+  <path d="M890 271v59" stroke="#98A2B3" stroke-width="4"/>
+  <path d="M880 318l10 16 10-16" fill="#98A2B3"/>
+  <g font-family="Arial,sans-serif">
+    <rect x="140" y="470" width="290" height="110" rx="18" fill="#FFFFFF" stroke="#E4E7EC" stroke-width="2"/>
+    <text x="170" y="510" font-size="21" font-weight="700" fill="#18212F">观察到</text>
+    <text x="170" y="542" font-size="17" fill="#667085">静态图里存在这条关系</text>
+    <text x="170" y="566" font-size="17" fill="#667085">≠ 这次操作走了这条路</text>
+    <rect x="455" y="470" width="290" height="110" rx="18" fill="#FFFFFF" stroke="#E4E7EC" stroke-width="2"/>
+    <text x="485" y="510" font-size="21" font-weight="700" fill="#18212F">解释了</text>
+    <text x="485" y="542" font-size="17" fill="#667085">模型给出一个合理假设</text>
+    <text x="485" y="566" font-size="17" fill="#667085">≠ 假设已经被验证</text>
+    <rect x="770" y="470" width="290" height="110" rx="18" fill="#FFFFFF" stroke="#E4E7EC" stroke-width="2"/>
+    <text x="800" y="510" font-size="21" font-weight="700" fill="#18212F">证明了</text>
+    <text x="800" y="542" font-size="17" fill="#667085">通过约定条件的测试</text>
+    <text x="800" y="566" font-size="17" fill="#667085">≠ 对所有输入全局等价</text>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FAFAF8"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">返回形状配对：一边配不上对，就成了「未知」</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">正确版有三个返回形态，缺陷版只有两个——少的那一个没有被算作「删除」，而是放进了「未知」</text>
+  <g font-family="Arial,sans-serif">
+    <text x="180" y="165" font-size="20" font-weight="700" fill="#1849A9">正确版（baseline）</text>
+    <text x="850" y="165" font-size="20" font-weight="700" fill="#B42318">缺陷版（defective）</text>
+    <rect x="100" y="185" width="260" height="70" rx="14" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="140" y="227" font-size="19" fill="#067647">成功 → success</text>
+    <rect x="100" y="275" width="260" height="70" rx="14" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="140" y="317" font-size="19" fill="#067647">失败 → failed</text>
+    <rect x="100" y="365" width="260" height="70" rx="14" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="140" y="407" font-size="19" fill="#B42318">取消 → idle</text>
+    <rect x="840" y="185" width="260" height="70" rx="14" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="880" y="227" font-size="19" fill="#067647">成功 → success</text>
+    <rect x="840" y="275" width="260" height="70" rx="14" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="880" y="317" font-size="19" fill="#067647">失败 → failed</text>
+  </g>
+  <path d="M360 220h480M360 310h480" stroke="#98A2B3" stroke-width="2.5" stroke-dasharray="8,6"/>
+  <path d="M470 205l14 8-14 8M470 295l14 8-14 8" fill="#98A2B3"/>
+  <text x="560" y="205" font-family="Arial,sans-serif" font-size="16" fill="#667085">配对成功</text>
+  <text x="560" y="295" font-family="Arial,sans-serif" font-size="16" fill="#667085">配对成功</text>
+  <path d="M360 400 L600 400" stroke="#B42318" stroke-width="2.5"/>
+  <path d="M600 385 L600 415" stroke="#B42318" stroke-width="2.5"/>
+  <rect x="600" y="365" width="220" height="70" rx="14" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+  <text x="630" y="407" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#B54708">找不到配对 → 未知</text>
+  <rect x="330" y="520" width="540" height="90" rx="16" fill="#F2F4F7"/>
+  <text x="370" y="558" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#18212F">新增 0 · 删除 0 · 变化 0 · 未知 1</text>
+  <text x="370" y="588" font-family="Arial,sans-serif" font-size="17" fill="#667085">工具没有说「这一支被删了」，它只说「这一个我配不上对」</text>
+</svg>
