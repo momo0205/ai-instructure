@@ -36,6 +36,7 @@ target/
 .pub-cache/
 .venv/
 venv/
+.uv-cache/
 __pycache__/
 *.py[cod]
 .pytest_cache/

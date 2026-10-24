@@ -1,3 +1,13 @@
+# Mira 踩坑记忆（归档）
+
+> ⚠️ **已归档（2026-10-24）**：这是 2026-06-18 的手工记忆，内容已并入
+> `.memory/ledger.jsonl`（用 `mem.py search "Mira 端点"` 可检索）。
+> 文中的路径（`~/code/...`）、App 名（`ironmao`）与部分端点可能已过时，
+> 请以 `mira-server/`、`mira-flutter/` 的代码和 README 为准。
+> 保留原文仅用于追溯当时的判断。
+
+---
+
 # Mira 踩坑记忆 · CodeWhale 会话记录
 
 > 2026-06-18 · ironmao · investment-research 项目
