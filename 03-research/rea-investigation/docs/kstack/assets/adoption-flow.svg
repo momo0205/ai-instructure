@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FBFAF7"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">要不要接 REA，先问四个问题</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">从任务出发，不是从工具出发</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="380" y="160" width="440" height="70" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="420" y="202" font-size="20" font-weight="700" fill="#1849A9">你要的事实，仓库里有吗？</text>
+    <rect x="380" y="290" width="440" height="70" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="420" y="332" font-size="20" font-weight="700" fill="#1849A9">能从真实产物或运行时拿到吗？</text>
+    <rect x="380" y="420" width="440" height="70" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="420" y="462" font-size="20" font-weight="700" fill="#1849A9">有判断对错的独立依据吗？</text>
+  </g>
+  <path d="M600 230v60M600 360v60" stroke="#98A2B3" stroke-width="3"/>
+  <path d="M590 278l10 14 10-14M590 408l10 14 10-14" fill="#98A2B3"/>
+  <g font-family="Arial,sans-serif">
+    <rect x="80" y="175" width="240" height="50" rx="12" fill="#F2F4F7"/>
+    <text x="110" y="207" font-size="18" fill="#475467">有 → 用现有工具</text>
+    <rect x="880" y="175" width="240" height="50" rx="12" fill="#F2F4F7"/>
+    <text x="910" y="207" font-size="18" fill="#475467">没有 → 继续问</text>
+    <rect x="80" y="305" width="240" height="50" rx="12" fill="#F2F4F7"/>
+    <text x="110" y="337" font-size="18" fill="#475467">不能 → 换思路</text>
+    <rect x="880" y="305" width="240" height="50" rx="12" fill="#F2F4F7"/>
+    <text x="910" y="337" font-size="18" fill="#475467">能 → 继续问</text>
+    <rect x="80" y="435" width="240" height="50" rx="12" fill="#F2F4F7"/>
+    <text x="110" y="467" font-size="18" fill="#475467">没有 → 先补验收</text>
+    <rect x="880" y="435" width="240" height="50" rx="12" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="910" y="467" font-size="18" font-weight="700" fill="#067647">有 → 可以接</text>
+  </g>
+  <rect x="250" y="540" width="700" height="80" rx="16" fill="#FFF7ED" stroke="#FDB022" stroke-width="2"/>
+  <text x="290" y="575" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#B54708">三个问题都答「能」，才轮到 REA</text>
+  <text x="290" y="602" font-family="Arial,sans-serif" font-size="16" fill="#667085">任何一个答不上来，先补条件，不是先装工具</text>
+</svg>

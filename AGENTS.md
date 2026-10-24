@@ -4,9 +4,13 @@
 
 ## 项目性质
 
-这是一个 **AI 工具集合空间**，不是单一代码仓库。每个子目录是一个独立项目，有各自的技术栈和构建方式。项目的全局索引见 [README.md](README.md)。
+这是一个 **AI 工具集合空间**，不是单一代码仓库。每个子目录是一个独立项目，有各自的技术栈和构建方式。项目的全局索引见 [projects.yaml](projects.yaml)（机器可读）与 [README.md](README.md)（人可读）。
 
 ## Superpowers 技能体系
+
+> **在 DeepSeek Harness（DSH）里**：这些技能尚未注册为 DSH 原生 skill（本会话的技能列表里没有它们）。
+> 因此「调用技能」= 先用 read 工具读取 `superpowers/skills/<name>/SKILL.md`，再按其中的步骤执行。
+> 在 Claude Code / Codex 等已注册的客户端里，可以直接按名称触发。
 
 开发任何子项目时，自动使用以下 Superpowers 技能：
 
@@ -63,11 +67,14 @@ echo DEEPSEEK_API_KEY=sk-xxxx > .env    # key 从项目所有者获取
 
 ```bash
 # 1. 拉取最新记忆（包括其他 Agent 的更新）
-git pull
+git pull --rebase
 
 # 2. 获取项目上下文
 python3 .memory/mem.py search "项目架构 关键决策"
 python3 .memory/mem.py search "已知问题 踩坑"
+
+# 3. 换机器后或索引丢失时，从账本重建向量索引
+python3 .memory/mem.py rebuild
 ```
 
 **完成任务后（必须执行）**：
@@ -76,8 +83,9 @@ python3 .memory/mem.py search "已知问题 踩坑"
 # 回写记忆（做了什么、关键决策、遇到的问题）
 python3 .memory/mem.py add "【模块/项目名】具体完成了什么。关键决策：xxx。遇到问题：xxx"
 
-# 提交到 git 同步
-git add -A && git commit -m "memory: xxx" && git push
+# 只提交账本，不要 git add -A（会把构建产物带进来）
+git add .memory/ledger.jsonl
+git commit -m "memory: xxx" && git push
 ```
 
 ### 记忆规范
@@ -94,31 +102,40 @@ git add -A && git commit -m "memory: xxx" && git push
 支持收藏弹窗跳转。Keystore 密码改用 key.properties 读取。
 ```
 
+### 两层结构：账本是真相源
+
+```
+.memory/ledger.jsonl   ← 只追加，进 git，纯文本可 diff / 可 review
+        │ rebuild
+        ▼
+.memory/qdrant/        ← 向量索引，gitignore，随时可从账本重建
+```
+
+- **写入顺序**：先落 ledger，再更新索引。索引失败也不丢记忆。
+- **没有 `DEEPSEEK_API_KEY` 时**：`add` 仍写账本，`search` 自动降级为账本关键词检索。
+- `mem0` 自己的配置/迁移目录被固定在 `.memory/.cache`（`MEM0_DIR`），不写 `~/.mem0`，
+  因此在 DSH 这类只允许写工作区的沙箱里也能运行。
+- **不要把向量库当真相源**：它只是缓存，换机器必须能重建。
+
 ### CLI 参考
 
 ```bash
-python3 .memory/mem.py add "内容"           # 写入记忆
-python3 .memory/mem.py search "关键词"       # 语义搜索
-python3 .memory/mem.py list                 # 列出所有记忆
-python3 .memory/mem.py reset                # 清空（慎用）
+python3 .memory/mem.py add "内容"       # 写入（账本 + 索引）
+python3 .memory/mem.py search "关键词"   # 语义搜索（失败时降级为关键词）
+python3 .memory/mem.py list             # 列出账本全部记忆
+python3 .memory/mem.py rebuild          # 从账本重建索引
+python3 .memory/mem.py export           # 把旧索引导出进账本
+python3 .memory/mem.py reset            # 清空索引（不动账本）
 ```
 
-### 架构
+### 跨机器同步
 
 ```
-┌──────────────┐      ┌──────────────┐
-│  Claude Code  │      │  CodeWhale   │
-│  (机器 A)     │      │  (机器 B)    │
-└──────┬───────┘      └──────┬───────┘
-       │ add/search          │ add/search
-       ▼                     ▼
-   .memory/ (git 仓库内)
-   ├── config.py      # Mem0 配置 (DeepSeek LLM + 本地嵌入)
-   ├── mem.py         # CLI 工具
-   ├── qdrant/        # 向量库 (gitignored)
-   └── history.db     # 历史 (gitignored)
-        │
-        ▼ git push/pull → 跨机器同步
+机器 A / Agent ──add──┐
+                      ├──> .memory/ledger.jsonl ──git push/pull──> 机器 B
+机器 B / Agent ──add──┘             │
+                                    └──rebuild──> .memory/qdrant/（本地索引，不入库）
 ```
 
-> **注意**：数据文件 (qdrant/、history.db) 不进入 git，通过 git 同步的只有代码和记忆的元数据层。首次在新机器上使用需重新执行 `pip3 install`。
+> 新机器首次使用：`pip3 install mem0ai sentence-transformers qdrant-client`，
+> 配好 `DEEPSEEK_API_KEY`，然后 `python3 .memory/mem.py rebuild`。
