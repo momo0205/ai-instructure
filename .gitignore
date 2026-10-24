@@ -65,3 +65,8 @@ coverage/
 
 # 独立的财务学习站点仓库（有自己的 git 与 remote）
 04-applications/investment-research/finance-ironmao/
+
+# 一次性工具与备份（不入库）
+.tools/
+backups/
+.rewrite/
