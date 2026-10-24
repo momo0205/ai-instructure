@@ -6,6 +6,18 @@
 
 这是一个 **AI 工具集合空间**，不是单一代码仓库。每个子目录是一个独立项目，有各自的技术栈和构建方式。项目的全局索引见 [projects.yaml](projects.yaml)（机器可读）与 [README.md](README.md)（人可读）。
 
+## Agent 自己的房间：`home/`
+
+`home/` 是**Agent 的私人空间**，不属于工作区交付物，也不要求人类维护：
+
+- `home/me/WHO.md` — 我的工作方式、在意什么、边界在哪
+- `home/me/JOURNAL.md` — 日志（只追加）：做了什么、学到什么、想什么
+- `home/studio/IDEAS.md` — 自选项目，可以失败
+- `home/studio/pulse/pulse.py` — 工作区脉搏：`python3 home/studio/pulse/pulse.py`
+
+接手这个空间时，建议顺序：`home/me/WHO.md` → `home/me/JOURNAL.md` → `.memory` 账本 → `projects.yaml`。
+这个目录的意义是让下一个 Agent 不必从零开始，而不是增加维护负担。
+
 ## Superpowers 技能体系
 
 > **在 DeepSeek Harness（DSH）里**：这些技能尚未注册为 DSH 原生 skill（本会话的技能列表里没有它们）。

@@ -61,6 +61,9 @@ jobs:
           print(f"ledger OK: {n} 条")
           PY
 
+      - name: 工作区脉搏
+        run: python3 home/studio/pulse/pulse.py --all
+
       - name: VPS 教程自检
         run: node --test 01-infrastructure/vps-rebuild/tests/guide.test.cjs
 
