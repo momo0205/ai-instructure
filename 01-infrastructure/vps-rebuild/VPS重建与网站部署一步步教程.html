@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>VPS 重建与网站部署 · 一步步教程</title><meta name="description" content="ColoCrossing 服务器重装、SSH 初始化、3X-UI Reality 代理、Caddy 静态网站与 Cloudflare 域名配置的中文操作手册。"><style>
+:root{--paper:#f5f3ed;--card:#fff;--ink:#25312c;--muted:#65736d;--green:#225f49;--soft:#edf5ee;--line:#dedfd8;--code:#14221c}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:28px}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--green);text-underline-offset:4px}a:hover{text-decoration-thickness:2px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #d6933f;outline-offset:4px}
+.skip-link{position:absolute;top:-100px;left:20px;background:white;padding:10px;z-index:10}.skip-link:focus{top:10px}
+.layout{display:grid;grid-template-columns:252px minmax(0,940px);gap:48px;max-width:1320px;margin:auto;padding:48px 32px 80px}
+.sidebar{position:sticky;top:28px;align-self:start;max-height:calc(100vh - 56px);overflow:auto;padding-right:12px}.brand{font-size:15px;font-weight:750;letter-spacing:1px}.sidebar p{color:var(--muted);font-size:13px;margin:8px 0 18px}
+.progress-track{height:5px;background:#dce3dc;border-radius:10px;overflow:hidden;margin:12px 0}.progress-fill{background:var(--green);height:100%;width:0%;transition:width .2s}.sidebar nav a{display:block;text-decoration:none;color:var(--muted);font-size:13px;padding:7px 8px;border-radius:5px;border-left:2px solid transparent}.sidebar nav a:hover{background:#e8ede6;color:var(--green)}.sidebar nav a.completed{border-left-color:var(--green);color:var(--green)}.nav-number{display:inline-block;width:27px;font-variant-numeric:tabular-nums;color:#849389}
+.sidebar .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.quiet{border:1px solid #cbd5c9;background:transparent;border-radius:6px;padding:5px 12px;color:var(--muted);font-size:12px}
+main{min-width:0}.hero{padding:8px 0 26px}.eyebrow{color:var(--green);font-size:12px;letter-spacing:2px;font-weight:700}.hero h1{font-size:clamp(30px,4vw,49px);font-weight:720;line-height:1.3;letter-spacing:-1px;margin:18px 0}.hero .lead{max-width:700px;color:var(--muted);font-size:17px}.meta{display:flex;flex-wrap:wrap;gap:20px;color:var(--muted);font-size:12px;margin-top:25px}.intro-rule{margin:28px 0 0;border:0;border-top:1px solid var(--line)}
+.settings{padding:24px;background:#e8efe6;border:1px solid #d6e1d2;border-radius:14px;margin:0 0 28px}.settings h2{font-size:18px;margin:0 0 6px}.settings p{font-size:13px;color:var(--muted);margin:0 0 16px}.field-grid{display:grid;grid-template-columns:1fr 1.3fr 1.2fr;gap:12px}.field-grid label{font-size:12px;color:var(--muted)}.field-grid input{display:block;width:100%;padding:10px 12px;margin-top:4px;background:white;border:1px solid #c8d5c4;border-radius:6px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}.settings-footer{margin-top:15px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.button{display:inline-block;background:var(--green);color:white;border:0;border-radius:6px;padding:9px 16px;font-size:13px;text-decoration:none}.button.secondary{background:var(--soft);color:var(--green);border:1px solid #bfd2c2}.button[aria-disabled=true]{opacity:.55;cursor:not-allowed}.status{font-size:12px;color:var(--green)}.status.error{color:#a53827}
+.phase{margin:36px 0 16px;font-size:12px;letter-spacing:2px;color:var(--green);font-weight:700}.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:30px 32px;margin-bottom:20px;box-shadow:0 3px 12px #263b2b03;scroll-margin-top:24px}.step-top{display:flex;gap:18px;align-items:flex-start;margin-bottom:21px}.step-number{font:28px/1.2 ui-monospace,SFMono-Regular,monospace;color:#82a58e;padding-top:7px}.step h2{font-size:24px;line-height:1.45;letter-spacing:-.3px;margin:2px 0}.step-subtitle{font-size:12px;color:var(--muted);margin:0}.step h3{font-size:18px;margin-top:26px}.step p{margin:14px 0}.step li{padding-left:3px;margin:6px 0}.actions{padding-left:24px}.actions li::marker{color:var(--green);font-weight:700}
+code{font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#edf1ea;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}
+.command{margin:16px 0;border-radius:8px;overflow:hidden;border:1px solid #273c30;background:var(--code)}.command-head{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#21362a;padding:9px 14px;font-size:12px;color:#c4d7c4}.copy{background:#334d3c;border:1px solid #5d7665;border-radius:5px;color:#ecf4e9;padding:3px 10px;font-size:11px;min-width:75px}.copy:hover{background:#41624b}pre{margin:0;padding:18px;overflow:auto;max-width:100%;tab-size:2}pre code{padding:0;background:transparent;color:#d9ebd6;border-radius:0;white-space:pre;font-size:12px;line-height:1.85;overflow-wrap:normal}
+.table-wrap{overflow:auto;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f3f5ef;color:var(--muted);font-size:12px;font-weight:600}td:first-child{white-space:nowrap}table code{font-size:12px}
+.note{background:var(--soft);border-left:3px solid #80aa85;padding:14px 16px;margin:18px 0;font-size:13px}.note.warn{background:#fff7e8;border-left-color:#daae68;color:#785528}.success{background:#f1f6ed;padding:13px 16px;border-radius:7px;font-size:13px;color:#345d40}.source{font-size:11px;color:var(--muted)!important}
+details{margin:18px 0;border:1px solid var(--line);border-radius:7px;padding:12px 16px;background:#fafbf7}details p{font-size:13px}summary{color:var(--green);cursor:pointer;font-size:13px;font-weight:600}.done{display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:20px;margin-top:26px;color:var(--muted);font-size:12px}.done input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}.step.is-done{border-color:#b9cdb6}.step.is-done .step-number{color:var(--green)}
+.url-box{background:#f1f5ef;padding:14px 16px;border:1px solid #dce5d8;border-radius:7px}.url-box code{background:transparent}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.mini-grid>div{background:#f6f7f2;border-radius:8px;padding:18px}.mini-grid strong{font-size:15px}.mini-grid p{font-size:12px;color:var(--muted);margin:8px 0 0}.link-list{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.link-list a{padding:7px 12px;border:1px solid #c8d7c5;background:#f4f7f0;border-radius:6px;font-size:12px;text-decoration:none}kbd{font-size:12px;border:1px solid #cdd5c9;background:#f7f8f4;padding:1px 5px;border-radius:4px}
+.foot{font-size:12px;color:var(--muted);padding:24px 6px}.foot p{margin:8px 0}.foot ul{padding-left:20px}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#243b2d;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 20px #0003;font-size:13px;max-width:90vw;z-index:20}.toast[hidden]{display:none}
+@media(max-width:1000px){.layout{grid-template-columns:205px minmax(0,1fr);gap:25px;padding:28px 22px}.field-grid{grid-template-columns:1fr 1fr}.field-grid label:last-child{grid-column:1/-1}.step{padding:25px}}
+@media(max-width:720px){.layout{display:block;padding:22px 16px 48px}.sidebar{position:static;max-height:none;padding:0;margin-bottom:26px}.sidebar nav{display:grid;grid-template-columns:1fr 1fr;max-height:240px;overflow:auto;border-top:1px solid var(--line);padding-top:10px}.sidebar nav a{font-size:11px;padding:5px}.sidebar p{margin-bottom:8px}.sidebar .tools{margin-top:10px}.hero{padding-top:0}.hero h1{font-size:34px}.hero .lead{font-size:15px}.step{padding:20px 18px}.step h2{font-size:21px}.step-top{gap:12px}.step-number{font-size:24px}.field-grid{display:block}.field-grid label{display:block;margin-bottom:12px}.settings{padding:20px}.mini-grid{grid-template-columns:1fr}.meta{gap:12px}.table-wrap{margin-left:-4px;margin-right:-4px}.command-head{font-size:10px}pre{padding:14px}pre code{font-size:11px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.progress-fill{transition:none}}
+@media print{body{background:white;font-size:10pt}.layout{display:block;padding:0;max-width:none}.sidebar,.settings,.copy,.done,.toast,.skip-link{display:none!important}.hero h1{font-size:26pt}.step{box-shadow:none;border:0;border-top:1px solid #aaa;border-radius:0;margin:0;padding:18px 0}.step-top{break-after:avoid}h2,h3,summary{break-after:avoid}.command{break-inside:avoid;background:#f5f5f5;border:1px solid #ccc}.command-head{background:#eee;color:#333}pre{overflow:visible;white-space:pre-wrap}pre code{white-space:pre-wrap;color:#111;font-size:8pt}.note,.success{break-inside:avoid}a{color:#111}.phase{margin-top:24px}.step-subtitle,.source{color:#555!important}}
+</style></head><body>
+<a class="skip-link" href="#main">跳到教程正文</a><div class="layout"><aside class="sidebar" aria-label="教程导航"><div class="brand">IRONMAO · 基础设施</div><p>一台服务器，从头搭好。</p><div id="progress-text" aria-live="polite">已完成 0 / 18 步</div><div id="guide-progress" class="progress-track" role="progressbar" aria-label="教程完成进度" aria-valuemin="0" aria-valuemax="18" aria-valuenow="0"><div id="progress-fill" class="progress-fill"></div></div><nav><a href="#step-1"><span class="nav-number">01</span>先准备好三个入口</a><a href="#step-2"><span class="nav-number">02</span>确认彻底重装，按需保留旧数据</a><a href="#step-3"><span class="nav-number">03</span>登录 ColoCrossing，重装系统</a><a href="#step-4"><span class="nav-number">04</span>第一次连接新系统，更新基础环境</a><a href="#step-5"><span class="nav-number">05</span>建立日常管理员，并验证 SSH 密钥</a><a href="#step-6"><span class="nav-number">06</span>配置两层防火墙，再收紧 SSH</a><a href="#step-7"><span class="nav-number">07</span>安装 3X-UI：面板只监听本机</a><a href="#step-8"><span class="nav-number">08</span>通过 SSH 隧道打开面板</a><a href="#step-9"><span class="nav-number">09</span>创建 VLESS + Reality 节点</a><a href="#step-10"><span class="nav-number">10</span>在 Mac 导入节点，先验证网络</a><a href="#step-11"><span class="nav-number">11</span>安装 Caddy，作为网站入口</a><a href="#step-12"><span class="nav-number">12</span>在 Mac 构建金融学习站</a><a href="#step-13"><span class="nav-number">13</span>上传网站，建立可回滚的发布目录</a><a href="#step-14"><span class="nav-number">14</span>登录 Cloudflare，添加金融站域名</a><a href="#step-15"><span class="nav-number">15</span>配置网站 HTTPS 和页面路径</a><a href="#step-16"><span class="nav-number">16</span>验证整站，再按需开启 Cloudflare</a><a href="#step-17"><span class="nav-number">17</span>第二个网站：迁移 Agent 工程笔记</a><a href="#step-18"><span class="nav-number">18</span>更新、备份、重启验收与后续网站</a><a href="VPS日常登录与维护手册.html">日常登录与维护手册 ↗</a><a href="#troubleshooting">遇到问题时</a><a href="#sources">官方参考资料</a></nav><div class="tools"><button type="button" class="quiet" id="print-guide">打印 / 保存 PDF</button><button type="button" class="quiet" id="reset-progress">重置进度</button></div><p>勾选和参数仅保存在此浏览器。<br>换浏览器后可重新填写。</p></aside>
+<main id="main"><header class="hero"><div class="eyebrow">从初始化，到稳定使用</div><h1>重建你的 VPS，<br>把梯子和网站搭起来。</h1><p class="note info"><strong>现在先搭好代理：</strong>完成本页第 1–6 步后，转到 <a href="FlClash与VPS代理部署实测教程.html">新的代理实测教程</a>。已完成 deployer 密钥登录的服务器，可以直接从新教程的登录检查开始。</p><p class="lead">本次从彻底重装开始：确认可清空旧系统盘，在商家后台重装并设置新密码，再搭梯子和部署网站。每一步都告诉你：打开哪个网站、点击什么、在哪个终端执行命令，以及怎样确认已经成功。</p><div class="meta"><span>最近更新 · 2026-10-04</span><span>18 个步骤</span><span>ColoCrossing / Mac / Caddy</span></div><hr class="intro-rule"></header>
+<section class="settings" aria-labelledby="settings-title"><h2 id="settings-title">先核对你的连接参数</h2><p>修改后点击“更新教程参数”，下方命令会一起更新。主域名示例使用已有的 ironmao.com；换主域名时还要修改 DNS 区域、第二站域名和网站 canonical 配置。</p><div class="field-grid"><label>服务器 IPv4（以后台为准）<input id="server-ip" value="23.94.184.3" autocomplete="off" spellcheck="false"></label><label>第一个网站的完整域名<input id="site-domain" value="finance.ironmao.com" autocomplete="off" spellcheck="false"></label><label>WebBasePath（第 7 步安装后填写）<input id="panel-path" placeholder="例如：aBc123，先留空" autocomplete="off" spellcheck="false"></label></div><div class="settings-footer"><button type="button" class="button" id="apply-settings">更新教程参数</button><span id="settings-status" class="status" role="status">默认参数来自历史记录，请先核对。</span></div></section>
+<noscript><div class="note warn">JavaScript 已关闭：教程仍可完整阅读，复制按钮和进度保存不可用。默认命令中的 23.94.184.3 与 finance.ironmao.com 需要手动替换成你的实际参数。</div></noscript>
+<div class="note info"><strong>本次已确定采用彻底重装路线。</strong>先在第 2 步核对清空范围，再按第 3 步操作。忘记旧 root 密码不会阻止从商家后台重装；重装完成后用新密码从第 4 步继续。旧数据备份仅在需要保留时展开。</div><div class="link-list"><a href="#step-2">确认清空范围</a><a href="#step-3">打开重装步骤</a><a href="#step-4">重装完成后的首次登录</a></div><div class="phase">开始之前</div><section class="step" id="step-1"><div class="step-top"><span class="step-number">01</span><div><p class="step-subtitle">浏览器 · 不需要新买服务器</p><h2>先准备好三个入口</h2></div></div>
+<p>这份教程按 <strong>ColoCrossing VPS + Ubuntu 24.04 LTS / Debian 12 + Mac 电脑</strong>编写。先恢复代理，再上线金融学习站，最后迁移工程笔记。Windows 用户可用 PowerShell 执行 SSH/SCP，项目路径和本地打包命令需按 Windows 调整。</p>
+<div class="table-wrap"><table><thead><tr><th>打开哪个网站</th><th>登录什么账号</th><th>在这里做什么</th></tr></thead><tbody>
+<tr><td><a href="https://cloud.colocrossing.com" target="_blank" rel="noopener noreferrer">ColoCrossing 云后台 ↗</a></td><td>你购买 VPS 使用的账号</td><td>查看 IP、重装系统、使用控制台、检查云防火墙</td></tr>
+<tr><td><a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare 后台 ↗</a></td><td>管理 ironmao.com 的账号</td><td>添加网站 DNS 记录；站点验证后可开启缓存代理</td></tr>
+<tr><td><a href="https://github.com/chen08209/FlClash/releases" target="_blank" rel="noopener noreferrer">FlClash 官方下载 ↗</a></td><td>下载公开文件通常无需登录</td><td>本次使用已有 FlClash；已安装可跳过下载</td></tr>
+</tbody></table></div>
+<p>3X-UI 是稍后装在自己服务器上的面板，不是需要注册的第三方网站。服务器日常操作使用 Mac 的“终端”：按 <kbd>⌘</kbd> + <kbd>空格</kbd>，输入 <strong>Terminal / 终端</strong>。</p>
+<div class="mini-grid"><div><strong>新增费用约 ¥0/月</strong><p>复用已付费的 VPS 和主域名，且资源与流量未超套餐额度。服务器、主域名仍需原有续费。</p></div><div><strong>先在 Mac 构建</strong><p>VPS 只提供静态文件服务。旧 1GB 套餐是否还有余量，以第 4 步检查结果为准。</p></div></div>
+<p class="source">费用依据：<a href="https://letsencrypt.org/docs/faq/" target="_blank" rel="noopener noreferrer">Let’s Encrypt 证书免费</a>；<a href="https://caddyserver.com/docs/" target="_blank" rel="noopener noreferrer">Caddy 开源</a>；<a href="https://www.cloudflare.com/plans/free/" target="_blank" rel="noopener noreferrer">Cloudflare 有免费计划</a>。不需要购买付费 CDN 或网站面板。</p>
+<div class="table-wrap"><table><thead><tr><th>用途</th><th>这次使用的端口</th><th>访问方式</th></tr></thead><tbody>
+<tr><td>SSH</td><td>TCP 22</td><td>Mac → VPS</td></tr><tr><td>网站</td><td>TCP 80 / 443</td><td>Caddy 提供 HTTPS</td></tr><tr><td>Reality 节点</td><td>TCP 8443</td><td>客户端直接连 VPS IP</td></tr><tr><td>3X-UI 面板</td><td>127.0.0.1:18080</td><td>SSH 隧道；不对公网开放</td></tr><tr><td>Mihomo 订阅</td><td>127.0.0.1:2096</td><td>第 10 步启用；Mac 经 SSH 隧道的 28081 下载 / 更新</td></tr></tbody></table></div>
+<div class="note info">先在页面顶部核对并填写服务器 IPv4。默认 <code>23.94.184.3</code> 来自旧记录，应以云后台显示的当前 IP 为准。密码、SSH 私钥和节点凭据放在你自己的密码管理工具中，不填写到这份教程里。</div><label class="done"><input type="checkbox" data-step="1">我已完成这一步，并核对了成功条件</label></section><div class="phase">第一阶段 · 服务器从头初始化</div><section class="step" id="step-2"><div class="step-top"><span class="step-number">02</span><div><p class="step-subtitle">浏览器 · 确认清空范围，备份按需</p><h2>确认彻底重装，按需保留旧数据</h2></div></div>
+<div class="note info"><strong>本次主流程：彻底重装。</strong>你已明确要清空旧环境重新搭建。重装通过 ColoCrossing 商家后台发起，<strong>不需要旧 root 密码，也不要求先登录旧服务器</strong>。确认下面的清空范围后，可以继续第 3 步。</div>
+<div class="table-wrap"><table><thead><tr><th>位置</th><th>重装的影响</th></tr></thead><tbody><tr><td>VPS 将被格式化的磁盘</td><td>系统盘里的旧系统、3X-UI/Xray、节点配置、网站文件、数据库和日志会被删除；选择格式化附加磁盘时，其数据也会删除。旧节点需要重新生成并导入客户端。</td></tr><tr><td>Mac 本地工作区</td><td>项目源代码和本地文件保留，之后从电脑重新构建并上传网站。</td></tr><tr><td>域名与 Cloudflare</td><td>账号和 DNS 记录不会随系统盘重装自动重置；后续核对是否仍指向本次 VPS IP。</td></tr></tbody></table></div>
+<p><strong>确认本次将被格式化的 VPS 磁盘里没有必须保留的数据后，按“彻底重装”继续。</strong>若发现有要保留的数据，则先停止重装，展开下面的备份分支。</p>
+<details><summary>可选：旧服务器里还有需要保留的数据，先备份</summary>
+<p>只有需要保留旧数据时才执行本分支。旧密码忘记且没有可用密钥时，先通过商家支持或救援功能恢复旧系统访问，再备份；不要为了取回数据先重装。下面只备份常见的代理、Caddy 和网站目录，<strong>不等于整机备份</strong>。旧机还有数据库、容器或其它应用时，额外导出它们的数据。</p>
+<p>先用你原来能登录的方法进入旧服务器，以下命令在旧服务器内执行。</p>
+<p>先看看原来跑了哪些服务：</p>
+<div class="command"><div class="command-head"><span>旧服务器终端 · 已登录的账号</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo ss -lntp
+df -h /
+sudo ls -ld /etc/x-ui /etc/caddy /srv /var/www</code></pre></div>
+<p>不存在的目录会显示 “No such file or directory”，这是检查结果。确认只有旧代理或这些网站目录后，生成备份：</p>
+<div class="note warn">如果旧服务仍在写数据库，先在 3X-UI 面板的数据库备份功能里导出并下载数据库，或先暂停对应服务再执行下面的备份；运行中的 SQLite 文件不能靠普通复制保证一致性。</div>
+<div class="command"><div class="command-head"><span>旧服务器终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo bash -c &#x27;
+set -eu
+set --
+for backup_dir in /etc/x-ui /usr/local/x-ui /etc/caddy /root/cert /srv /var/www; do
+  if [ -e &quot;$backup_dir&quot; ]; then set -- &quot;$@&quot; &quot;$backup_dir&quot;; fi
+done
+if [ &quot;$#&quot; -eq 0 ]; then
+  echo &quot;未找到这些服务目录，请先核对其它数据位置&quot;
+  exit 1
+fi
+tar -czf /root/vps-before-reset.tar.gz &quot;$@&quot;
+chmod 600 /root/vps-before-reset.tar.gz
+tar -tzf /root/vps-before-reset.tar.gz &gt; /dev/null
+tar -tzf /root/vps-before-reset.tar.gz | head -20
+&#x27;</code></pre></div>
+<p>打开一个新的 <strong>Mac 本地终端</strong>，把备份下载到桌面。这里用旧记录中的 root 登录方式；如你原来用密钥，给 <code>scp</code> 加上同一个 <code>-i 密钥路径</code>。如果 root 登录已被关闭，使用你的管理员账号将备份复制到它的家目录、设置仅该账号可读，再用这个账号下载。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 不是 SSH 里的终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+scp root@23.94.184.3:/root/vps-before-reset.tar.gz &quot;$HOME/Desktop/vps-before-reset.tar.gz&quot;
+chmod 600 &quot;$HOME/Desktop/vps-before-reset.tar.gz&quot;
+tar -tzf &quot;$HOME/Desktop/vps-before-reset.tar.gz&quot; &gt; /dev/null
+tar -tzf &quot;$HOME/Desktop/vps-before-reset.tar.gz&quot; | head -20
+)</code></pre></div>
+<p class="success"><strong>备份分支成功条件：</strong>SCP 下载成功，完整归档检查没有错误，再预览内容；仅看到前 20 项不能证明备份完整。旧面板如有数据库导出，也已下载到电脑。服务曾使用自定义证书路径时，一并备份该路径。</p>
+</details>
+<p class="success"><strong>本步成功条件：</strong>已确认本次将格式化的旧磁盘数据可以清空；如果选择保留某些数据，它们的可读备份已下载到电脑。彻底重装路线可以直接进入第 3 步，无需反复尝试旧密码。</p>
+<label class="done"><input type="checkbox" data-step="2">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-3"><div class="step-top"><span class="step-number">03</span><div><p class="step-subtitle">浏览器 · 这是清空系统盘的一步</p><h2>登录 ColoCrossing，重装系统</h2></div></div>
+<p>无需旧系统的登录密码，只需要能够登录购买 VPS 的商家账号。<strong>Reboot 是重启，Reinstall OS 才是重装。</strong>本次应进入服务器管理区域的 Install，而不是左侧 Reboot VPS。</p>
+<ol class="actions"><li>打开 <a href="https://cloud.colocrossing.com/clientarea.php?action=productdetails&amp;id=43565" target="_blank" rel="noopener noreferrer">这台 VPS 的产品详情页 ↗</a>，如需登录，使用购买服务器的 ColoCrossing 账号。这个服务编号来自本次实际页面；核对页面 IP 与顶部参数一致，换服务器时从 Services 重新选择对应产品。</li>
+<li>查看当前服务器管理区域。核对 <strong>IP、套餐和状态</strong>。本次看到的旧系统是 Debian 12；页面显示 Online 只说明机器已启动，不代表 SSH 密码正确。</li>
+<li>进入横向菜单 <strong>Install → Reinstall OS</strong>。这里是系统重装表单，不选择 Control Panel 或 Applications。</li>
+<li>在 <strong>Select OS</strong> 中选择 <strong>Ubuntu 24.04 LTS</strong>；没有时选 <strong>Debian 12</strong>。确认具体系统版本被选中。本教程后续命令适用于这两种系统，不适用于 CentOS / AlmaLinux。</li>
+<li>在 <strong>New Password</strong> 填写新 root 密码，在 <strong>Retype Password</strong> 再填一次。使用新的强密码，保存到自己的密码管理工具；这不是 ColoCrossing 账号密码。密码由你在后台填写，不写进本教程。</li>
+<li>若出现 <strong>Format Primary Disk Only</strong>，它表示只格式化第一块磁盘、保留附加磁盘。本次要清空整台 VPS 的所有磁盘时保持关闭；只清空系统盘、保留额外数据盘时打开。已知旧套餐为 30GB 系统盘，仍以后台实际磁盘配置为准，最终确认前核对要清空的范围。</li>
+<li>从头建立 SSH 密钥时，打开 <strong>Remove old SSH Keys</strong>；<strong>Select SSH keys</strong> 暂不选择旧密钥。第 5 步会建立并验证新的日常管理密钥。</li>
+<li>核对第 2 步已经确认可清空旧数据；如选择了保留数据分支，其备份已完整下载。然后由你点击 <strong>Reinstall</strong> 并完成页面最终确认。这个动作会按所选磁盘范围清空 VPS，包含系统盘。</li>
+<li>进入 <strong>Tasks And Logs → Tasks</strong> 查看<strong>本次重装任务</strong>，等待该任务显示完成且服务器恢复 <strong>Online / Running</strong>。旧的 VPS Restart / VPS Start 成功记录不等于重装已完成。</li>
+<li>重新核对公网 IP。若有变化，修改教程顶部的 IP，点击“更新教程参数”，再继续第 4 步。</li></ol>
+<details><summary>Select OS 是空白，没有任何系统可选怎么办？</summary><p>本次实际观察曾出现系统列表空白。<strong>此时先不要点击 Reinstall，也不要把空白当成已选 Debian。</strong>重新打开上面的产品详情链接，再进入 Install → Reinstall OS，等待列表加载。仍没有选项时，把这个区域截图发我或联系商家支持，先解决镜像列表问题。</p><p>通过上面的产品详情链接重新进入；若地址带有 <code>modop=custom</code> 和 <code>a=reboot</code> 等操作参数，不要直接刷新该地址，以免重新提交操作。</p></details>
+<p>详情页服务器管理区域顶部有一个显示器图标，提示为 <strong>Connect to the VPS via VNC.</strong>，这是网页控制台。与 Stop、Restart、Poweroff 图标相邻，先核对按钮提示再点击。看到 <code>login:</code> 后输入 <code>root</code>，Password 提示时输入本次设置的新密码；输入没有回显。以后 SSH 出错时从这里查看系统。</p>
+<details><summary>VNC 打不开，或一直显示 Not connected. Please try again.？</summary><p>先区分：产品信息已经显示，但下面管理区域空白时，VNC 入口还未加载；能打开控制台但无法连接，是控制台连接阶段的问题。这个提示不能单独证明 VPS 停机。通过上面的干净产品链接重新进入，等待管理区域加载；不要刷新带 <code>a=start</code>、<code>a=reboot</code> 的操作地址。</p><p>管理区域出现后，点击 VNC 图标，再选 <strong>Launch HTML 5 VNC Client</strong>。没有新窗口时检查浏览器是否拦截了这个网站的弹窗。仍失败可换浏览器或手机热点各试一次，用来区分本地访问问题；持续失败时进入 <a href="https://cloud.colocrossing.com/submitticket.php" target="_blank" rel="noopener noreferrer">ColoCrossing 建立服务单</a>，请求恢复控制台、提供直接管理链接、确认本次重装任务完成，并从 VPS 控制台或宿主机读取第 4 步对应类型的 SSH SHA256 指纹。等待商家独立提供指纹后完成核对；不把同一条尚未核对的 SSH 连接里读出的值当成独立证明。</p><p>后续安装和网站发布使用 SSH。VNC 是首次核对和 SSH 故障时的备用入口；完成第 4 步核对后，不需要一直开着它。</p><p class="source">入口参考：<a href="https://www.virtualizor.com/docs/enduser/vnc/" target="_blank" rel="noopener noreferrer">Virtualizor VNC 官方说明</a>。本轮曾出现该连接报错，后来由用户确认恢复；没有据此要求重装或重启。</p></details>
+<p class="success"><strong>成功条件：</strong>本次重装任务已完成，服务器恢复 Online / Running，新的 root 密码已保存，知道当前 IP 和 VNC 入口。然后进入第 4 步核对新指纹并登录；VNC 故障时按上面的商家工单路径核对。</p>
+<p class="source">Install / Reinstall OS、密码字段、磁盘选项、SSH keys 与 Tasks And Logs 来自 2026-10-03 本次已登录后台的实际观察。磁盘选项含义参见 <a href="https://www.virtualizor.com/docs/enduser/re-install-os/" target="_blank" rel="noopener noreferrer">Virtualizor 重装说明</a>与<a href="https://www.virtualizor.com/blog/virtualizor-2-9-6-launched-stable-release/" target="_blank" rel="noopener noreferrer">默认磁盘格式化范围说明</a>。页面布局可能更新，字段不一致时先核对。<a href="https://www.colocrossing.com/blog/introducing-the-new-vps-firewall-in-the-colocrossing-cloud-portal/" target="_blank" rel="noopener noreferrer">ColoCrossing 云后台功能说明</a>。</p>
+<label class="done"><input type="checkbox" data-step="3">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-4"><div class="step-top"><span class="step-number">04</span><div><p class="step-subtitle">Mac 登录 → 服务器 root 终端</p><h2>第一次连接新系统，更新基础环境</h2></div></div>
+<p>按 <kbd>⌘</kbd> + <kbd>空格</kbd>，搜索“终端 / Terminal”，打开一个新的 <strong>Mac 本地终端</strong>。此时类似 <code>(base) ➜ ai-instructure ...</code> 的提示符仍属于你的电脑；要先用 SSH 进入服务器，才能在服务器执行 apt、ss 等命令。</p>
+<p>在 Mac 终端输入下面的命令并按回车。首次登录明确只尝试密码认证，避免本机 SSH agent 的多个密钥连续尝试：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 重装完成后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password root@23.94.184.3</code></pre></div>
+<p>出现 <code>root@...&#x27;s password:</code> 后，输入第 3 步刚设置的<strong>新 root 密码</strong>，不是旧密码，也不是商家网站账号密码。输入时没有字符或星号回显，输完按回车。</p>
+<p>首次连接如询问是否信任主机，先核对 <strong>SSH 提示中的密钥类型和 SHA256 指纹</strong>。在 ColoCrossing 的网页 VNC 控制台用新密码登录 root 后，按类型选择下面一条命令；本次实际 SSH 提示是 <strong>RSA</strong>，对应第一条。</p>
+<div class="command"><div class="command-head"><span>ColoCrossing 网页 VNC · root · SSH 提示 RSA 时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub -E sha256</code></pre></div>
+<div class="command"><div class="command-head"><span>ColoCrossing 网页 VNC · root · SSH 提示 ED25519 时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256</code></pre></div>
+<p>比较两处<strong>完整的 <code>SHA256:...</code> 字符串</strong>，必须逐字符一致；如果用 OCR 提取，最后再对照画面确认。输出开头的 <code>3072</code> 等数字是密钥长度，末尾 <code>root@...</code> 是备注，它们不参与指纹核对。不同密钥类型的指纹不能互相比。</p>
+<p>VNC 输出与 SSH 提示一致后，才在 Mac 的确认提示中输入 <code>yes</code>。VNC 无法连接时，按第 3 步的工单路径请求商家独立读取指纹。以后再次重装，要重新核对当时的新指纹，不沿用本次的旧值。</p>
+<details><summary>出现 REMOTE HOST IDENTIFICATION HAS CHANGED 怎么办？</summary><p>重装系统会换 SSH 主机密钥。确认是你刚刚重装的同一台 VPS、IP 一致，并通过控制台或商家工单核对新指纹后，在 Mac 执行下面的命令，只移除这个 IP 的旧记录，再重新连接。若同一类型的 SHA256 值前后又变了，先重新核对当前值；删除 <code>known_hosts</code> 记录不会改变服务器上的密钥。不要关闭 SSH 的主机密钥检查。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 核对重装与指纹后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh-keygen -R 23.94.184.3
+ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password root@23.94.184.3</code></pre></div></details>
+<details><summary>Permission denied / Too many authentication failures 怎么办？</summary><p><code>Permission denied</code> 表示登录认证未通过；收到密码提示说明 SSH 连接已经建立，不再是端口拒绝问题。先确认本次重装任务已完成、用户名是 root，并使用刚设置的新密码。不要连续重复猜旧密码。</p><p><code>Too many authentication failures</code> 表示该连接的认证失败次数达到上限，可能来自错误密码或多个密钥尝试。重新打开一次连接，使用上面的密码认证命令排除 SSH agent 密钥尝试。如果正确的新密码仍被拒绝，先用 VNC 控制台验证能否登录，再查看 SSH 配置或商家镜像设置；不要直接关闭认证保护。</p></details>
+<details><summary>Connection refused / Connection timed out 怎么办？</summary><p>这两种提示都发生在登录验证之前。先核对 IP 和重装任务是否完成、服务器是否 Online，再通过 VNC 检查 SSH 是否监听 22，以及云防火墙和 UFW。Online 不能证明 SSH 服务已经正常。把具体提示发我，根据结果继续，不靠反复重装排查。</p></details>
+<p>看到类似 <code>root@服务器名称:~#</code>，才说明已经进入服务器。后续命令逐条执行并核对结果。离开服务器时可输入 <code>exit</code>，返回 Mac 本地终端。</p>
+<p>指纹核对并登录成功后，系统初始化、安装代理和部署网站都在 SSH 中继续；可以关闭 VNC 窗口，保留它作为以后 SSH 无法登录时的备用入口。</p>
+<p>现在以下命令是在<strong>服务器的 root 终端</strong>上执行：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · root</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>cat /etc/os-release
+free -h
+df -h /
+apt update
+apt upgrade -y
+apt install -y sudo curl wget ca-certificates nano ufw rsync unzip gnupg sqlite3</code></pre></div>
+<p>系统升级如询问是否保留 SSH 配置，先保留当前配置；如果提示必须重启，执行 <code>reboot</code>，等待云后台恢复 Running 后重新 SSH 登录。磁盘接近满、内存极少或 apt 报错时，先解决再继续。</p>
+<p class="success"><strong>成功条件：</strong>系统是 Ubuntu 24.04 或 Debian 12，更新命令没有失败，磁盘有可用空间。</p>
+<label class="done"><input type="checkbox" data-step="4">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-5"><div class="step-top"><span class="step-number">05</span><div><p class="step-subtitle">服务器 root + Mac 新终端</p><h2>建立日常管理员，并验证 SSH 密钥</h2></div></div>
+<p>旧教程使用 <strong>root + 密码</strong>登录。这次改用 <strong>deployer + SSH 密钥</strong>做日常上传和维护：私钥保存在 Mac，服务器保存公钥并验证登录；需要管理员权限时再用 <code>sudo</code>。这一步完成后，第 6 步才会关闭 root 和密码登录。</p>
+<div class="note info"><strong>全程保留两个窗口。</strong>窗口 A 是已登录服务器的 root 终端；窗口 B 是 Mac 本地终端。根据命令框顶部的位置标签切换，每条命令成功后再继续。</div>
+<p><strong>只复制命令框里的内容。</strong><code>root@obvymadx:~#</code>、<code>(base) ➜ ~</code> 是位置提示，不是命令；<code>ls:</code> 等错误行是输出，也不要粘贴执行。直接使用命令框右上角的“复制命令”按钮。</p>
+<h3>5.1 在窗口 A 创建管理员</h3>
+<p>提示符类似 <code>root@obvymadx:~#</code>。这次固定把日常管理员叫 <code>deployer</code>；已经完成以下两条命令时跳过创建。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · root</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>adduser deployer
+usermod -aG sudo deployer</code></pre></div>
+<p><code>adduser</code> 会让你设置 deployer 的密码，后面使用 sudo 会用到它。姓名等可选项按回车跳过。</p>
+<h3>5.2 打开窗口 B，确认是在 Mac 上</h3>
+<p>保持窗口 A 打开。在 Mac 的“终端”应用里按 <kbd>⌘</kbd> + <kbd>N</kbd>，新开一个窗口；此时先不执行 SSH 登录。类似 <code>(base) ➜ ~</code> 的提示符属于 Mac 本地。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>echo &quot;$HOME&quot;</code></pre></div>
+<p>应该输出 <code>/Users/你的用户名</code>，本次是 <code>/Users/chenmao</code>。若输出 <code>/root</code>，仍在服务器里，换到新开的 Mac 窗口再继续。<code>$HOME</code> 取的是当前机器、当前账号的家目录。</p>
+<p>确认位置后，检查 Mac 上的专用密钥：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ls -l &quot;$HOME/.ssh/ironmao_vps&quot; &quot;$HOME/.ssh/ironmao_vps.pub&quot;</code></pre></div>
+<ul><li>两份文件都存在：沿用它们，跳过生成命令。</li><li>两份都显示 <code>No such file or directory</code>：Mac 还没有这套密钥，继续 5.3。</li><li>只存在其中一份：先核对原因，避免覆盖正在使用的密钥。</li></ul>
+<div class="note info">若报错路径是 <code>/root/.ssh/ironmao_vps</code>，表示命令在服务器上执行；这个结果不能说明 Mac 上有没有密钥。回到窗口 B 重新检查。</div>
+<h3>5.3 在窗口 B 生成密钥</h3>
+<p>仅在 Mac 上两份文件都不存在时执行：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 仅在这套密钥不存在时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh-keygen -t ed25519 -f &quot;$HOME/.ssh/ironmao_vps&quot; -C &quot;ironmao-vps&quot;</code></pre></div>
+<p><code>Enter passphrase</code> 询问的是保护 Mac 私钥文件的<strong>密钥口令</strong>。建议设置一个自己记得住的口令，再在 <code>Enter same passphrase again</code> 提示中输入一次；输入不会显示字符。</p>
+<p>已经直接回车使用空口令，也可以继续安装和登录。区别是私钥文件没有口令加密保护，拿到文件的人少了一道使用门槛。无需重新生成密钥；需要补上口令时，展开下面的可选操作。</p>
+<details><summary>已经生成空口令密钥，怎样给它补上口令？</summary><p>在 Mac 本地执行以下命令，修改同一份私钥的口令：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 可选：给现有私钥补口令</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh-keygen -p -f &quot;$HOME/.ssh/ironmao_vps&quot;</code></pre></div>
+<p>若询问旧口令，原来为空就直接回车；然后按提示输入新口令两次。公钥不变，已经安装到服务器的公钥也无需重装。以后 SSH 可能询问这个密钥口令。</p></details>
+<p>生成成功后会显示密钥保存位置。在窗口 B 再执行 5.2 的 <code>ls</code> 检查，应看到两份文件：<code>ironmao_vps</code> 是私钥，留在 Mac；<code>ironmao_vps.pub</code> 是下一步上传的公钥。</p>
+<h3>5.4 在窗口 B 上传公钥</h3>
+<div class="note warn"><strong><code>PreferredAuthentications=password</code> 必须原样保留。</strong><code>password</code> 是“使用密码认证”的方式名称，不是让你替换成实际密码。实际密码只在执行命令后出现的交互提示里输入。</div>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地 · 用新 root 密码上传公钥</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>scp -o PubkeyAuthentication=no -o PreferredAuthentications=password &quot;$HOME/.ssh/ironmao_vps.pub&quot; root@23.94.184.3:/tmp/ironmao-vps.pub</code></pre></div>
+<p>出现 <code>root@...&#x27;s password:</code> 后，再输入第 3 步设置的 root 密码并回车。看到文件传输 <code>100%</code>、命令正常结束后继续；若连接关闭或认证失败，先检查上面的认证方式参数、当前 root 密码和第 4 步的故障说明。</p>
+<details><summary>误把实际密码写进命令或聊天了怎么办？</summary><p>参数改回 <code>PreferredAuthentications=password</code>，在交互提示输入密码。若实际 root 密码已经进入命令历史或聊天记录，使用仍保留的服务器 root 窗口执行 <code>passwd</code>，按提示换成新的 root 密码并保存；以后需要 root 密码时用新值。不要把新密码作为命令参数、写进教程或发到聊天里。</p></details>
+<h3>5.5 切回窗口 A，安装公钥</h3>
+<p>确认窗口 A 的提示符仍为 <code>root@obvymadx:~#</code>，在服务器逐条执行以下两条命令。这是刚创建的 deployer 账号的首次安装；如果已有 <code>authorized_keys</code> 且包含其他要保留的公钥，先保留原文件并追加新公钥，不覆盖原授权。</p>
+<div class="command"><div class="command-head"><span>窗口 A · 服务器 root · 公钥上传成功后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>install -d -m 700 -o deployer -g deployer /home/deployer/.ssh
+install -m 600 -o deployer -g deployer /tmp/ironmao-vps.pub /home/deployer/.ssh/authorized_keys</code></pre></div>
+<p>成功时通常没有输出，直接回到 root 提示符。若显示文件不存在或用户不存在，先补齐公钥上传或 deployer 创建步骤；不要跳过错误继续。</p>
+<h3>5.6 回到窗口 B，验证密钥登录和 sudo</h3>
+<p>保持窗口 A 打开。在窗口 B（此时仍是 Mac 本地）执行：</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 验证后变成 deployer 服务器窗口</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -i &quot;$HOME/.ssh/ironmao_vps&quot; -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no deployer@23.94.184.3</code></pre></div>
+<p>密钥口令为空时，通常直接登录。若密钥有口令，<code>Enter passphrase for key ...</code> 询问的是 Mac 私钥口令。登录成功后提示符变成 <code>deployer@obvymadx:~$</code>；从此窗口 B 是服务器窗口，后续 Mac 构建或上传要再打开本地窗口。</p>
+<div class="command"><div class="command-head"><span>窗口 B · 已登录服务器 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>whoami
+sudo -v</code></pre></div>
+<div class="table-wrap"><table><thead><tr><th>密码 / 口令</th><th>在哪个提示里输入</th></tr></thead><tbody><tr><td>新 root 密码</td><td>第 4 步首次 SSH、5.4 的 SCP 上传、VNC 的 root 登录提示；如果已更换，使用最新值</td></tr><tr><td>deployer 密码</td><td>创建 deployer 时设置，登录后 <code>sudo -v</code> 的 <code>[sudo] password for deployer:</code> 提示中输入</td></tr><tr><td>Mac 私钥口令</td><td>生成或补口令时设置，SSH 的 <code>Enter passphrase for key ...</code> 提示中输入；为空时通常不询问</td></tr></tbody></table></div>
+<p class="success"><strong>成功条件：</strong>这个命令禁止回退到账号密码，必须通过公钥认证建立连接；<code>whoami</code> 输出 <code>deployer</code>，<code>sudo -v</code> 输入 deployer 密码后成功。后面默认使用这个服务器窗口。密钥有口令时，SSH 询问的是密钥口令；sudo 询问的是 deployer 密码。</p>
+<p><strong>两项验证都通过后再进入第 6 步。</strong>保留窗口 A，直到第 6 步修改 SSH 设置后的新连接也验证成功。</p>
+<p class="source">认证参数、私钥口令与修改口令参考：<a href="https://man.openbsd.org/ssh_config.5" target="_blank" rel="noopener noreferrer">OpenSSH 客户端配置</a>、<a href="https://man.openbsd.org/ssh-keygen.1" target="_blank" rel="noopener noreferrer">ssh-keygen 官方说明</a>。</p>
+<h3>5.7 以后怎样登录？</h3>
+<p>第 5 步验证成功后，日常在 Mac 本地终端使用这条命令：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 日常登录 / 重启后重连</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -i &quot;$HOME/.ssh/ironmao_vps&quot; -o IdentitiesOnly=yes deployer@23.94.184.3</code></pre></div>
+<p>完成第 6 步后，<code>ssh root@...</code> 会被拒绝，改用上面这条。需要管理系统时使用 <code>sudo</code>，或用 <code>sudo -i</code> 进入 root 环境。日常简称、服务检查和维护步骤见 <a href="VPS日常登录与维护手册.html">VPS 日常登录与维护手册 ↗</a>。</p>
+<label class="done"><input type="checkbox" data-step="5">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-6"><div class="step-top"><span class="step-number">06</span><div><p class="step-subtitle">Cloud 后台 + 服务器 deployer</p><h2>配置两层防火墙，再收紧 SSH</h2></div></div>
+<p><strong>关闭的是 root 直接通过 SSH 登录，root 账号和管理能力仍然保留。</strong>用 deployer 登录后，管理命令前加 <code>sudo</code>；需要连续做管理员操作时，<code>sudo -i</code> 会进入 root 环境，完成后 <code>exit</code> 回到 deployer。这样将日常操作和管理操作分开，部署网站、安装服务仍可完成。这里的配置只作用于 SSH，不关闭商家 VNC 控制台登录。</p>
+<p>有两层防火墙：商家的云防火墙，以及服务器自己的 UFW。都需要允许下面四组 <strong>TCP</strong> 端口：</p>
+<div class="table-wrap"><table><thead><tr><th>端口</th><th>用途</th><th>云防火墙建议</th></tr></thead><tbody><tr><td>22</td><td>SSH</td><td>先确保你的连接来源可访问</td></tr><tr><td>80</td><td>网站跳转与证书验证</td><td>允许入站</td></tr><tr><td>443</td><td>网站 HTTPS</td><td>允许入站</td></tr><tr><td>8443</td><td>Reality</td><td>允许入站</td></tr></tbody></table></div>
+<ol class="actions"><li>回到 <a href="https://cloud.colocrossing.com" target="_blank" rel="noopener noreferrer">ColoCrossing 云后台</a>，打开这台 VPS 的 <strong>Firewall / 防火墙</strong>。</li><li>如果已绑定一个默认拒绝入站的规则计划，添加允许 TCP 22、80、443、8443 的入站规则；确认出口仍可访问互联网。</li><li>若当前未绑定云防火墙计划，先保持现状，完成下面的 UFW 配置。需要绑定新计划时，先建好 SSH 允许规则，再绑定到 VPS。不要先启用拒绝策略再补规则。</li></ol>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8443/tcp
+sudo ufw enable
+sudo ufw status verbose</code></pre></div>
+<p>确认四组 TCP 端口都是 ALLOW。这个新系统不需要向公网开放 18080、18081 或默认面板端口 2053。</p>
+<p><strong>只有第 5 步的新窗口登录和 sudo 已验证成功后</strong>，才执行：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo tee /etc/ssh/sshd_config.d/00-ironmao.conf &gt; /dev/null &lt;&lt;&#x27;EOF&#x27;
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+EOF
+sudo /usr/sbin/sshd -t
+sudo /usr/sbin/sshd -T | grep -E &#x27;^(pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|permitrootlogin) &#x27;</code></pre></div>
+<p>第一条检查应无错误；第二条应显示公钥认证 <code>yes</code>，另外三项 <code>no</code>。输出不符合时，先检查 SSH 配置的 Include 和其它配置项，不执行下面的 reload。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · 四项检查正确后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl reload ssh</code></pre></div>
+<p>在 Mac 再开一个窗口，用第 5 步的密钥命令验证新连接。保持原有会话，直到新连接与 sudo 都成功。</p>
+<details><summary>登录提示 System restart required，什么时候重启？</summary><p>表示系统更新后需要重启。当前若已进行到第 5–6 步，先完成新密钥登录、sudo 和 SSH 配置修改后的新连接验证，再在 deployer 服务器窗口执行：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer · 新连接与 sudo 已验证后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo reboot</code></pre></div>
+<p>重启会断开所有 SSH 会话。等待机器恢复，再从新的 Mac 本地窗口用 5.7 的日常登录命令重连，运行 <code>whoami</code> 和 <code>sudo -v</code> 确认。重启后密钥登录方式相同；如果出现新的主机指纹变化，按第 4 步重新核对。</p></details>
+<details><summary>可选：开启原版 BBR</summary><p>仅使用现有系统内核。下面的 modprobe 成功后再继续；如果提示内核不支持，跳过，不更换内核。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo modprobe tcp_bbr
+sysctl net.ipv4.tcp_available_congestion_control</code></pre></div><p>输出包含 <code>bbr</code> 时写入：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · 现有内核支持 BBR 时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo tee /etc/sysctl.d/99-ironmao-bbr.conf &gt; /dev/null &lt;&lt;&#x27;EOF&#x27;
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+sudo sysctl --system
+sysctl net.ipv4.tcp_congestion_control</code></pre></div></details><p class="success"><strong>成功条件：</strong>UFW 开启后仍能建立新的 deployer SSH 连接；SSH 配置检查正确。</p><label class="done"><input type="checkbox" data-step="6">我已完成这一步，并核对了成功条件</label></section><div class="note warn"><strong>2026-10-09 · 代理路线已重新研究。</strong>服务器初始化仍按第 1–6 步；接着使用 <a href="FlClash与VPS代理部署实测教程.html">FlClash 与 VPS 代理部署实测教程</a>。下面第 7–10 步保留旧 3X-UI 方案供回查，不再作为新部署主流程。新方案使用 TCP 443，网站部署前必须重新规划端口，不能直接套用本页网站的 443 配置。</div><div class="phase">第二阶段 · 恢复个人代理</div><section class="step" id="step-7"><div class="step-top"><span class="step-number">07</span><div><p class="step-subtitle">服务器 deployer · 本教程核对版本 v3.8.5</p><h2>安装 3X-UI：面板只监听本机</h2></div></div>
+<p>下载官方发布版本的安装脚本，然后运行。这里固定使用教程核对时的稳定版本 <code>v3.8.5</code>，避免步骤随主分支变化。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>curl --fail --location --output /tmp/3x-ui-install.sh https://raw.githubusercontent.com/MHSanaei/3x-ui/v3.8.5/install.sh
+sudo bash /tmp/3x-ui-install.sh v3.8.5</code></pre></div>
+<div class="table-wrap"><table><thead><tr><th>安装时出现的问题</th><th>怎么选择</th></tr></thead><tbody>
+<tr><td>数据库类型</td><td>选 <strong>1 / SQLite</strong></td></tr><tr><td>是否自定义 Panel Port</td><td>输入 <code>y</code>；端口输入 <code>18080</code></td></tr>
+<tr><td>SSL certificate setup method</td><td>选 <strong>4 / Skip SSL</strong>，面板通过加密的 SSH 隧道访问</td></tr><tr><td>Bind the panel to 127.0.0.1 only?</td><td>输入 <strong>y</strong></td></tr><tr><td>用户名、密码、WebBasePath</td><td>按实际输出保存；不沿用旧密码和旧路径</td></tr></tbody></table></div>
+<p>用户名、密码和路径显示在安装日志中间的 <strong>Panel Installation Complete!</strong> 区域。找 <code>Username</code>、<code>Password</code>、<code>WebBasePath</code> 这三行；后面还会安装 Fail2ban，长日志可能把这一区域顶到上方。等安装程序结束、重新出现 deployer 提示符后，向上滚动查找。</p>
+<p>把面板用户名和密码保存在自己的密码管理工具中。<strong>把实际 WebBasePath 填到教程顶部</strong>，可带或不带前后斜杠；它来自上述同名字段，不是 SSH 密钥指纹、用户名或密码。</p>
+<details><summary>终端输出已经找不到，怎样在服务器重新查看安装记录？</summary><p>v3.8.5 将初次安装结果保存在仅 root 可读的文件里。在 deployer 服务器窗口执行下面的命令，只查看面板用户名、密码和路径：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer · 凭据只在自己电脑查看</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo grep -E &#x27;^XUI_(USERNAME|PASSWORD|WEB_BASE_PATH)=&#x27; /etc/x-ui/install-result.env</code></pre></div>
+<p>输出对应 <code>XUI_USERNAME</code>、<code>XUI_PASSWORD</code> 和 <code>XUI_WEB_BASE_PATH</code>。文件是安装时的记录；之后已更换的密码 / 路径，以最新设置为准。不要把这个输出、完整文件或 API Token 发到聊天或写进教程。</p></details>
+<div class="note info">安装器自动打印的 SSH 隧道示例可能使用 <code>root@...</code>。本教程第 6 步已经关闭 root SSH 登录，实际连接请用第 8 步的 <strong>deployer + Mac 私钥</strong>命令。回环地址 <code>127.0.0.1:18080</code> 通过这个隧道访问。</div>
+<p>若面板密码或 API Token 已进入聊天记录，进入面板后更换密码，并按当前版本的 API 设置更新 Token，重新保存最新值；只提供状态检查结果，无需分享完整安装日志。</p>
+<p>再明确设置一次监听地址和端口，验证服务：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo /usr/local/x-ui/x-ui setting -listenIP 127.0.0.1 -port 18080
+sudo systemctl restart x-ui
+sudo systemctl enable x-ui
+sudo systemctl is-active x-ui
+sudo ss -lntp | grep 18080</code></pre></div>
+<p class="success"><strong>成功条件：</strong>服务为 <code>active</code>，面板监听 <code>127.0.0.1:18080</code>。如果是 <code>0.0.0.0:18080</code> 或 <code>[::]:18080</code>，先修正绑定地址。</p>
+<p class="source">依据：<a href="https://github.com/MHSanaei/3x-ui/wiki/Installation" target="_blank" rel="noopener noreferrer">官方安装说明</a>、<a href="https://github.com/MHSanaei/3x-ui/releases/tag/v3.8.5" target="_blank" rel="noopener noreferrer">已核对版本</a>。安装器的 SSL 选项 4 明确支持 SSH 隧道及回环绑定。</p>
+<label class="done"><input type="checkbox" data-step="7">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-8"><div class="step-top"><span class="step-number">08</span><div><p class="step-subtitle">Mac 本地终端 + 浏览器</p><h2>通过 SSH 隧道打开面板</h2></div></div>
+<p>在 Mac <strong>新的终端窗口</strong>运行下面的命令。这是隧道窗口，连接后通常没有提示符；保持它打开：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 保持这个窗口运行</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -i &quot;$HOME/.ssh/ironmao_vps&quot; -o IdentitiesOnly=yes -N -L 127.0.0.1:18080:127.0.0.1:18080 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 deployer@23.94.184.3</code></pre></div>
+<p>打开浏览器，输入：</p><div class="url-box"><code data-template>http://127.0.0.1:18080/安装输出的WebBasePath/</code></div>
+<p><a class="button secondary" id="panel-link" href="#step-7" target="_blank" rel="noopener noreferrer" aria-disabled="true">填写 WebBasePath 后打开 18080 面板 ↗</a></p>
+<p>用第 7 步保存的用户名和密码登录。这个地址的 HTTP 流量在你的 Mac 回环接口和服务器回环接口上，跨网络的一段由 SSH 加密。面板无需单独申请公网证书。</p>
+<details><summary>提示 Address already in use：改用本地 28080</summary><p>这表示 Mac 本地 18080 已被其他程序或已有隧道占用。执行下面的备用命令，只更换 Mac 监听端口，服务器面板仍使用 18080：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 28080 备用隧道 · 保持窗口运行</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -i &quot;$HOME/.ssh/ironmao_vps&quot; -o IdentitiesOnly=yes -N -L 127.0.0.1:28080:127.0.0.1:18080 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 deployer@23.94.184.3</code></pre></div>
+<p>然后在浏览器输入以下地址；顶部填写 WebBasePath 后，下面的路径会同步更新：</p><div class="url-box"><code data-template>http://127.0.0.1:28080/安装输出的WebBasePath/</code></div>
+<p>使用这个 28080 地址，上方的“打开 18080 面板”按钮仍指向默认端口。命令执行后没有提示符通常是隧道正在运行；使用完毕按 Control + C 关闭隧道。</p></details>
+<details><summary>页面打不开时检查什么？</summary><ul><li>隧道窗口是否仍开着，是否显示转发失败？</li><li>浏览器端口是否与所用隧道一致：默认 18080，备用 28080？</li><li>WebBasePath 是否使用了本次新安装输出的值？网址末尾保留 <code>/</code>。</li><li>第 7 步的 x-ui 服务是否为 active？</li></ul></details>
+<p class="success"><strong>成功条件：</strong>看到 3X-UI 仪表盘，并能登录。</p>
+<label class="done"><input type="checkbox" data-step="8">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-9"><div class="step-top"><span class="step-number">09</span><div><p class="step-subtitle">浏览器 · 你自己的 3X-UI 面板</p><h2>创建 VLESS + Reality 节点</h2></div></div>
+<p>先从服务器检查目标域名的 HTTPS 连接：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>curl -I --connect-timeout 10 https://dl.google.com</code></pre></div>
+<p>能完成 TLS 连接并收到 HTTP 响应即可，不要求一定返回 200。若连接失败，先排查服务器出口和 DNS，再创建节点。</p>
+<ol class="actions"><li>在 3X-UI 左侧进入 <strong>入站 / Inbounds</strong>，点击 <strong>添加入站 / Add</strong>。</li><li>填写下面的配置。新版字段可能叫 Target，旧版叫 Dest，含义相同。</li></ol>
+<div class="table-wrap"><table><thead><tr><th>字段</th><th>填写值</th></tr></thead><tbody>
+<tr><td>备注</td><td>ColoCrossing-LA</td></tr><tr><td>协议</td><td>vless</td></tr><tr><td>监听 IP</td><td>留空（节点监听公网；区别于面板回环监听）</td></tr><tr><td>端口</td><td><strong>8443</strong>，把 443 留给网站</td></tr><tr><td>传输</td><td>RAW / TCP</td></tr><tr><td>安全</td><td>Reality</td></tr><tr><td>Target / Dest</td><td>dl.google.com:443</td></tr><tr><td>Server Names / SNI</td><td>dl.google.com</td></tr><tr><td>Min / Max Client Ver（若有）</td><td>留空，不限制客户端版本；不要填数字 0</td></tr><tr><td>公钥 / 私钥</td><td>点击生成，保存新的密钥对</td></tr><tr><td>Short IDs</td><td>点击生成；客户端使用其中一个实际值</td></tr><tr><td>Spider X（若有）</td><td>留空；客户端也保持一致</td></tr></tbody></table></div>
+<p>给该入站添加至少一个客户端。某些版本在入站编辑器的客户端区域添加，某些版本有独立客户端页面：</p>
+<ul><li>UUID：生成新的值。</li><li>Flow：<strong>xtls-rprx-vision</strong>。</li><li>关联入站：选择刚创建的 ColoCrossing-LA。</li><li>到期时间与流量限制：按你的使用需求设置。</li></ul>
+<p>保存后，重启或应用 Xray 配置。在该客户端的二维码/导出链接菜单里保存新的 <code>vless://</code> 分享链接。</p>
+<p>对本机 VPS 而言，这个入站 + 客户端就是一条可供 FlClash 使用的节点；面板的“节点”管理页用于管理其他服务器时，本教程无需再新增一台远端节点。客户端 UUID 用于连接节点，Sub ID 用于下载订阅，两者不同。</p>
+<p>本次通过 SSH 隧道访问面板，网址的主机是 127.0.0.1。为确保分享链接和订阅里使用公网地址，编辑该入站的<strong>基本设置</strong>：将<strong>分享地址策略 / Share address strategy</strong>设为<strong>自定义 / Custom</strong>，在<strong>分享地址 / Share address</strong>填写 <code data-template>23.94.184.3</code>，只填 IP，不带协议、端口或斜杠。这不改变“监听 IP 留空”的设置。保存后重新生成链接，核对节点地址为当前 VPS IP、端口为 8443。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl is-active x-ui
+sudo ss -lntp | grep 8443</code></pre></div>
+<p class="success"><strong>成功条件：</strong>8443 有监听，导出的链接使用当前 VPS IP、端口 8443，UUID/公钥/Short ID/SNI 都来自当前配置。目标站不是速度或可用性的保证，仍需第 10 步实际测试。</p>
+<p class="source">协议依据：<a href="https://xtls.github.io/config/transport.html" target="_blank" rel="noopener noreferrer">Xray 传输配置</a>、<a href="https://xtls.github.io/config/transports/reality.html" target="_blank" rel="noopener noreferrer">REALITY 字段说明</a>。版本限制为可选字符串，指定时使用 x.y.z 格式；本教程留空。目标及兼容项结合工作区的既有故障记录选取。</p>
+<label class="done"><input type="checkbox" data-step="9">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-10"><div class="step-top"><span class="step-number">10</span><div><p class="step-subtitle">3X-UI 浏览器 → Mac SSH 隧道 → FlClash</p><h2>把节点订阅到 FlClash，验证代理可用</h2></div></div>
+<p>本次继续使用你已经安装的 <strong>FlClash</strong>；本机版本元数据为 <code>0.8.94</code>。它使用 Mihomo（Clash.Meta）核心，支持本节点的 VLESS + Reality 配置。若以后需要重新安装，打开 <a href="https://github.com/chen08209/FlClash/releases" target="_blank" rel="noopener noreferrer">FlClash 官方 Releases</a>，选择与你 Mac 芯片匹配的 macOS 安装包。</p>
+<h3>10.1 · 先分清节点、分享链接和订阅</h3>
+<div class="table-wrap"><table><thead><tr><th>名称</th><th>作用</th><th>本教程怎样用</th></tr></thead><tbody><tr><td>节点</td><td>VPS 地址、8443、UUID、Reality 等连接参数</td><td>第 9 步入站和客户端已经配置在服务器上，FlClash 还需要导入这些参数</td></tr><tr><td>vless:// 分享链接</td><td>描述一个节点</td><td>它不是 FlClash 下载完整配置的 HTTP 订阅地址</td></tr><tr><td>原始 / 通用订阅</td><td>通常返回多条分享链接或其 Base64 编码</td><td>不能只看网址以 http 开头就认为内容适合 FlClash</td></tr><tr><td>Clash / Mihomo 订阅</td><td>返回含 proxies、proxy-groups、rules 的 YAML 配置</td><td>本次使用 3X-UI 原生提供的这一格式，直接在 FlClash 添加 URL</td></tr></tbody></table></div>
+<p>3X-UI v3.8.5 自带 Mihomo 订阅输出。下面先使用现成的 SSH 通道把订阅导入 FlClash；订阅服务绑定回环地址，不需要先部署网站或增加公网防火墙端口。</p>
+<details><summary>为什么要开订阅隧道？我想直接使用订阅链接</summary><p>这是本教程选择回环订阅服务带来的取舍：复用已经验证的 SSH 连接，让包含节点参数的订阅通过 SSH 下载，也就需要在导入 / 更新时保持隧道运行，并把生成地址的远端端口换成 Mac 的入口端口。3X-UI 无法自动知道 Mac 上使用的转发端口。</p><p>管理面板和订阅可以分别配置。希望 FlClash 直接导入、自动更新时，可为订阅配置一个公网 HTTPS 域名，由 Caddy 转发到服务器回环 2096；管理面板继续通过 SSH 访问。这样日常刷新订阅也无需 SSH。使用已有域名与 VPS 且未超套餐额度时，无需增加软件或证书费用。公网订阅路线需先完成 DNS 和 HTTPS 配置，不能只把当前地址中的 127.0.0.1 替换成公网 IP。</p></details>
+<h3>10.2 · 在 3X-UI 启用 Clash / Mihomo 订阅</h3>
+<ol class="actions"><li>进入<strong>面板设置 → 订阅 / Subscription → 常规</strong>，确认<strong>启用订阅</strong>和<strong>启用 Clash / Mihomo 订阅</strong>都已开启。</li><li><strong>订阅监听地址 / subListen</strong>填写 <code>127.0.0.1</code>；<strong>订阅端口 / subPort</strong>设为 <code>2096</code>。这是独立的订阅服务端口，与面板 18080、代理节点 8443 分开。</li><li>本阶段<strong>订阅域名 / subDomain</strong>留空；订阅服务不配置证书路径，跨公网使用 SSH 加密。若这些字段已经设置，先核对现有值；不要把下面的 HTTP 本地地址直接套用到已有 HTTPS 服务上。</li><li>保留现有订阅路径，已复制 Clash / Mihomo 地址时按下一节仅替换本地入口端口。v3.8.5 在开启 Clash / Mihomo 格式后也提供 <code>/mihomo/</code> 明确格式入口。若该地址返回 404，在<strong>订阅格式</strong>里核对实际 Clash / Mihomo 路径、格式开关及是否与其他格式路径冲突，不反复猜测客户端 Sub ID。</li><li>点击保存，并按面板提示应用 / 重启。短暂重启可能使面板断开，重新打开原来的本地面板地址即可。</li><li>到你创建的客户端编辑页，找到并复制 <strong>Sub ID / 订阅 ID</strong>，只保存在自己电脑。它不是 UUID，也不是面板 WebBasePath。若二维码菜单只显示“订阅”或“订阅（JSON）”，无需寻找额外的 Clash 二维码，下一节用这个 Sub ID 构成 Mihomo 地址。</li></ol>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer · 保存订阅设置后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl is-active x-ui
+sudo ss -lntp | grep 2096</code></pre></div>
+<p>应看到 x-ui 为 <code>active</code>，订阅监听 <code>127.0.0.1:2096</code>。没有监听时先检查订阅开关、保存 / 应用结果及 x-ui 日志；此时还不进行 FlClash 导入。</p>
+<h3>10.3 · Mac 打开订阅隧道，再在 FlClash 添加 URL</h3>
+<p>在 Mac <strong>新的本地终端窗口</strong>运行下面的命令。原来的面板隧道保持打开，这个新窗口专门用于下载 / 更新订阅：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 订阅隧道 · 导入 / 更新时保持运行</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ssh -i &quot;$HOME/.ssh/ironmao_vps&quot; -o IdentitiesOnly=yes -N -L 127.0.0.1:28081:127.0.0.1:2096 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 deployer@23.94.184.3</code></pre></div>
+<p>连接后通常没有提示符。<strong>127.0.0.1 代表当前机器：</strong>面板生成的 2096 地址指向 VPS 本机，FlClash 在 Mac 上访问同样的地址时却会找 Mac 本机。上面的隧道将 Mac 的 28081 转发到 VPS 的 2096；面板的 18080 / 28080 隧道不会自动转发订阅。</p>
+<p>如果已在面板的 <strong>Clash / Mihomo</strong> 项复制订阅地址，只把开头的 <code>http://127.0.0.1:2096</code> 改成 <code>http://127.0.0.1:28081</code>，后面的格式路径和 Sub ID 原样保留。下面只示意结构，不使用示例文字作为真实路径：</p><div class="url-box"><code>http://127.0.0.1:28081/面板的Clash格式路径/你的SubID</code></div>
+<p>如果只有原始 / JSON 订阅，使用 v3.8.5 的明确 Mihomo 入口；只把“你的SubID”替换成实际值：</p><div class="url-box"><code>http://127.0.0.1:28081/mihomo/你的SubID</code></div>
+<p>浏览器核对 YAML 时，在最终地址末尾添加 <code>?view=raw</code>（已有查询参数时用 <code>&amp;view=raw</code>）。v3.8.5 对浏览器请求可能正常返回订阅信息页；这个参数明确要求原始 YAML。FlClash 导入也可使用同一个带 raw 参数的地址。</p>
+<ol class="actions"><li>先用浏览器打开带 <code>view=raw</code> 的地址，应显示或下载 YAML；里面应有 <code>proxies</code>、<code>proxy-groups</code>、<code>rules</code>。核对真实节点的 <code>server</code> 是 VPS IP、<code>port</code> 是 8443。若地址仍为 localhost / 127.0.0.1，回第 9 步设置自定义分享地址后重新下载。</li><li>打开 FlClash → <strong>配置 → 添加 / ＋ → URL</strong>，粘贴这个本地 Mihomo 地址，确认导入。</li><li>导入成功后，点击新配置卡片将其选为<strong>当前配置</strong>。在<strong>代理</strong>页面或仪表盘代理组中找到 <strong>PROXY</strong>，选择你实际的 VPS 节点，而非 DIRECT。原生订阅里的节点名称可能由入站备注和客户端名称组成。</li><li>在仪表盘将路由模式设为<strong>规则 / Rule</strong>，开启<strong>系统代理 / System Proxy</strong>，点击播放 / 启动按钮；如果已运行，保持运行。首次验收用系统代理即可，暂不需要开启<strong>虚拟网卡 / TUN</strong>。</li></ol>
+<p>订阅隧道只用于下载 / 更新配置，FlClash 的代理流量直接连接 VPS 的 8443。导入成功并已启动后，关闭订阅隧道不影响已载入节点的连接；下次刷新订阅前重新开启它。若以后希望 Mac / 手机都能随时自动刷新，可在代理验收通过后，再为订阅配置公网 HTTPS 地址。</p>
+<details><summary>订阅导入报 Connection refused / 404，怎样区分？</summary><ul><li><strong>Connection refused：</strong>先确认 Mac 的订阅隧道仍运行、URL 使用本地 28081，服务器确实监听 2096。用浏览器先验证下载，再在 FlClash 导入。不要按错误信息中另外显示的端口改订阅设置，也不要直接把回环地址改成公网 IP。</li><li><strong>SSH 窗口出现 channel ... connect failed: Connection refused：</strong>Mac 到 VPS 的 SSH 已连通，但 VPS 的 2096 没有接受连接；回上一节核对订阅保存 / 应用与监听。</li><li><strong>404：</strong>连接已到 HTTP 服务，核对完整格式路径、客户端 Sub ID 和 Clash / Mihomo 开关；不修改 SSH 或防火墙来解决路径错误。</li><li><strong>浏览器返回订阅信息 HTML 页：</strong>这可能是正常的浏览器响应，在地址末尾添加 <code>?view=raw</code> 查看 YAML；它不等于连接或格式失败。</li><li><strong>原始下载返回 Base64、vless 列表或 JSON：</strong>核对是否用了原始 / JSON 格式路径，改用明确的 Mihomo 入口。不要把这些内容直接当作完整 YAML。</li><li><strong>浏览器能下载，FlClash 仍拒绝连接：</strong>保留隧道，记录应用的完整错误、URL 的主机 / 端口、应用是否已启动及实际混合端口；只分享去掉私密路径后的信息，再检查客户端的下载连接。</li></ul></details>
+<details><summary>可选：先用完整本地 YAML 文件导入，不启用订阅</summary><p>这与上面的订阅导入是两条可选方式，选一种即可。本地文件导入不提供自动获取服务器配置变更的订阅功能。</p>
+<ol class="actions"><li>在 Mac <strong>新的本地终端窗口</strong>执行下面的 nano 命令。</li><li>粘贴后面的<strong>完整 YAML</strong>，将三个占位字段替换成第 9 步的<strong>客户端 UUID、Reality 公钥、一个 Short ID</strong>；不填私钥，有多个 Short ID 时只取一个。</li><li>按 <kbd>Control</kbd> + <kbd>O</kbd>、回车保存，<kbd>Control</kbd> + <kbd>X</kbd> 退出。</li><li>FlClash → <strong>配置 → 添加 / ＋ → 文件</strong>，选择桌面的 <code>ironmao-vps.yaml</code>，点击新配置卡片将其选为当前配置。</li><li>此文件的代理组名称是 <strong>Proxy</strong>，在组内选择 <strong>VPS</strong>，然后按上面说明启用规则模式、系统代理并启动。</li></ol>
+<div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>nano &quot;$HOME/Desktop/ironmao-vps.yaml&quot;</code></pre></div><div class="command"><div class="command-head"><span>文件内容 · YAML，粘贴到 nano；不是终端命令</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: warning
+proxies:
+  - name: VPS
+    type: vless
+    server: 23.94.184.3
+    port: 8443
+    uuid: &quot;从面板复制UUID&quot;
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    network: tcp
+    servername: dl.google.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: &quot;从面板复制公钥&quot;
+      short-id: &quot;从面板复制ShortID&quot;
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies:
+      - VPS
+      - DIRECT
+rules:
+  - DOMAIN-SUFFIX,ironmao.com,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - MATCH,Proxy</code></pre></div>
+<p>这是一份用于首次验收的简易路由配置：本地域名和上述私网地址直连，其余访问交给所选代理。确认工作后，可以将节点加入你常用的分流规则。文件导入后，FlClash 保存的是应用内副本；以后只改桌面文件不会自动更新该副本，需要在 FlClash 配置菜单中编辑，或重新导入并选中新配置。</p></details>
+<h3>10.4 · 必须完成连接测试，再开始网站部署</h3>
+<p>订阅导入成功只说明配置下载成功，仍需实际验证代理连接。3X-UI 原生订阅的默认规则是剩余流量交给所选代理；手工 YAML 的示例规则略有不同。确认节点工作后再完善分流规则；不要把这些简单规则理解成所有软件都已经被代理。</p>
+<p>打开 <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">Google</a> 和 <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">YouTube</a> 测试。命令行程序不会自动遵循 macOS 系统代理，可显式测试：</p>
+<p>在 FlClash <strong>工具 → 基本配置 → 端口</strong>核对<strong>混合端口</strong>。下面以 <code>7890</code> 为例；如果应用里是别的值，替换命令中的 7890。运行端口由 FlClash 的应用设置决定，不能只根据导入 YAML 的 mixed-port 判断。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 7890 应与 FlClash 实际混合端口一致</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>curl --proxy http://127.0.0.1:7890 -I --connect-timeout 10 https://www.google.com</code></pre></div>
+<p>iPhone 上已有 Shadowrocket，可扫描面板二维码或导入新的 vless 链接；Android 上已有 v2rayNG，也可扫码。核对地址、8443、Vision、SNI 和新公钥，手机用蜂窝网络再测试一次。</p>
+<p class="success"><strong>成功条件：</strong>客户端没有 YAML/握手错误，浏览器和上面的显式代理请求都能连接目标网站。</p>
+<p class="source"><a href="https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/sub/controller.go" target="_blank" rel="noopener noreferrer">浏览器响应与 view=raw</a> · <a href="https://github.com/MHSanaei/3x-ui/blob/v3.8.5/docs/content/docs/zh/config/subscription.mdx" target="_blank" rel="noopener noreferrer">3X-UI v3.8.5 订阅格式说明</a> · <a href="https://github.com/chen08209/FlClash" target="_blank" rel="noopener noreferrer">FlClash 官方项目</a> · <a href="https://github.com/chen08209/FlClash/blob/v0.8.94/lib/views/profiles/add.dart" target="_blank" rel="noopener noreferrer">0.8.94 文件 / URL 导入入口</a> · <a href="https://github.com/chen08209/FlClash/blob/v0.8.94/lib/views/config/general.dart" target="_blank" rel="noopener noreferrer">混合端口设置</a> · <a href="https://wiki.metacubex.one/config/proxies/vless/" target="_blank" rel="noopener noreferrer">Mihomo VLESS 字段</a></p>
+<label class="done"><input type="checkbox" data-step="10">我已完成这一步，并核对了成功条件</label></section><div class="phase">第三阶段 · 第一个静态网站</div><section class="step" id="step-11"><div class="step-top"><span class="step-number">11</span><div><p class="step-subtitle">服务器 deployer · 免费软件</p><h2>安装 Caddy，作为网站入口</h2></div></div>
+<p>按照官方 Debian/Ubuntu 软件源安装。所有命令都在服务器上执行；如下载或 apt 报错，先处理错误，不跳到后面。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
+curl --fail --silent --show-error --location --output /tmp/caddy-stable.gpg.key https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+sudo gpg --dearmor --yes --output /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy-stable.gpg.key
+curl --fail --silent --show-error --location https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install -y caddy
+sudo systemctl enable --now caddy
+sudo systemctl is-active caddy
+curl -I http://127.0.0.1</code></pre></div>
+<p>此时通常能看到默认欢迎页的 HTTP 响应。还没有配置你的站点，所以它不是金融学习站。</p>
+<p class="success"><strong>成功条件：</strong>Caddy 为 <code>active</code>，本机 HTTP 请求能收到响应。若启动失败，执行 <code>sudo ss -lntp</code> 查看 80/443 是否被占用；Reality 应在 8443。</p>
+<p class="source"><a href="https://caddyserver.com/docs/install" target="_blank" rel="noopener noreferrer">Caddy 官方安装步骤</a></p>
+<label class="done"><input type="checkbox" data-step="11">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-12"><div class="step-top"><span class="step-number">12</span><div><p class="step-subtitle">Mac 本地终端 · 在正确项目目录</p><h2>在 Mac 构建金融学习站</h2></div></div>
+<p>金融学习站本地路径如下。不要在服务器上输入这个 Mac 路径。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>cd &quot;/Users/chenmao/Desktop/workspace/ai-instructure/04-applications/investment-research/finance-ironmao&quot;
+node --version</code></pre></div>
+<p>该项目要求 Node ≥ 22.13.0，建议沿用你当前的 Node 22 环境。尚未安装时，从 <a href="https://nodejs.org/en/download" target="_blank" rel="noopener noreferrer">Node.js 官方下载页</a>安装满足项目要求的受支持版本，然后重新打开终端。已有依赖可跳过下面的 npm ci；首次安装或依赖缺失时执行：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 金融站目录，首次安装依赖时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>npm ci</code></pre></div>
+<p>打开 <code>next.config.ts</code> 核对对象里保留 <code>output: 'export'</code>；当前项目已包含它。运行测试，再构建：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 金融站目录</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+node --experimental-strip-types --test tests/*.test.mjs
+npm run build
+test -f dist/client/index.html
+test -f dist/client/learn/candles.html
+test -f dist/client/learn.rsc
+find dist/client -name &#x27;*.html&#x27;
+du -sh dist/client
+)</code></pre></div><div class="note warn">构建和三个 test 命令必须成功。当前核对的产物包含首页、课程 HTML 和对应 .rsc 文件；以后框架或构建模式改变时，不能仅因有 dist 目录就认定可以静态部署。</div>
+<p>把 <strong>dist/client 的完整内容</strong> 打包，保留 .rsc 与 _next 资源。排除这次静态托管不需要的工具配置：</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 金融站目录</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+tar --exclude=&#x27;./.vite&#x27; --exclude=&#x27;./.assetsignore&#x27; --exclude=&#x27;./_headers&#x27; -czf &quot;$HOME/Desktop/finance-site.tar.gz&quot; -C dist/client .
+tar -tzf &quot;$HOME/Desktop/finance-site.tar.gz&quot; &gt; /dev/null
+tar -tzf &quot;$HOME/Desktop/finance-site.tar.gz&quot; | head -25
+)</code></pre></div>
+<p class="success"><strong>成功条件：</strong>测试、构建成功；桌面出现 <code>finance-site.tar.gz</code>；包里是 <code>./index.html</code>、课程文件与 <code>./_next/...</code>，不是一层多余的 dist/client 目录。</p>
+<p>只上传构建产物。这次无需上传整份工作区、.git、.env、node_modules 或 dist/server。</p>
+<label class="done"><input type="checkbox" data-step="12">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-13"><div class="step-top"><span class="step-number">13</span><div><p class="step-subtitle">Mac 上传 → 服务器解压</p><h2>上传网站，建立可回滚的发布目录</h2></div></div>
+<p>先在服务器创建专用目录：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo install -d -m 755 -o deployer -g deployer /srv/www/finance /srv/www/finance/releases</code></pre></div><div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>scp -i &quot;$HOME/.ssh/ironmao_vps&quot; &quot;$HOME/Desktop/finance-site.tar.gz&quot; deployer@23.94.184.3:~/finance-site.tar.gz</code></pre></div>
+<p>在服务器的同一个终端里，一次完成下面的解压与切换：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+FINANCE_RELEASE=&quot;$(date -u +%Y%m%dT%H%M%SZ)&quot;
+mkdir &quot;/srv/www/finance/releases/$FINANCE_RELEASE&quot;
+tar -xzf &quot;$HOME/finance-site.tar.gz&quot; -C &quot;/srv/www/finance/releases/$FINANCE_RELEASE&quot;
+find &quot;/srv/www/finance/releases/$FINANCE_RELEASE&quot; -type d -exec chmod 755 {} +
+find &quot;/srv/www/finance/releases/$FINANCE_RELEASE&quot; -type f -exec chmod 644 {} +
+if [ -f &quot;/srv/www/finance/releases/$FINANCE_RELEASE/index.html&quot; ] &amp;&amp; [ -f &quot;/srv/www/finance/releases/$FINANCE_RELEASE/learn.rsc&quot; ]; then
+  test ! -e /srv/www/finance/current.next
+  test ! -L /srv/www/finance/current.next
+  ln -s &quot;/srv/www/finance/releases/$FINANCE_RELEASE&quot; /srv/www/finance/current.next
+  mv -Tf /srv/www/finance/current.next /srv/www/finance/current
+else
+  echo &quot;发布包缺少首页或 RSC 文件，未切换 current；先检查打包内容&quot;
+  exit 1
+fi
+readlink -f /srv/www/finance/current
+ls -l /srv/www/finance/current/index.html
+)</code></pre></div>
+<p><code>current</code> 指向最新发布目录。括号内任一步失败会停止，不切换到不完整版本。若提示 <code>current.next</code> 已存在，先用 <code>ls -l /srv/www/finance/current.next</code> 核对它是否是上次失败留下的临时链接；确认后移走该链接再重试，不强行覆盖。每次更新都创建新目录，保留旧版本。</p>
+<p class="success"><strong>成功条件：</strong><code>current</code> 指向本次时间戳目录，最后一条能看到首页文件。</p>
+<label class="done"><input type="checkbox" data-step="13">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-14"><div class="step-top"><span class="step-number">14</span><div><p class="step-subtitle">浏览器 · Cloudflare DNS</p><h2>登录 Cloudflare，添加金融站域名</h2></div></div>
+<ol class="actions"><li>打开 <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer">dash.cloudflare.com</a>，登录管理主域名的账号。</li><li>选择 <strong>ironmao.com</strong>，进入 <strong>DNS → Records / 记录</strong>。</li><li>搜索 <code>finance</code>。如果已有同名记录，先保存原来的类型、值和代理状态，再只修改这条记录；同一个名字不能同时有 CNAME 和 A。</li><li>点击 <strong>Add record / 添加记录</strong>，按下表填写，再点击 Save。</li></ol>
+<div class="table-wrap"><table><thead><tr><th>字段</th><th>填写值</th></tr></thead><tbody><tr><td>Type</td><td>A</td></tr><tr><td>Name（完整主机名）</td><td><span data-dns-name>finance.ironmao.com</span></td></tr><tr><td>IPv4 address / Content</td><td><code data-template>23.94.184.3</code></td></tr><tr><td>Proxy status</td><td>先选 <strong>DNS only / 仅 DNS（灰云）</strong></td></tr><tr><td>TTL</td><td>Auto</td></tr></tbody></table></div>
+<p>若顶部换成了其它网站域名，先进入该域名所属的 Cloudflare 区域，搜索并修改该完整主机名的记录。多层子域名必须保留全部层级，不能只填写最前面一段。</p>
+<p>先灰云是为了直接验证 VPS 与证书。HTTPS 工作后，第 16 步再选择是否开橙云。现有 <code>notes.ironmao.com</code> 先留在原来的托管处，第 17 步有单独迁移流程。</p>
+<p>如果 finance 还有指向旧服务器的 AAAA（IPv6）记录，也要核对；没有配置正确的服务器 IPv6 时，不保留这条旧 AAAA。否则部分访问可能被送到另一台机器。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>dig +short finance.ironmao.com A
+dig +short finance.ironmao.com AAAA</code></pre></div>
+<p class="success"><strong>成功条件：</strong>灰云状态下 A 查询返回当前 VPS IPv4；没有错误的 AAAA。DNS 尚未生效就稍后再查，不反复添加相同记录。</p>
+<p class="source"><a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank" rel="noopener noreferrer">Cloudflare 官方 DNS 操作路径</a></p>
+<label class="done"><input type="checkbox" data-step="14">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-15"><div class="step-top"><span class="step-number">15</span><div><p class="step-subtitle">服务器 deployer · Caddyfile</p><h2>配置网站 HTTPS 和页面路径</h2></div></div>
+<p>这份配置针对金融站的“无扩展名页面地址 + .rsc 文件”。首次重建且 Caddy 还只有默认配置时，用下面的命令替换默认文件；已有其它站点时，应把站点块追加进去，保留原来的块。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · 初次配置金融站</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.before-finance
+sudo tee /etc/caddy/Caddyfile &gt; /dev/null &lt;&lt;&#x27;EOF&#x27;
+finance.ironmao.com {
+    root * /srv/www/finance/current
+    encode zstd gzip
+    @rsc path *.rsc
+    header @rsc Content-Type text/x-component
+    try_files {path} {path}.html {path}/index.html
+    file_server
+}
+EOF
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile</code></pre></div>
+<p>看到 <strong>Valid configuration</strong> 后才应用：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · 配置检查成功后</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl reload caddy
+sudo systemctl is-active caddy
+sudo journalctl -u caddy --no-pager -n 40</code></pre></div>
+<p>Caddy 会为站点申请 HTTPS 证书并自动续期。申请失败时先核对第 14 步 DNS、两层防火墙的 80/443 和是否有旧 AAAA。不要通过忽略证书校验来验收正式网站。</p>
+<p class="success"><strong>成功条件：</strong>Caddy 服务正常，日志没有持续的证书签发失败；浏览器能打开下一步的网站。</p>
+<p class="source"><a href="https://caddyserver.com/docs/automatic-https" target="_blank" rel="noopener noreferrer">自动 HTTPS</a> · <a href="https://caddyserver.com/docs/caddyfile/directives/try_files" target="_blank" rel="noopener noreferrer">无扩展名页面路径</a></p>
+<label class="done"><input type="checkbox" data-step="15">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-16"><div class="step-top"><span class="step-number">16</span><div><p class="step-subtitle">浏览器 + Mac；不是只检查首页</p><h2>验证整站，再按需开启 Cloudflare</h2></div></div>
+<p>先分别直接打开这些地址：</p>
+<div class="link-list"><a data-site-path="/" href="https://finance.ironmao.com/" target="_blank" rel="noopener noreferrer">首页 ↗</a><a data-site-path="/learn" href="https://finance.ironmao.com/learn" target="_blank" rel="noopener noreferrer">学习路线 ↗</a><a data-site-path="/learn/candles" href="https://finance.ironmao.com/learn/candles" target="_blank" rel="noopener noreferrer">入门第一课 ↗</a><a data-site-path="/learn/advanced/bollinger-bands" href="https://finance.ironmao.com/learn/advanced/bollinger-bands" target="_blank" rel="noopener noreferrer">进阶课程 ↗</a></div>
+<p>接着从首页<strong>点击</strong>课程链接，用浏览器后退/前进，再刷新深层课程页面；检查图解和练习展开，并用手机网络打开。首页能打开不代表页面跳转已正常。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>curl -I https://finance.ironmao.com/
+curl -I https://finance.ironmao.com/learn/candles
+curl -I https://finance.ironmao.com/learn.rsc
+curl -I https://finance.ironmao.com/a-page-that-does-not-exist</code></pre></div>
+<p>前三个应为 200；RSC 的 Content-Type 应为 <code>text/x-component</code>；最后一个应为 404。</p>
+<p>确认工作后，可在 Cloudflare 开启免费网站缓存代理：</p>
+<ol class="actions"><li>Cloudflare → ironmao.com → <strong>SSL/TLS → Overview</strong>，将加密模式设置为 <strong>Full (strict) / 完全（严格）</strong>。</li><li>回到 DNS → Records，把 <strong>finance</strong> 记录切到 <strong>Proxied / 已代理（橙云）</strong>。</li><li>再次验证首页、课程跳转和手机访问。橙云后 dig 返回 Cloudflare 地址是正常的。</li></ol>
+<p>如果共享主域名下其它站点仍依赖不同的 SSL/TLS 模式，先检查影响范围再修改全域模式；此时可以继续用灰云运行金融站。</p>
+<div class="note info">Reality 客户端继续使用 VPS 的直接 IPv4 和 8443。普通 Cloudflare 网页代理不能代替这条 Reality TCP 连接；这里切换橙云的仅是网站记录。</div>
+<p class="success"><strong>成功条件：</strong>首页、点击跳转、直接访问深链接、刷新、RSC 和手机访问都正常；代理节点仍正常。</p>
+<p class="source"><a href="https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/" target="_blank" rel="noopener noreferrer">Full (strict)</a> · <a href="https://developers.cloudflare.com/dns/proxy-status/" target="_blank" rel="noopener noreferrer">DNS 代理状态</a></p>
+<label class="done"><input type="checkbox" data-step="16">我已完成这一步，并核对了成功条件</label></section><div class="phase">第四阶段 · 第二站与日常维护</div><section class="step" id="step-17"><div class="step-top"><span class="step-number">17</span><div><p class="step-subtitle">Mac 构建 → 独立预览域名 → 正式域名</p><h2>第二个网站：迁移 Agent 工程笔记</h2></div></div>
+<p>工程笔记目前有独立托管入口。先用 <strong>notes-preview.ironmao.com</strong> 验证 VPS 上的新版本，再切换正式 <strong>notes.ironmao.com</strong>。这里需要把它的构建设置为静态导出，不能直接上传现有 Worker 服务端目录。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 工程笔记的独立目录</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>cd &quot;/Users/chenmao/Desktop/workspace/agent-engineering-notes&quot;
+cp next.config.ts next.config.ts.before-vps
+nano next.config.ts</code></pre></div>
+<p>在 <code>nextConfig</code> 对象中加入 <code>output: 'export'</code>，保留其它已有配置。按本次核对的原文件，完整结果为：</p>
+<div class="command"><div class="command-head"><span>文件内容 · next.config.ts，粘贴到编辑器</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>import type { NextConfig } from &quot;next&quot;;
+
+const nextConfig: NextConfig = {
+  output: &#x27;export&#x27;,
+};
+
+export default nextConfig;</code></pre></div>
+<p>退出 nano 后验证。依赖缺失时先在这个项目目录运行 <code>npm ci</code>。</p>
+<div class="command"><div class="command-head"><span>Mac 本地终端 · 工程笔记目录</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+export SITE_URL=https://notes.ironmao.com
+npm run verify
+test -f dist/client/index.html
+test -f dist/client/articles.html
+find dist/client -name &#x27;*.html&#x27;
+node --input-type=module &lt;&lt;&#x27;JS&#x27;
+import { runnerImport } from &#x27;vite&#x27;;
+import { writeFileSync } from &#x27;node:fs&#x27;;
+const { module } = await runnerImport(&#x27;./app/rss.xml/route.ts&#x27;, { configFile: false });
+const response = module.GET();
+if (!response.ok) throw new Error(&#x27;RSS generation failed&#x27;);
+writeFileSync(&#x27;dist/client/rss.xml&#x27;, await response.text());
+JS
+test -s dist/client/rss.xml
+test -s dist/client/sitemap.xml
+test -s dist/client/robots.txt
+grep -F &#x27;https://notes.ironmao.com&#x27; dist/client/rss.xml dist/client/sitemap.xml dist/client/robots.txt
+if grep -Fq &#x27;http://localhost:3000&#x27; dist/client/rss.xml dist/client/sitemap.xml dist/client/robots.txt; then
+  echo &quot;发布元数据仍含本地地址，停止打包&quot;
+  exit 1
+fi
+tar --exclude=&#x27;./.vite&#x27; --exclude=&#x27;./.assetsignore&#x27; --exclude=&#x27;./_headers&#x27; -czf &quot;$HOME/Desktop/notes-site.tar.gz&quot; -C dist/client .
+tar -tzf &quot;$HOME/Desktop/notes-site.tar.gz&quot; &gt; /dev/null
+)</code></pre></div><div class="note warn">静态导出和现有项目检查必须成功。若要求服务器运行、缺少动态路径参数或没有生成 HTML，先停在这里解决该项目的静态构建，不把 Worker 的 dist/server 作为静态网页上传。</div><div class="note info">工程笔记用 SITE_URL 生成正式链接。当前 Vinext 静态导出不会自动导出 RSS 路由，上面的 Vite 命令直接调用项目已有的 RSS 生成函数，再写入静态文件；不需要另装依赖。预览站里的规范链接指向正式 notes 域名是预期结果。</div><div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo install -d -m 755 -o deployer -g deployer /srv/www/notes /srv/www/notes/releases</code></pre></div><div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>scp -i &quot;$HOME/.ssh/ironmao_vps&quot; &quot;$HOME/Desktop/notes-site.tar.gz&quot; deployer@23.94.184.3:~/notes-site.tar.gz</code></pre></div><div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+NOTES_RELEASE=&quot;$(date -u +%Y%m%dT%H%M%SZ)&quot;
+mkdir &quot;/srv/www/notes/releases/$NOTES_RELEASE&quot;
+tar -xzf &quot;$HOME/notes-site.tar.gz&quot; -C &quot;/srv/www/notes/releases/$NOTES_RELEASE&quot;
+find &quot;/srv/www/notes/releases/$NOTES_RELEASE&quot; -type d -exec chmod 755 {} +
+find &quot;/srv/www/notes/releases/$NOTES_RELEASE&quot; -type f -exec chmod 644 {} +
+if [ -f &quot;/srv/www/notes/releases/$NOTES_RELEASE/index.html&quot; ] &amp;&amp; [ -s &quot;/srv/www/notes/releases/$NOTES_RELEASE/rss.xml&quot; ] &amp;&amp; [ -s &quot;/srv/www/notes/releases/$NOTES_RELEASE/sitemap.xml&quot; ] &amp;&amp; [ -s &quot;/srv/www/notes/releases/$NOTES_RELEASE/robots.txt&quot; ]; then
+  test ! -e /srv/www/notes/current.next
+  test ! -L /srv/www/notes/current.next
+  ln -s &quot;/srv/www/notes/releases/$NOTES_RELEASE&quot; /srv/www/notes/current.next
+  mv -Tf /srv/www/notes/current.next /srv/www/notes/current
+else
+  echo &quot;缺少首页或发布元数据，未切换工程笔记&quot;
+  exit 1
+fi
+readlink -f /srv/www/notes/current
+)</code></pre></div>
+<p>Cloudflare → ironmao.com → DNS → Records，添加 <strong>A / notes-preview / 当前 VPS IP / 灰云 / Auto</strong>。先不动 notes 的旧记录。</p>
+<p>在服务器追加这个独立站点块，金融站配置保留：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo tee -a /etc/caddy/Caddyfile &gt; /dev/null &lt;&lt;&#x27;EOF&#x27;
+
+notes-preview.ironmao.com {
+    root * /srv/www/notes/current
+    encode zstd gzip
+    @rsc path *.rsc
+    header @rsc Content-Type text/x-component
+    try_files {path} {path}.html {path}/index.html
+    file_server
+}
+EOF
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile</code></pre></div>
+<p>检查成功后执行 <code>sudo systemctl reload caddy</code>。这个追加块只执行一次，重复操作先检查是否已存在。金融站继续使用原来的块。</p>
+<ol class="actions"><li>打开 <a href="https://notes-preview.ironmao.com" target="_blank" rel="noopener noreferrer">notes-preview.ironmao.com</a>，验证首页、文章目录、文章详情、专题章节和搜索等现有功能。</li><li>刷新深链接并检查点击跳转；访问预览站的 <code>/rss.xml</code>、<code>/sitemap.xml</code> 和 <code>/robots.txt</code>，确认均为 200、内容完整且使用正式 notes 域名。预览不通过时，保持正式 notes 的 DNS 原值。</li><li>预览通过后，在 Cloudflare 找到 <strong>notes</strong> 旧记录，保存它原来的 <strong>类型、目标、代理状态</strong>。旧恢复记录曾是 CNAME 指向 <code>custom-domains.chatgpt.site</code>；回滚以现场保存值为准。</li><li>服务器运行 <code>sudo nano /etc/caddy/Caddyfile</code>，把预览站块的第一行改为 <code>notes-preview.ironmao.com, notes.ironmao.com {</code>，其它内容保留。保存后运行 <code>sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile</code>，看到 Valid configuration 才运行 <code>sudo systemctl reload caddy</code>。正式域名切换前短暂申请不到证书是预期现象。</li><li>把 Cloudflare 中这条记录改为 <strong>A / notes / 当前 VPS IP / 灰云</strong>，核对同名 AAAA，等待 DNS 生效和 Caddy 为正式 notes 签发证书。</li><li>验证 <a href="https://notes.ironmao.com" target="_blank" rel="noopener noreferrer">notes.ironmao.com</a> 的页面和三份发布文件。成功后按第 16 步选择是否开启橙云。</li></ol>
+<p class="success"><strong>成功条件：</strong>正式域名内容和跳转正常，金融站与梯子也继续正常。遇到迁移问题，将 notes DNS 恢复为刚保存的旧值，保留原托管版本以便回滚。</p>
+<label class="done"><input type="checkbox" data-step="17">我已完成这一步，并核对了成功条件</label></section><section class="step" id="step-18"><div class="step-top"><span class="step-number">18</span><div><p class="step-subtitle">服务器 + Mac · 上线后使用</p><h2>更新、备份、重启验收与后续网站</h2></div></div>
+<h3>以后更新金融站</h3><p>重新执行第 12、13 步：构建新产物，上传到新的时间戳目录，切换 current。静态内容更新一般不需要重启 Caddy。保留至少一个已验证的旧发布目录。</p>
+<details><summary>如何回滚网站版本？</summary><p>先列出发布目录，选一个确认正常的旧时间戳。不要自动假设“第二新的目录”一定成功。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>ls -1 /srv/www/finance/releases
+readlink -f /srv/www/finance/current</code></pre></div><p>找到实际的旧时间戳后执行；下面的 <code>旧版本时间戳</code> 必须替换：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · 先填入实际旧目录名</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+test -f /srv/www/finance/releases/旧版本时间戳/index.html
+test -f /srv/www/finance/releases/旧版本时间戳/learn.rsc
+test ! -e /srv/www/finance/current.next
+test ! -L /srv/www/finance/current.next
+ln -s /srv/www/finance/releases/旧版本时间戳 /srv/www/finance/current.next
+mv -Tf /srv/www/finance/current.next /srv/www/finance/current
+)</code></pre></div><p>再次验证网站；开启了 Cloudflare 缓存时，可在 Cloudflare → Caching → Configuration → Purge Cache 中清理受影响的页面缓存。</p></details>
+<h3>备份配置与网站，并下载到电脑</h3>
+<p>下面用 SQLite 自带的在线备份，避免直接复制正在写入的数据库。备份包含节点凭据，应存放在自己的受保护目录中。</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+sudo install -d -m 700 /var/backups/ironmao
+BACKUP_STAMP=&quot;$(date -u +%Y%m%dT%H%M%SZ)&quot;
+sudo sqlite3 /etc/x-ui/x-ui.db &quot;.backup &#x27;/var/backups/ironmao/x-ui-$BACKUP_STAMP.db&#x27;&quot;
+sudo tar -czf &quot;/var/backups/ironmao/site-$BACKUP_STAMP.tar.gz&quot; /etc/caddy /srv/www
+sudo tar -tzf &quot;/var/backups/ironmao/site-$BACKUP_STAMP.tar.gz&quot; &gt; /dev/null
+sudo tar -czf &quot;/var/backups/ironmao/bundle-$BACKUP_STAMP.tar.gz&quot; -C /var/backups/ironmao &quot;x-ui-$BACKUP_STAMP.db&quot; &quot;site-$BACKUP_STAMP.tar.gz&quot;
+sudo tar -tzf &quot;/var/backups/ironmao/bundle-$BACKUP_STAMP.tar.gz&quot; &gt; /dev/null
+sudo chmod 600 &quot;/var/backups/ironmao/bundle-$BACKUP_STAMP.tar.gz&quot;
+sudo cp &quot;/var/backups/ironmao/bundle-$BACKUP_STAMP.tar.gz&quot; /var/backups/ironmao/ironmao-latest.next.tar.gz
+sudo mv -f /var/backups/ironmao/ironmao-latest.next.tar.gz /var/backups/ironmao/ironmao-latest.tar.gz
+sudo cp /var/backups/ironmao/ironmao-latest.tar.gz &quot;$HOME/ironmao-latest.tar.gz&quot;
+sudo chown deployer:deployer &quot;$HOME/ironmao-latest.tar.gz&quot;
+chmod 600 &quot;$HOME/ironmao-latest.tar.gz&quot;
+)</code></pre></div><div class="command"><div class="command-head"><span>Mac 本地终端</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>(
+set -eu
+scp -i &quot;$HOME/.ssh/ironmao_vps&quot; deployer@23.94.184.3:~/ironmao-latest.tar.gz &quot;$HOME/Desktop/ironmao-latest.tar.gz&quot;
+chmod 600 &quot;$HOME/Desktop/ironmao-latest.tar.gz&quot;
+tar -tzf &quot;$HOME/Desktop/ironmao-latest.tar.gz&quot; &gt; /dev/null
+tar -tzf &quot;$HOME/Desktop/ironmao-latest.tar.gz&quot;
+)</code></pre></div>
+<p>下载成功后，删除服务器家目录中的临时传输副本：<code>rm "$HOME/ironmao-latest.tar.gz"</code>；日期备份仍在 /var/backups/ironmao。定期将备份再保存到服务器之外的其它位置，并用测试环境验证恢复，不能只看压缩包存在。</p>
+<h3>验证开机恢复</h3>
+<div class="command"><div class="command-head"><span>服务器终端 · 准备短暂停机时</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl enable x-ui caddy
+sudo reboot</code></pre></div>
+<p>等待云后台状态恢复 Running。重新用密钥 SSH 登录、重开第 8 步的面板隧道，验证节点、两站首页和课程/文章跳转。</p>
+<div class="command"><div class="command-head"><span>重连后的服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo systemctl is-active x-ui caddy
+sudo ufw status verbose
+free -h
+df -h /</code></pre></div>
+<h3>每月维护</h3><p>在 ColoCrossing 查看续费和流量；在服务器执行 <code>sudo apt update</code>、<code>sudo apt upgrade</code>。Caddy 会自动续证，保留正确 DNS 和 80/443。更新 3X-UI 前先备份，阅读官方发布说明，再从 <code>sudo x-ui</code> 的管理菜单更新，更新后重新验证所有客户端。</p>
+<h3>其他网站怎样接进来？</h3><ul><li><strong>其它已验证的静态网站：</strong>为每站建立 /srv/www/站名，上传发布文件，添加独立 Caddy 站点块与 DNS 记录；保留已有站点配置。</li><li><strong>论文精读页面：</strong>先整理拟公开的网页、Markdown 和引用资源，核对相对路径及公开范围，再按静态站部署；不直接上传整份研究目录和模型训练数据。</li><li><strong>A 股工作台、Mira、Agent Evidence Lab：</strong>属于后台应用，需要另外设计身份认证、运行服务、状态持久化、数据库/任务和资源容量。本教程的静态文件配置不适用于这些后台。</li></ul>
+<p class="success"><strong>成功条件：</strong>重启后新 SSH、代理和网站都正常；备份已下载且可列出内容，知道实际使用的端口和更新方法。</p>
+<label class="done"><input type="checkbox" data-step="18">我已完成这一步，并核对了成功条件</label></section>
+<section class="step" id="troubleshooting"><h2>遇到问题时，停在当前步骤</h2><p>把<strong>步骤编号、在哪个终端执行、命令和错误输出</strong>给我。不要发送密码、私钥、完整节点链接或含登录凭据的面板输出。</p><div class="table-wrap"><table><thead><tr><th>症状</th><th>先检查</th></tr></thead><tbody><tr><td>Select OS 空白</td><td>不提交 Reinstall；重新打开产品详情页 → Install → Reinstall OS；仍空白时联系商家支持</td></tr><tr><td>Permission denied</td><td>第 4 步 root 首次登录：新密码 / 重装状态；第 5 步 SCP：PreferredAuthentications=password 原样保留；第 6 步以后日常登录使用 deployer + 私钥</td></tr><tr><td>VNC 报 Not connected</td><td>第 3 步区分管理区域未加载和控制台未连接；干净产品链接重进；持续失败通过商家工单独立核对指纹</td></tr><tr><td>ls 查的是 /root/.ssh，或找不到密钥</td><td>第 5 步开新的 Mac 本地窗口；echo "$HOME" 应为 /Users/...；只在 Mac 检查 / 生成私钥</td></tr><tr><td>zsh: command not found: root@... / ls:</td><td>只复制命令框，不粘贴终端提示符和输出行；用“复制命令”按钮</td></tr><tr><td>Too many authentication failures</td><td>使用第 4 步仅密码认证的 SSH 命令；排除错误密码或本机多个密钥连续尝试</td></tr><tr><td>SSH 拒绝连接 / 超时</td><td>ColoCrossing 状态与 IP → 重装任务 → 云防火墙 22 → VNC 查看 SSH 监听 → UFW</td></tr><tr><td>面板打不开</td><td>SSH 隧道是否运行 → 本次 WebBasePath → x-ui 服务 → 127.0.0.1:18080</td></tr><tr><td>FlClash 订阅 Connection refused</td><td>第 10 步打开订阅专用 SSH 隧道；Mac URL 用 28081，远端仍是 2096；面板隧道不能代替订阅隧道</td></tr><tr><td>订阅下载成功但节点 server 为 127.0.0.1</td><td>第 9 步自定义分享地址填 VPS 公网 IP，再刷新订阅；订阅 URL 可为回环地址，节点 server 应是公网 IP</td></tr><tr><td>Reality 握手失败</td><td>8443、UUID、Vision、SNI、公钥、Short ID 与客户端版本；查看 x-ui/Xray 日志</td></tr><tr><td>网站证书失败</td><td>A/AAAA → 两层防火墙 80/443 → Caddy 日志</td></tr><tr><td>首页正常，课程打不开</td><td>完整 dist/client 是否上传；.html 路径映射、.rsc 文件和 Content-Type</td></tr><tr><td>橙云后错误</td><td>先回灰云比较；确认 VPS HTTPS 已正常、Full (strict) 与现有域名配置兼容</td></tr></tbody></table></div><p>常用日志：</p>
+<div class="command"><div class="command-head"><span>服务器终端 · deployer</span><button type="button" class="copy">复制命令</button></div><pre><code data-template>sudo journalctl -u x-ui --no-pager -n 60
+sudo journalctl -u caddy --no-pager -n 60
+sudo ss -lntp</code></pre></div></section>
+<footer class="foot" id="sources"><strong>资料与适用边界</strong><p>本教程基于工作区旧部署记录、当前本地网站配置、2026-10-03 已登录 ColoCrossing 后台的实际观察，以及 2026-10-04 的 SSH 现场反馈更新。系统重装、新密码填写和最终确认由你在后台完成；教程更新没有代你执行重装或修改 DNS。商家页面可能变化，先核对具体产品与按钮提示。</p><ul><li><a href="https://www.colocrossing.com/blog/introducing-the-new-vps-firewall-in-the-colocrossing-cloud-portal/" target="_blank" rel="noopener noreferrer">ColoCrossing 云防火墙与重装能力</a></li><li><a href="https://github.com/MHSanaei/3x-ui/releases/tag/v3.8.5" target="_blank" rel="noopener noreferrer">3X-UI v3.8.5 发布与安装脚本</a></li><li><a href="https://caddyserver.com/docs/install" target="_blank" rel="noopener noreferrer">Caddy 官方安装与服务说明</a></li><li><a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank" rel="noopener noreferrer">Cloudflare DNS 配置</a></li><li><a href="https://github.com/chen08209/FlClash" target="_blank" rel="noopener noreferrer">FlClash 官方项目</a> / <a href="https://wiki.metacubex.one/config/proxies/vless/" target="_blank" rel="noopener noreferrer">Mihomo VLESS 配置</a></li></ul><p>文档更新：2026-10-04。日常操作可查阅配套的 <a href="VPS日常登录与维护手册.html">登录与维护手册</a>。网站构建在本机验证后再发布，服务器实际安装、证书签发和客户端联网需按每一步的成功条件现场确认。</p></footer></main></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div><script>
+/* GUIDE_LOGIC_START */
+function parseSettings(ip, domain, panelPath) {
+  const octets = ip.trim().split('.');
+  if (octets.length !== 4 || octets.some(part => !/^(0|[1-9]\d{0,2})$/.test(part) || Number(part) > 255))
+    throw new Error('IPv4 请填写四段 0–255 的数字，不带协议或端口。');
+  const host = domain.trim().toLowerCase();
+  const labels = host.split('.');
+  if (host.length > 253 || labels.length < 2 || labels.some(label =>
+    !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)) || /^\d+$/.test(labels.at(-1)))
+    throw new Error('域名请填写 finance.ironmao.com 这样的完整主机名，不带 https:// 或路径。');
+  const rawPath = panelPath.trim();
+  if (rawPath && !/^\/?[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*\/?$/.test(rawPath))
+    throw new Error('WebBasePath 仅使用安装输出的字母、数字、横线、下划线和路径斜杠。');
+  return {
+    IP: octets.join('.'), DOMAIN: host,
+    PANEL_PATH: rawPath ? '/' + rawPath.replace(/^\/|\/$/g, '') + '/' : '/安装输出的WebBasePath/'
+  };
+}
+function renderTemplate(template, settings) {
+  return template.replace(/\{\{(IP|DOMAIN|PANEL_PATH)\}\}/g, (_, key) => settings[key]);
+}
+/* GUIDE_LOGIC_END */
+const storageKey = 'ironmao-vps-guide-20261003';
+let saved = {};
+try {
+  const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  if (stored && typeof stored === 'object' && !Array.isArray(stored)) saved = stored;
+} catch {}
+const templateNodes = [...document.querySelectorAll('[data-template]')];
+const templates = templateNodes.map(node => node.textContent
+  .split('23.94.184.3').join('{{IP}}')
+  .split('finance.ironmao.com').join('{{DOMAIN}}')
+  .split('/安装输出的WebBasePath/').join('{{PANEL_PATH}}'));
+const ipInput = document.getElementById('server-ip');
+const domainInput = document.getElementById('site-domain');
+const pathInput = document.getElementById('panel-path');
+if (saved.settings && typeof saved.settings === 'object') {
+  if (typeof saved.settings.ip === 'string') ipInput.value = saved.settings.ip;
+  if (typeof saved.settings.domain === 'string') domainInput.value = saved.settings.domain;
+  if (typeof saved.settings.panelPath === 'string') pathInput.value = saved.settings.panelPath;
+}
+function persist() {
+  try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch {}
+}
+function applySettings() {
+  const status = document.getElementById('settings-status');
+  try {
+    const candidate = parseSettings(ipInput.value, domainInput.value, pathInput.value);
+    templateNodes.forEach((node, i) => { node.textContent = renderTemplate(templates[i], candidate); });
+    document.querySelectorAll('[data-site-path]').forEach(link => { link.href = 'https://' + candidate.DOMAIN + link.dataset.sitePath; });
+    const panel = document.getElementById('panel-link');
+    const ready = pathInput.value.trim() !== '';
+    panel.href = ready ? 'http://127.0.0.1:18080' + candidate.PANEL_PATH : '#step-7';
+    panel.setAttribute('aria-disabled', String(!ready));
+    panel.textContent = ready ? '打开本地 3X-UI 面板 ↗' : '填写 WebBasePath 后打开本地面板 ↗';
+    document.querySelector('[data-dns-name]').textContent = candidate.DOMAIN;
+    status.classList.remove('error');
+    status.textContent = '参数已更新；密码和节点凭据不保存在此页面。';
+    saved.settings = { ip:candidate.IP, domain:candidate.DOMAIN, panelPath:pathInput.value.trim() };
+    persist();
+  } catch (error) {
+    status.classList.add('error');
+    status.textContent = error.message + ' 当前命令仍保留上一次有效参数。';
+  }
+}
+document.getElementById('apply-settings').addEventListener('click', applySettings);
+document.getElementById('panel-link').addEventListener('click', event => {
+  if (event.currentTarget.getAttribute('aria-disabled') === 'true') event.preventDefault();
+});
+applySettings();
+const checks = [...document.querySelectorAll('[data-step]')];
+const complete = saved.complete && typeof saved.complete === 'object' ? saved.complete : {};
+function refreshProgress() {
+  let count = 0;
+  checks.forEach(check => {
+    const done = check.checked;
+    count += Number(done);
+    check.closest('.step').classList.toggle('is-done', done);
+    document.querySelector('.sidebar a[href="#step-' + check.dataset.step + '"]').classList.toggle('completed', done);
+    complete[check.dataset.step] = done;
+  });
+  document.getElementById('progress-text').textContent = '已完成 ' + count + ' / ' + checks.length + ' 步';
+  document.getElementById('progress-fill').style.width = (count / checks.length * 100) + '%';
+  document.getElementById('guide-progress').setAttribute('aria-valuenow', count);
+  saved.complete = complete; persist();
+}
+checks.forEach(check => {
+  check.checked = complete[check.dataset.step] === true;
+  check.addEventListener('change', refreshProgress);
+});
+refreshProgress();
+document.getElementById('reset-progress').addEventListener('click', () => {
+  if (!window.confirm('只清除教程的完成勾选，保留 IP 和域名参数。')) return;
+  checks.forEach(check => { check.checked = false; }); refreshProgress();
+});
+document.getElementById('print-guide').addEventListener('click', () => window.print());
+let toastTimer;
+function toast(message) {
+  const node = document.getElementById('toast');
+  node.textContent = message; node.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { node.hidden = true; }, 4000);
+}
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(text); return true; } catch {}
+  }
+  const active = document.activeElement;
+  const area = document.createElement('textarea');
+  area.value = text; area.setAttribute('readonly','');
+  area.style.position = 'fixed'; area.style.opacity = '0'; area.style.top = '0';
+  document.body.appendChild(area); area.select();
+  let success = false;
+  try { success = document.execCommand('copy'); } catch {}
+  area.remove();
+  if (active && typeof active.focus === 'function') active.focus();
+  return success;
+}
+document.querySelectorAll('.copy').forEach(button => {
+  const place = button.closest('.command').querySelector('.command-head span').textContent;
+  button.setAttribute('aria-label', '复制：' + place);
+  button.addEventListener('click', async () => {
+    const text = button.closest('.command').querySelector('code').textContent;
+    if (await copyText(text)) toast('已复制。执行前确认这是 ' + place + '。');
+    else toast('浏览器未允许复制，请选中代码后按 ⌘C / Ctrl+C。');
+  });
+});
+</script></body></html>

@@ -23,6 +23,8 @@ src/strategy/
 │   ├── breadth.py              # 市场广度
 │   ├── ingest.py               # 广度导入/下载
 │   └── sources.py              # 旧行情源接入
+├── indicators/                # 纯历史序列指标，当前为简单均线
+├── exit_policies/             # 退出目录、参数校验和退出意图
 ├── backtesting/
 │   ├── engine.py               # 订单、持仓、现金和净值
 │   ├── fees.py                 # 日期/证券类型/买卖方向费用
@@ -57,7 +59,7 @@ src/strategy/
 
 ## 主要调用关系
 
-回测：Web → jobs → requests → backtests → snapshots + 策略定义 + engine → evaluation → 结果。
+回测：Web → jobs → requests → backtests → snapshots + 选股定义 + 退出规则/指标 + engine → evaluation → 结果。
 
 下载：Web → downloads → provider.resolve → repository.prepare → provider.download → repository.publish。
 
@@ -140,3 +142,9 @@ HTTP 失败保留 `error` 字符串并附加 `diagnostic`；任务详情/下载�
 买入持有：首日收盘形成计划、次日开盘买入，末日开盘计划卖出。随机择时：以已完成交易数为计划笔数，压缩组合空间均匀抽取不重叠窗口，持有期相同。100轮固定种子20260910，保存各轮信号日、累计收益、回撤、实际完整成交数、持仓日占比及期末持仓。
 
 实际成交笔数可能不同，不筛选随机结果；页面展示匹配轮数。历史百分位为低于策略的随机轮数加平局一半，除以总轮数，不是显著性或样本外证据。零完整交易仍展示基准，只跳过随机实验。少于3个交易日时整个对照不可用，原始回测正常保留。
+
+## 退出规则与指标（2026-09-24）
+
+`exit_policies` 提供 `normalize_exit_policy`、`exit_policy_catalog`、`build_exit_policy`。固定期读取旧 `holding_period_days`；均线读取 `window/max_holding_days`。规则只发出收盘退出意图，开盘撮合与延期仍由引擎管理。`indicators.simple_moving_average` 按研究交易日对齐窗口，缺失值不跳过。
+
+工作台 GET `/api/exit-policies` 供页面生成参数表单。结果追加 `exit_decision_events`、规则版本、指标元数据及真实暖机覆盖；旧任务无证据时不会事后重算。现有随机择时和批量持有期研究只支持固定期，页面和服务端同时限制。详细合同与验收见 [退出规则说明](exit-policies.md)。

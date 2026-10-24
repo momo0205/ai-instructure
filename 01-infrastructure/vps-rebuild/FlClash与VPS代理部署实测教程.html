@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>FlClash 与 VPS 代理部署 · 实测教程</title><meta name="description" content="Ubuntu VPS、sing-box Reality Vision 443、FlClash 完整配置与普通 HTTPS 订阅的中文操作手册。"><style id="guide-style">
+:root{--paper:#f5f3ed;--card:#fff;--ink:#25312c;--muted:#65736d;--green:#225f49;--soft:#edf5ee;--line:#dedfd8;--code:#14221c}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:28px}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--green);text-underline-offset:4px}a:hover{text-decoration-thickness:2px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #d6933f;outline-offset:4px}
+.skip-link{position:absolute;top:-100px;left:20px;background:white;padding:10px;z-index:10}.skip-link:focus{top:10px}
+.layout{display:grid;grid-template-columns:252px minmax(0,940px);gap:48px;max-width:1320px;margin:auto;padding:48px 32px 80px}
+.sidebar{position:sticky;top:28px;align-self:start;max-height:calc(100vh - 56px);overflow:auto;padding-right:12px}.brand{font-size:15px;font-weight:750;letter-spacing:1px}.sidebar p{color:var(--muted);font-size:13px;margin:8px 0 18px}
+.progress-track{height:5px;background:#dce3dc;border-radius:10px;overflow:hidden;margin:12px 0}.progress-fill{background:var(--green);height:100%;width:0%;transition:width .2s}.sidebar nav a{display:block;text-decoration:none;color:var(--muted);font-size:13px;padding:7px 8px;border-radius:5px;border-left:2px solid transparent}.sidebar nav a:hover{background:#e8ede6;color:var(--green)}.sidebar nav a.completed{border-left-color:var(--green);color:var(--green)}.nav-number{display:inline-block;width:27px;font-variant-numeric:tabular-nums;color:#849389}
+.sidebar .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.quiet{border:1px solid #cbd5c9;background:transparent;border-radius:6px;padding:5px 12px;color:var(--muted);font-size:12px}
+main{min-width:0}.hero{padding:8px 0 26px}.eyebrow{color:var(--green);font-size:12px;letter-spacing:2px;font-weight:700}.hero h1{font-size:clamp(30px,4vw,49px);font-weight:720;line-height:1.3;letter-spacing:-1px;margin:18px 0}.hero .lead{max-width:700px;color:var(--muted);font-size:17px}.meta{display:flex;flex-wrap:wrap;gap:20px;color:var(--muted);font-size:12px;margin-top:25px}.intro-rule{margin:28px 0 0;border:0;border-top:1px solid var(--line)}
+.settings{padding:24px;background:#e8efe6;border:1px solid #d6e1d2;border-radius:14px;margin:0 0 28px}.settings h2{font-size:18px;margin:0 0 6px}.settings p{font-size:13px;color:var(--muted);margin:0 0 16px}.field-grid{display:grid;grid-template-columns:1fr 1.3fr 1.2fr;gap:12px}.field-grid label{font-size:12px;color:var(--muted)}.field-grid input{display:block;width:100%;padding:10px 12px;margin-top:4px;background:white;border:1px solid #c8d5c4;border-radius:6px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}.settings-footer{margin-top:15px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.button{display:inline-block;background:var(--green);color:white;border:0;border-radius:6px;padding:9px 16px;font-size:13px;text-decoration:none}.button.secondary{background:var(--soft);color:var(--green);border:1px solid #bfd2c2}.button[aria-disabled=true]{opacity:.55;cursor:not-allowed}.status{font-size:12px;color:var(--green)}.status.error{color:#a53827}
+.phase{margin:36px 0 16px;font-size:12px;letter-spacing:2px;color:var(--green);font-weight:700}.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:30px 32px;margin-bottom:20px;box-shadow:0 3px 12px #263b2b03;scroll-margin-top:24px}.step-top{display:flex;gap:18px;align-items:flex-start;margin-bottom:21px}.step-number{font:28px/1.2 ui-monospace,SFMono-Regular,monospace;color:#82a58e;padding-top:7px}.step h2{font-size:24px;line-height:1.45;letter-spacing:-.3px;margin:2px 0}.step-subtitle{font-size:12px;color:var(--muted);margin:0}.step h3{font-size:18px;margin-top:26px}.step p{margin:14px 0}.step li{padding-left:3px;margin:6px 0}.actions{padding-left:24px}.actions li::marker{color:var(--green);font-weight:700}
+code{font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#edf1ea;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}
+.command{margin:16px 0;border-radius:8px;overflow:hidden;border:1px solid #273c30;background:var(--code)}.command-head{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#21362a;padding:9px 14px;font-size:12px;color:#c4d7c4}.copy{background:#334d3c;border:1px solid #5d7665;border-radius:5px;color:#ecf4e9;padding:3px 10px;font-size:11px;min-width:75px}.copy:hover{background:#41624b}pre{margin:0;padding:18px;overflow:auto;max-width:100%;tab-size:2}pre code{padding:0;background:transparent;color:#d9ebd6;border-radius:0;white-space:pre;font-size:12px;line-height:1.85;overflow-wrap:normal}
+.table-wrap{overflow:auto;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f3f5ef;color:var(--muted);font-size:12px;font-weight:600}td:first-child{white-space:nowrap}table code{font-size:12px}
+.note{background:var(--soft);border-left:3px solid #80aa85;padding:14px 16px;margin:18px 0;font-size:13px}.note.warn{background:#fff7e8;border-left-color:#daae68;color:#785528}.success{background:#f1f6ed;padding:13px 16px;border-radius:7px;font-size:13px;color:#345d40}.source{font-size:11px;color:var(--muted)!important}
+details{margin:18px 0;border:1px solid var(--line);border-radius:7px;padding:12px 16px;background:#fafbf7}details p{font-size:13px}summary{color:var(--green);cursor:pointer;font-size:13px;font-weight:600}.done{display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:20px;margin-top:26px;color:var(--muted);font-size:12px}.done input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}.step.is-done{border-color:#b9cdb6}.step.is-done .step-number{color:var(--green)}
+.url-box{background:#f1f5ef;padding:14px 16px;border:1px solid #dce5d8;border-radius:7px}.url-box code{background:transparent}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.mini-grid>div{background:#f6f7f2;border-radius:8px;padding:18px}.mini-grid strong{font-size:15px}.mini-grid p{font-size:12px;color:var(--muted);margin:8px 0 0}.link-list{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.link-list a{padding:7px 12px;border:1px solid #c8d7c5;background:#f4f7f0;border-radius:6px;font-size:12px;text-decoration:none}kbd{font-size:12px;border:1px solid #cdd5c9;background:#f7f8f4;padding:1px 5px;border-radius:4px}
+.foot{font-size:12px;color:var(--muted);padding:24px 6px}.foot p{margin:8px 0}.foot ul{padding-left:20px}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#243b2d;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 20px #0003;font-size:13px;max-width:90vw;z-index:20}.toast[hidden]{display:none}
+@media(max-width:1000px){.layout{grid-template-columns:205px minmax(0,1fr);gap:25px;padding:28px 22px}.field-grid{grid-template-columns:1fr 1fr}.field-grid label:last-child{grid-column:1/-1}.step{padding:25px}}
+@media(max-width:720px){.layout{display:block;padding:22px 16px 48px}.sidebar{position:static;max-height:none;padding:0;margin-bottom:26px}.sidebar nav{display:grid;grid-template-columns:1fr 1fr;max-height:240px;overflow:auto;border-top:1px solid var(--line);padding-top:10px}.sidebar nav a{font-size:11px;padding:5px}.sidebar p{margin-bottom:8px}.sidebar .tools{margin-top:10px}.hero{padding-top:0}.hero h1{font-size:34px}.hero .lead{font-size:15px}.step{padding:20px 18px}.step h2{font-size:21px}.step-top{gap:12px}.step-number{font-size:24px}.field-grid{display:block}.field-grid label{display:block;margin-bottom:12px}.settings{padding:20px}.mini-grid{grid-template-columns:1fr}.meta{gap:12px}.table-wrap{margin-left:-4px;margin-right:-4px}.command-head{font-size:10px}pre{padding:14px}pre code{font-size:11px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.progress-fill{transition:none}}
+@media print{body{background:white;font-size:10pt}.layout{display:block;padding:0;max-width:none}.sidebar,.settings,.copy,.done,.toast,.skip-link{display:none!important}.hero h1{font-size:26pt}.step{box-shadow:none;border:0;border-top:1px solid #aaa;border-radius:0;margin:0;padding:18px 0}.step-top{break-after:avoid}h2,h3,summary{break-after:avoid}.command{break-inside:avoid;background:#f5f5f5;border:1px solid #ccc}.command-head{background:#eee;color:#333}pre{overflow:visible;white-space:pre-wrap}pre code{white-space:pre-wrap;color:#111;font-size:8pt}.note,.success{break-inside:avoid}a{color:#111}.phase{margin-top:24px}.step-subtitle,.source{color:#555!important}}
+</style></head><body>
+<a class="skip-link" href="#main">跳到教程正文</a><div class="layout"><aside class="sidebar" aria-label="教程导航"><div class="brand">IRONMAO · 代理部署</div><p>先验证节点，再建立订阅。</p><nav>
+<a href="#step-1"><span class="nav-number">01</span>选定起点与两个终端</a><a href="#step-2"><span class="nav-number">02</span>登录、检查与备份</a><a href="#step-3"><span class="nav-number">03</span>安装固定版本</a><a href="#step-4"><span class="nav-number">04</span>检查 Reality 目标</a><a href="#step-5"><span class="nav-number">05</span>生成完整配对配置</a><a href="#step-6"><span class="nav-number">06</span>检查、启动与防火墙</a><a href="#step-7"><span class="nav-number">07</span>下载文件与 FlClash 导入</a><a href="#step-8"><span class="nav-number">08</span>真实联网验收</a><a href="#step-9"><span class="nav-number">09</span>系统代理与订阅域名</a><a href="#step-10"><span class="nav-number">10</span>退役旧节点与 HTTPS 订阅</a><a href="#step-11"><span class="nav-number">11</span>URL 导入与更新验收</a><a href="#step-12"><span class="nav-number">12</span>维护、回退与网站边界</a><a href="#troubleshooting">遇到问题时</a><a href="#sources">官方参考资料</a><a href="VPS重建与网站部署一步步教程.html#step-1">全新系统初始化入口 ↗</a></nav><div class="tools"><button type="button" class="quiet" id="print-guide">打印 / 保存 PDF</button></div><p>页面不保存任何节点凭据或订阅链接。</p></aside>
+<main id="main"><header class="hero"><div class="eyebrow">现有 FlClash · Ubuntu VPS · 文件与 HTTPS 订阅</div><h1>把 VPS 代理搭起来，<br>每一步都能核对。</h1><p class="lead">主路线使用固定版本 sing-box 1.14.2，原生 VLESS + Reality + Vision，监听 TCP 443。先用完整文件在已有 FlClash 0.8.94 上验收；联网确认后，再用自己的域名建立普通 HTTPS 订阅。</p><div class="meta"><span>核对日期 · 2026-10-09</span><span>12 个步骤</span><span>Mac / Ubuntu 24.04 amd64</span></div><hr class="intro-rule"></header>
+<div class="note" id="verification-evidence"><strong>实际验证范围</strong><p>2026-10-09，独立实验使用这台 Mac 已安装的 FlClash 0.8.94 原始内核，对 Ubuntu 24 amd64 容器内服务端执行真实 Reality 握手与公网 HTTPS 请求。结果来自实际内核，不是配置导入或延迟测试。</p><div class="table-wrap"><table><thead><tr><th>服务端</th><th>MLKEM</th><th>最终 HTTPS 结果</th></tr></thead><tbody><tr><td>sing-box 1.14.2</td><td>false · 主路线</td><td>204 成功；1 MiB 下载 HTTP 200</td></tr><tr><td>sing-box 1.14.2</td><td>true</td><td>204 成功</td></tr><tr><td>Xray 26.3.27</td><td>false</td><td>204 成功</td></tr><tr><td>Xray 26.3.27</td><td>true</td><td>204 成功</td></tr><tr><td>Xray 26.9.9</td><td>false</td><td>失败：curl 35 / HTTP 000</td></tr><tr><td>Xray 26.9.9</td><td>true</td><td>204 成功</td></tr></tbody></table></div><p>主路线重复 3 次 204 与 2 次 1 MiB 下载均通过；错误 UUID、错误公钥负例均失败。Ubuntu 包安装和服务用户配置检查已通过。<strong>不包括 GUI 点击导入、真实 VPS 新路线部署、systemd 作为 PID 1 的启动，以及公网 ACME 签证书</strong>；这些仍按下方现场成功条件验收。实验没有改动正在运行的 FlClash、系统代理或真实 VPS 服务。</p></div>
+<div class="note"><strong>固定参数：</strong>VPS IPv4 <code>23.94.184.3</code>，日常账号 <code>deployer</code>，Mac 私钥 <code>$HOME/.ssh/ironmao_vps</code>，订阅域名 <code>sub.ironmao.com</code>。IP 以商家后台为准；更换参数时统一修改命令。真实 UUID、Reality 密钥与订阅令牌不要写入 HTML。</div>
+<noscript><div class="note warn">JavaScript 已关闭：正文仍可阅读，请手动选中命令复制。</div></noscript>
+
+<section class="step" id="step-1"><div class="step-top"><span class="step-number">01</span><div><p class="step-subtitle">Mac 本地 · 选择入口</p><h2>选定起点，准备两个终端</h2></div></div>
+<p>按 <kbd>⌘</kbd> + <kbd>空格</kbd>，打开“终端 / Terminal”。保留两个窗口：<strong>窗口 A 登录 VPS</strong>，<strong>窗口 B 始终留在 Mac 本地</strong>。每个命令块都标明执行地点。</p>
+<div class="table-wrap"><table><thead><tr><th>当前状态</th><th>从哪里开始</th></tr></thead><tbody><tr><td>已完成 deployer、sudo 与密钥初始化</td><td>直接第 2 步，不需要重装。</td></tr><tr><td>全新 VPS / 确实需要重装</td><td>先完成<a href="VPS重建与网站部署一步步教程.html#step-1">旧初始化教程第 1–6 步</a>再回来；<strong>跳过旧第 7–10 步</strong>，本教程替代旧代理路线。</td></tr><tr><td>已有 3X-UI / Xray</td><td>前半程保留旧服务与 8443 节点，新 443 验收通过后再退役。</td></tr></tbody></table></div>
+<p>保留已有 FlClash 0.8.94，在“关于”核对版本；缺少时从<a href="https://github.com/chen08209/FlClash/releases/tag/v0.8.94" target="_blank" rel="noopener noreferrer">官方 v0.8.94 发布页</a>下载匹配 Mac 架构的安装包。</p>
+<div class="note">Mihomo 官方文档不保证与 Xray 26.7.11 及之后版本的 Reality 兼容。实验中新 Xray 的 MLKEM=true 能连通，false 失败，不能概括成所有新 Xray 都失败。本教程选择已实测的 sing-box 1.14.2 + <code>support-x25519mlkem768: false</code>，升级前要重新验证。</div>
+<p>Reality 目标无需属于你，节点无需申请自己的 HTTPS 证书。自己的域名与可信证书用于后半程的普通订阅 HTTPS。</p><p class="success"><strong>成功条件：</strong>deployer 密钥登录与 sudo 可用；版本和初始化起点已核对。</p></section>
+
+<section class="step" id="step-2"><div class="step-top"><span class="step-number">02</span><div><p class="step-subtitle">窗口 A · Mac 登录后，在 VPS 检查</p><h2>登录 VPS，检查端口并保留回退</h2></div></div>
+<div class="command"><div class="command-head"><span>窗口 A · Mac 本地终端 · 执行后成为 VPS 窗口</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-ssh-login">ssh -i "$HOME/.ssh/ironmao_vps" -o IdentitiesOnly=yes deployer@23.94.184.3</code></pre></div>
+<p>登录后执行检查。sudo 提示询问 deployer 密码，SSH 的密钥口令提示询问 Mac 私钥口令；不把密码写进命令。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · deployer</span><button class="copy" type="button">复制命令</button></div><pre><code id="vps-preflight">whoami
+sudo -v
+cat /etc/os-release
+dpkg --print-architecture
+uname -m
+timedatectl status
+sudo systemctl is-active x-ui caddy sing-box
+sudo ss -lntp
+sudo ufw status verbose</code></pre></div>
+<div class="note warn">要求 Ubuntu 24.04、amd64 / x86_64、正确且同步的时钟。<strong>TCP 443 必须空闲</strong>；若已有 Caddy、Nginx 或其他服务占用，先停下核对已有网站，不杀进程，不覆盖 Caddyfile。已有 sing-box 在运行也先核对用途。</div>
+<p>2026-10-09 只读检查曾看到 x-ui、Caddy、SSH active，8443 / 2096 / 80 有监听，443 空闲；以本次现场为准。若系统提示需重启，先验证新 SSH 连接与 sudo，再独立安排重启、重连，不把它夹在安装步骤中。</p><p>下面建立一次初始快照，保留服务 active / enabled 状态和配置。活跃 SQLite 使用 backup API；备份目录只让 root 读取。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 一次性初始备份</span><button class="copy" type="button">复制命令</button></div><pre><code id="migration-backup">sudo python3 - &lt;&lt;'PY_BACKUP'
+import datetime, json, os, pathlib, shutil, sqlite3, subprocess
+state_dir = pathlib.Path('/var/lib/ironmao-proxy')
+state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+os.chmod(state_dir, 0o700)
+state_file = state_dir / 'migration.json'
+if state_file.exists():
+    print('已有初始迁移记录，保留原始回退状态：', state_file)
+    raise SystemExit(0)
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+backup = pathlib.Path('/var/backups/ironmao-proxy') / ('initial-' + stamp)
+backup.mkdir(mode=0o700, parents=True)
+os.chmod(backup.parent, 0o700)
+def status(unit, action):
+    result = subprocess.run(['systemctl', action, unit], text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    return result.stdout.strip() or 'unknown'
+services = {unit: {'active': status(unit, 'is-active'),
+                   'enabled': status(unit, 'is-enabled')}
+            for unit in ('x-ui', 'caddy', 'sing-box')}
+for name, source in [('x-ui', '/etc/x-ui'), ('caddy', '/etc/caddy'),
+                     ('sing-box', '/etc/sing-box')]:
+    src = pathlib.Path(source)
+    if src.exists():
+        ignored = shutil.ignore_patterns('x-ui.db', 'x-ui.db-wal', 'x-ui.db-shm') if name == 'x-ui' else None
+        shutil.copytree(src, backup / name, ignore=ignored)
+db = pathlib.Path('/etc/x-ui/x-ui.db')
+if db.exists():
+    with sqlite3.connect('file:' + str(db) + '?mode=ro', uri=True) as src:
+        with sqlite3.connect(backup / 'x-ui-consistent.db') as dst:
+            src.backup(dst)
+for name, command in [('listeners.txt', ['ss', '-lntp']),
+                      ('ufw.txt', ['ufw', 'status', 'verbose'])]:
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    (backup / name).write_text(result.stdout)
+state = {'created_utc': stamp, 'backup_dir': str(backup), 'services': services}
+state_file.write_text(json.dumps(state, indent=2) + '\n')
+os.chmod(state_file, 0o600)
+print('初始备份：', backup)
+print('原服务状态：', json.dumps(services, ensure_ascii=False))
+PY_BACKUP</code></pre></div>
+<p class="success"><strong>成功条件：</strong>443 空闲；架构与时间符合要求；初始备份已保存；旧 x-ui 按原状态运行。</p></section>
+
+<section class="step" id="step-3"><div class="step-top"><span class="step-number">03</span><div><p class="step-subtitle">窗口 A · VPS 终端 · Ubuntu amd64</p><h2>安装固定版本 sing-box</h2></div></div><p>固定下载官方 1.14.2 amd64 包，先比对 SHA-256。校验失败就停止，不绕过校验。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 安装后尚不启动</span><button class="copy" type="button">复制命令</button></div><pre><code id="sing-box-package-install">bash &lt;&lt;'SH_INSTALL'
+set -eu
+. /etc/os-release
+[ "$ID" = ubuntu ] &amp;&amp; [ "$VERSION_ID" = 24.04 ] || {
+  echo '停止：本教程仅用于 Ubuntu 24.04。'; exit 1;
+}
+[ "$(dpkg --print-architecture)" = amd64 ] || {
+  echo '停止：需要 amd64 软件包。'; exit 1;
+}
+if ! sudo apt update; then
+  echo '停止：软件源更新失败，sing-box 尚未安装完成。先处理下面的软件源故障，再重跑本块；不要继续第 5 步。'
+  exit 1
+fi
+sudo apt install -y ca-certificates curl python3 openssl
+curl --fail --location --output /tmp/sing-box_1.14.2_linux_amd64.deb \
+  https://github.com/SagerNet/sing-box/releases/download/v1.14.2/sing-box_1.14.2_linux_amd64.deb
+printf '%s  %s\n' \
+  '3a15ee1ee918cb5297ccf7fb4356b31ba85f8a7c01da122c5b3e3aeda0568001' \
+  '/tmp/sing-box_1.14.2_linux_amd64.deb' | sha256sum --check
+sudo dpkg -i /tmp/sing-box_1.14.2_linux_amd64.deb
+sudo apt-mark hold sing-box
+/usr/bin/sing-box version
+getent passwd sing-box
+getent group sing-box
+sudo systemctl cat sing-box
+SH_INSTALL</code></pre></div>
+<div class="note warn"><strong>已有 Caddy 软件源报 402 Payment Required 时：</strong>本块会在 apt update 处停止，后续下载安装均未执行。这个仓库访问错误不是要求你给 VPS 充值；Caddy 官方仓库也有<a href="https://github.com/caddyserver/dist/issues/100" target="_blank" rel="noopener noreferrer">相同错误记录</a>。若服务器已安装 Caddy，可执行下面的恢复块，暂时停用该更新源；不卸载、不停止 Caddy，也不绕过软件包签名。其他软件源错误不能直接套用此恢复块。</div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 仅 Caddy Cloudsmith 源报 402 时执行</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-source-recovery">bash &lt;&lt;'SH_CADDY_SOURCE'
+set -eu
+source_file=/etc/apt/sources.list.d/caddy-stable.list
+disabled_file=/etc/apt/sources.list.d/caddy-stable.list.disabled
+if [ -f "$source_file" ]; then
+  [ ! -e "$disabled_file" ] || {
+    echo '停止：停用文件已存在，不能覆盖；请先核对这两个源文件。'; exit 1;
+  }
+  grep -Fq 'https://dl.cloudsmith.io/public/caddy/stable/deb/debian' "$source_file" || {
+    echo '停止：源文件不是预期的官方 Caddy Cloudsmith 源，不修改。'; exit 1;
+  }
+  sudo mv "$source_file" "$disabled_file"
+elif [ ! -f "$disabled_file" ]; then
+  echo '停止：未找到预期源文件；先定位 Caddy 的实际 .list / .sources 文件，不猜路径。'
+  exit 1
+fi
+sudo apt update
+sudo systemctl is-active caddy
+SH_CADDY_SOURCE</code></pre></div>
+<p>恢复块成功后，<strong>重新复制本步上方完整安装块</strong>，直到哈希 OK、版本 1.14.2、passwd / group 输出包含 sing-box，才继续第 4 / 5 步。初始备份不用重做。停用期间 Caddy 不会从该源收到更新；仓库恢复后，先确认原 .list 不存在，再将 .disabled 文件改回原名并执行 apt update。APT 只读取 .list / .sources 源文件，改名保留了原始内容。</p>
+<div class="note warn">固定包安装脚本创建系统用户并 reload systemd，<strong>不自动 enable / start</strong>。包内默认配置是 Shadowsocks 8080，必须先替换为第 5 步配置，绝不启动默认配置。</div><p>核对版本 1.14.2，服务文件的 <code>User=sing-box</code> 及其主组 <code>sing-box</code>、<code>CAP_NET_BIND_SERVICE</code>。服务用 <code>-C /etc/sing-box</code> 读取整个目录，备份必须放在 <code>/var/backups/ironmao-proxy</code>。</p><p class="success"><strong>成功条件：</strong>哈希 OK；版本 1.14.2；服务用户与权限符合要求；未启动默认配置。</p></section>
+
+<section class="step" id="step-4"><div class="step-top"><span class="step-number">04</span><div><p class="step-subtitle">窗口 A · VPS 终端 · 检查出口</p><h2>检查 Reality 握手目标</h2></div></div><p>固定目标 <code>dl.google.com:443</code>，两端 SNI 一致。先确认 VPS 本身能访问目标、协商 TLS 1.3 和 h2。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 只检查握手目标</span><button class="copy" type="button">复制命令</button></div><pre><code id="reality-target-check">timeout 15 openssl s_client -connect dl.google.com:443 -servername dl.google.com -tls1_3 -alpn h2 -verify_return_error &lt; /dev/null</code></pre></div><p>核对 TLSv1.3、<code>ALPN protocol: h2</code> 和证书验证成功。超时、日期或证书错误、缺少 h2 时先处理 VPS 出口、DNS 与时间，不随意改 SNI。</p><div class="note">这里只证明 VPS → 目标的 TLS 可用，还未证明 Mac → VPS 代理可用。第 8 步必须验收显式代理的 HTTPS、出口 IP 与服务器日志。</div><p class="success"><strong>成功条件：</strong>可信 TLS 1.3 握手和 h2 协商通过。</p></section>
+
+<section class="step" id="step-5"><div class="step-top"><span class="step-number">05</span><div><p class="step-subtitle">窗口 A · VPS 终端 · 只生成一次</p><h2>一次生成服务端与完整客户端配置</h2></div></div><p>完整复制整块命令。它在 VPS 生成 UUID、短 ID 和 Reality 密钥对，备份原配置，写出服务端 JSON 与完整 Mihomo YAML；无需手抄密钥。私钥只留在服务器，客户端中的 UUID、公钥和短 ID 也需要保管。</p><div class="note">若客户端文件已存在，生成器拒绝覆盖，直接下载当前文件即可。活动服务或配置目录里其他 JSON 也会触发停止，避免意外轮换或叠加配置。</div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 完整配对生成器</span><button class="copy" type="button">复制命令</button></div><pre><code id="real-server-generator">sudo python3 - &lt;&lt;'PY_CONFIG'
+import datetime, grp, json, os, pathlib, pwd, re, secrets, shutil, subprocess, uuid
+server_ip = '23.94.184.3'
+sni = 'dl.google.com'
+client = pathlib.Path('/home/deployer/ironmao-vps.yaml')
+config_dir = pathlib.Path('/etc/sing-box')
+config = config_dir / 'config.json'
+if not pathlib.Path('/usr/bin/sing-box').is_file():
+    raise SystemExit('停止：sing-box 尚未安装。返回第 3 步，处理软件源错误并完成安装后再生成配置。')
+try:
+    pwd.getpwnam('sing-box')
+    service_group = grp.getgrnam('sing-box').gr_gid
+except KeyError:
+    raise SystemExit('停止：sing-box 服务用户或组缺失。返回第 3 步，完成软件包安装；不要手动创建组跳过安装。')
+if client.exists():
+    raise SystemExit('停止：客户端文件已存在。保留凭据，直接下载，不要重新生成。')
+if subprocess.run(['systemctl', 'is-active', '--quiet', 'sing-box']).returncode == 0:
+    raise SystemExit('停止：sing-box 正在运行，先核对用途，不能覆盖活动配置。')
+others = [p for p in config_dir.rglob('*.json') if p != config]
+if others:
+    raise SystemExit('停止：配置目录存在其他 JSON，先核对，不能叠加运行。')
+account = pwd.getpwnam('deployer')
+result = subprocess.run(['/usr/bin/sing-box', 'generate', 'reality-keypair'],
+                        check=True, text=True, stdout=subprocess.PIPE)
+keys = dict(line.strip().split(':', 1) for line in result.stdout.splitlines() if ':' in line)
+private_key = keys.get('PrivateKey', '').strip()
+public_key = keys.get('PublicKey', '').strip()
+if not all(re.fullmatch(r'[A-Za-z0-9_-]{43}', key) for key in (private_key, public_key)):
+    raise SystemExit('停止：无法识别密钥输出格式，未写入配置。')
+user_id = str(uuid.uuid4())
+short_id = secrets.token_hex(8)
+server = {
+    'log': {'level': 'info', 'timestamp': True},
+    'inbounds': [{
+        'type': 'vless', 'tag': 'vless-in',
+        'listen': '0.0.0.0', 'listen_port': 443,
+        'users': [{'name': 'ironmao-mac', 'uuid': user_id, 'flow': 'xtls-rprx-vision'}],
+        'tls': {
+            'enabled': True, 'server_name': sni, 'min_version': '1.3',
+            'reality': {
+                'enabled': True,
+                'handshake': {'server': sni, 'server_port': 443},
+                'private_key': private_key, 'short_id': [short_id]
+            }
+        }
+    }],
+    'outbounds': [{'type': 'direct', 'tag': 'direct'}],
+    'route': {'final': 'direct'}
+}
+profile = f'''mixed-port: 7890
+bind-address: 127.0.0.1
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+tun:
+  enable: false
+dns:
+  enable: true
+  listen: 127.0.0.1:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+  proxy-server-nameserver:
+    - 223.5.5.5
+  direct-nameserver:
+    - 223.5.5.5
+  nameserver:
+    - "https://dns.google/dns-query#PROXY"
+proxies:
+  - name: IRONMAO-Reality-443
+    type: vless
+    server: "{server_ip}"
+    port: 443
+    uuid: "{user_id}"
+    network: tcp
+    tls: true
+    udp: false
+    flow: xtls-rprx-vision
+    servername: "{sni}"
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: "{public_key}"
+      short-id: "{short_id}"
+      support-x25519mlkem768: false
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - IRONMAO-Reality-443
+rules:
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - MATCH,PROXY
+'''
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+backup_dir = pathlib.Path('/var/backups/ironmao-proxy')
+backup_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+os.chmod(backup_dir, 0o700)
+if config.exists():
+    backup = backup_dir / ('sing-box-config-' + stamp + '.json')
+    shutil.copy2(config, backup)
+    os.chmod(backup, 0o600)
+config_dir.mkdir(mode=0o750, parents=True, exist_ok=True)
+os.chown(config_dir, 0, service_group)
+os.chmod(config_dir, 0o750)
+old_umask = os.umask(0o077)
+try:
+    temporary = config.with_name('.config.json.new')
+    temporary.write_text(json.dumps(server, indent=2) + '\n')
+    os.chown(temporary, 0, service_group)
+    os.chmod(temporary, 0o640)
+    os.replace(temporary, config)
+    client.write_text(profile)
+    os.chown(client, account.pw_uid, account.pw_gid)
+    os.chmod(client, 0o600)
+finally:
+    os.umask(old_umask)
+print('已生成服务端配置与完整客户端文件；未打印密钥。')
+print('客户端：', client)
+PY_CONFIG</code></pre></div>
+<p>这份文件包含 DNS、节点、选择组与规则。首轮互联网流量统一走 PROXY，私有网段直连；组里没有 DIRECT 回退。Google DoH 经节点，223.5.5.5 用于引导与直连解析；引导仍可能有明文 DNS，后续隐私与分流要单独验证。<code>udp: false</code> 把本轮限定为 TCP，游戏、QUIC 与 UDP 应用不在通过范围。</p><p class="success"><strong>成功条件：</strong>整块正常结束，两个配置已写入，未打印真实凭据。</p></section>
+
+<section class="step" id="step-6"><div class="step-top"><span class="step-number">06</span><div><p class="step-subtitle">窗口 A · VPS + 商家云后台</p><h2>检查权限、启动服务并放行 443</h2></div></div><p>先以实际服务用户检查完整目录，无错误后才启动。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 先检查</span><button class="copy" type="button">复制命令</button></div><pre><code id="sing-box-permission-check">sudo stat -c '%U:%G %a %n' /etc/sing-box /etc/sing-box/config.json /home/deployer/ironmao-vps.yaml
+sudo -u sing-box /usr/bin/sing-box check -C /etc/sing-box</code></pre></div><p>目录应为 root:sing-box 750，服务配置 root:sing-box 640，客户端 deployer:deployer 600。检查成功通常无输出；有任何错误先修正。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 检查通过后</span><button class="copy" type="button">复制命令</button></div><pre><code id="sing-box-start">sudo systemctl enable --now sing-box
+sudo systemctl is-active sing-box
+sudo systemctl is-enabled sing-box
+sudo ss -lntp 'sport = :443'
+sudo journalctl -u sing-box --no-pager -n 40</code></pre></div><p>ColoCrossing 云后台确认 TCP 22 与 443 入站可达。服务器 UFW 只补充 443，现有 80、8443 与旧服务先保留；云防火墙与 UFW 都要允许。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 保留已有规则</span><button class="copy" type="button">复制命令</button></div><pre><code id="node-firewall">sudo ufw allow 443/tcp
+sudo ufw status verbose</code></pre></div><p class="success"><strong>成功条件：</strong>active、enabled，sing-box 监听 TCP 443，日志无权限或配置错误；两层防火墙允许 443。</p></section>
+
+<section class="step" id="step-7"><div class="step-top"><span class="step-number">07</span><div><p class="step-subtitle">窗口 B · Mac + FlClash</p><h2>下载文件，在 FlClash 选中节点</h2></div></div><p>窗口 B 必须是 Mac 本地终端；本路线下载不需要 SSH 订阅隧道。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 下载完整配置</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-download-profile">umask 077
+scp -i "$HOME/.ssh/ironmao_vps" -o IdentitiesOnly=yes deployer@23.94.184.3:/home/deployer/ironmao-vps.yaml "$HOME/Downloads/ironmao-vps.yaml"
+chmod 600 "$HOME/Downloads/ironmao-vps.yaml"</code></pre></div>
+<ol class="actions"><li>先停止 FlClash 内核，关闭 <strong>TUN 与系统代理</strong>，模式设为 <strong>规则 / Rule</strong>；保留旧配置。</li><li>在 <strong>工具 → 基本配置 → 端口</strong> 检查实际 <strong>Mixed / 混合端口</strong>。文件写的是 7890，但应用设置可能覆盖端口、模式和 TUN，以实际值为准。</li><li>进入 <strong>配置 → 添加 → 文件</strong>，选择下载目录里的 <code>ironmao-vps.yaml</code>。</li><li>设为<strong>当前 / 激活配置</strong>，再启动内核。</li><li>代理页面的 <strong>PROXY</strong> 组选择 <code>IRONMAO-Reality-443</code>，再次核对 TUN 与系统代理仍关闭。</li></ol>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 核对监听端口</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-listener-check">lsof -nP -iTCP:7890 -sTCP:LISTEN</code></pre></div><div class="note">节点 server 是 VPS 公网 IP，不是 127.0.0.1。127.0.0.1:7890 是 Mac 上 FlClash 的入站端口。若实际端口不同，下一步所有 curl 端口统一替换。</div><p class="success"><strong>成功条件：</strong>配置激活、新节点选中、TUN 与系统代理关闭，实际 Mixed 端口有监听。</p></section>
+
+<section class="step" id="step-8"><div class="step-top"><span class="step-number">08</span><div><p class="step-subtitle">窗口 A 看日志 · 窗口 B 发起请求</p><h2>用显式代理验证真实联网</h2></div></div><p>窗口 A 开实时日志，保持运行；结束按 Control + C。日志可能包含访问目标，分享前删去凭据与私密链接。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 保持运行</span><button class="copy" type="button">复制命令</button></div><pre><code id="server-live-log">sudo journalctl -u sing-box -f --since now</code></pre></div><p>窗口 B 逐块验收。<code>curl -q</code> 不读个人 curl 配置，<code>--noproxy ''</code> 清空绕过列表，<code>--proxy</code> 指定 FlClash；保留这些参数。每次请求立即检查退出码。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · HTTPS 204</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-explicit-204">curl -q --noproxy '' --proxy http://127.0.0.1:7890 --connect-timeout 10 --max-time 30 --silent --show-error --output /dev/null --write-out 'final_http=%{http_code}\n' https://www.gstatic.com/generate_204
+printf 'curl_exit=%s\n' "$?"</code></pre></div><p>期望 final_http=204、curl_exit=0。CONNECT 的 200 Connection established 不是最终 HTTPS 成功。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 正常 HTTPS 内容</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-explicit-content">curl -q --noproxy '' --proxy http://127.0.0.1:7890 --connect-timeout 10 --max-time 40 --fail --location --silent --show-error --output "$HOME/Downloads/ironmao-proxy-check.html" --write-out 'final_http=%{http_code} bytes=%{size_download}\n' https://www.example.com/
+printf 'curl_exit=%s\n' "$?"
+wc -c "$HOME/Downloads/ironmao-proxy-check.html"</code></pre></div><p>期望最终 HTTP 200、退出码 0、非空网页，打开文件核对内容为 Example Domain。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 出口 IP</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-explicit-exit-ip">curl -q --noproxy '' --proxy http://127.0.0.1:7890 --connect-timeout 10 --max-time 30 --fail --silent --show-error https://api.ipify.org
+printf '\ncurl_exit=%s\n' "$?"</code></pre></div><p>期望 IPv4 为 23.94.184.3；若商家使用独立 NAT 出口，按商家与 VPS 实际出口记录核对。VPS 同时段日志应有 VLESS 入站与目标出站，FlClash 连接页面策略应为新节点。</p><div class="note warn">三项均通过才继续；配置导入、延迟、端口可连接、服务 active 不能替代联网验收。失败时保留旧节点，暂不停止 x-ui。</div><p class="success"><strong>成功条件：</strong>204、HTTPS 内容与正确出口 IP 通过，且有对应服务端日志；重复一次 204 仍成功。</p></section>
+
+<section class="step" id="step-9"><div class="step-top"><span class="step-number">09</span><div><p class="step-subtitle">Mac · FlClash + Cloudflare 后台</p><h2>开启日常系统代理，准备订阅域名</h2></div></div><p>显式验收通过后开启 FlClash <strong>系统代理</strong>，保持 Rule、新节点选中、TUN 关闭。浏览器访问 HTTPS 网页，核对应用连接记录。TUN 与 UDP 功能放到以后单独验证。</p><p>打开<a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare 后台</a>，选择 ironmao.com → DNS → 记录 → 添加记录。</p><div class="table-wrap"><table><thead><tr><th>字段</th><th>填写</th></tr></thead><tbody><tr><td>类型 / 名称</td><td>A / sub</td></tr><tr><td>IPv4</td><td>23.94.184.3，以当前 VPS 为准</td></tr><tr><td>代理状态 / TTL</td><td>仅 DNS、灰云 / Auto</td></tr></tbody></table></div><p>核对同名 AAAA：没有可用的公网 IPv6 服务就不要留无效 AAAA。不用 Cloudflare 橙云代理订阅端口。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 公开 DNS</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-subscription-dns">dig +short A sub.ironmao.com
+dig +short AAAA sub.ironmao.com</code></pre></div><p>两层防火墙允许 TCP 80 与 8443：80 用于 HTTP-01 证书申请 / 续期，8443 用于订阅；443 继续给 sing-box。</p><p class="success"><strong>成功条件：</strong>浏览器联网通过；灰云 A 正确，无错误 AAAA；公网 TCP 80 / 8443 可达。</p></section>
+
+<section class="step" id="step-10"><div class="step-top"><span class="step-number">10</span><div><p class="step-subtitle">窗口 A · VPS · 新节点验收后才执行</p><h2>退役旧节点，部署正常 HTTPS 订阅</h2></div></div><div class="note warn">仅在第 8 步全部通过后执行。本步停止旧 x-ui，释放 8443 给普通 HTTPS 订阅；保留旧安装与数据库，不卸载。</div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 快照并退役旧服务</span><button class="copy" type="button">复制命令</button></div><pre><code id="old-xui-retire">sudo python3 - &lt;&lt;'PY_RETIRE'
+import datetime, pathlib, shutil, sqlite3, subprocess
+if not pathlib.Path('/var/lib/ironmao-proxy/migration.json').exists():
+    raise SystemExit('停止：缺少第 2 步迁移备份。')
+if subprocess.run(['systemctl', 'is-active', '--quiet', 'sing-box']).returncode != 0:
+    raise SystemExit('停止：新 sing-box 尚未运行。')
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+backup = pathlib.Path('/var/backups/ironmao-proxy') / ('before-xui-retire-' + stamp)
+backup.mkdir(mode=0o700, parents=True)
+source = pathlib.Path('/etc/x-ui')
+if source.exists():
+    shutil.copytree(source, backup / 'x-ui',
+                    ignore=shutil.ignore_patterns('x-ui.db', 'x-ui.db-wal', 'x-ui.db-shm'))
+db = source / 'x-ui.db'
+if db.exists():
+    with sqlite3.connect('file:' + str(db) + '?mode=ro', uri=True) as src:
+        with sqlite3.connect(backup / 'x-ui-consistent.db') as dst:
+            src.backup(dst)
+exists = subprocess.run(['systemctl', 'cat', 'x-ui'], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL).returncode == 0
+if exists:
+    subprocess.run(['systemctl', 'disable', '--now', 'x-ui'], check=True)
+print('旧服务仅停止并禁用；快照：', backup)
+PY_RETIRE
+sudo ss -lntp 'sport = :8443'
+sudo systemctl is-active x-ui</code></pre></div><p>8443 应无监听，x-ui inactive；新系统没有旧服务是正常情况。仍有其他监听进程就停下核对，不抢端口。</p><p>已有 Caddy 必须复用其服务与 Caddyfile。先确认 <code>sudo systemctl cat caddy</code> 读取 /etc/caddy/Caddyfile；自定义路径时先调整本教程路径。不要另起第二个服务，也不覆盖已有网站。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 已有 Caddy 自动跳过安装</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-package-install">bash &lt;&lt;'SH_CADDY'
+set -euo pipefail
+if command -v caddy &gt;/dev/null 2&gt;&amp;1; then
+  caddy version
+  echo '已有 Caddy，复用现有服务和配置。'
+else
+  sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
+  curl -1sLf --fail https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
+    | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  curl -1sLf --fail https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
+    | sudo tee /etc/apt/sources.list.d/caddy-stable.list &gt;/dev/null
+  sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  sudo chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+  sudo apt update
+  sudo apt install -y caddy
+fi
+SH_CADDY</code></pre></div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 云防火墙也要允许</span><button class="copy" type="button">复制命令</button></div><pre><code id="subscription-firewall">sudo ufw allow 80/tcp
+sudo ufw allow 8443/tcp
+sudo ufw status verbose
+sudo systemctl cat caddy</code></pre></div><p>以下生成器将完整 YAML 放入 /srv/ironmao-proxy-subscription，用随机长路径提供访问，其他路径 404。它备份主配置，追加独立 import；重跑保留同一令牌，不重复 import。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 普通 HTTPS 订阅生成器</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-subscription-generator">sudo python3 - &lt;&lt;'PY_SUBSCRIPTION'
+import datetime, grp, json, os, pathlib, secrets, shutil
+state_dir = pathlib.Path('/var/lib/ironmao-proxy')
+state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+os.chmod(state_dir, 0o700)
+state_file = state_dir / 'subscription.json'
+main = pathlib.Path('/etc/caddy/Caddyfile')
+fragment = pathlib.Path('/etc/ironmao-proxy-caddy/subscription.caddy')
+client = pathlib.Path('/home/deployer/ironmao-vps.yaml')
+if not client.is_file() or not main.is_file():
+    raise SystemExit('停止：需要已有完整客户端文件与 Caddyfile。')
+if fragment.exists() and not state_file.exists():
+    raise SystemExit('停止：已有订阅片段但缺少私有状态，先核对来源。')
+if state_file.exists():
+    state = json.loads(state_file.read_text())
+    token = state['token']
+else:
+    token = secrets.token_urlsafe(24)
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    backup_dir = pathlib.Path('/var/backups/ironmao-proxy')
+    backup_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(backup_dir, 0o700)
+    before = backup_dir / ('Caddyfile-before-subscription-' + stamp)
+    shutil.copy2(main, before)
+    os.chmod(before, 0o600)
+    state = {'token': token, 'url': f'https://sub.ironmao.com:8443/{token}/profile.yaml',
+             'caddy_before': str(before), 'fragment': str(fragment)}
+caddy_group = grp.getgrnam('caddy').gr_gid
+site_dir = pathlib.Path('/srv/ironmao-proxy-subscription')
+if not state_file.exists() and site_dir.exists():
+    raise SystemExit('停止：订阅目录已存在但没有本教程状态，先核对，不能覆盖。')
+site_dir.mkdir(mode=0o750, parents=True, exist_ok=True)
+os.chown(site_dir, 0, caddy_group)
+os.chmod(site_dir, 0o750)
+fragment.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+os.chown(fragment.parent, 0, caddy_group)
+os.chmod(fragment.parent, 0o750)
+text = f'''https://sub.ironmao.com:8443 {{
+    tls {{
+        issuer acme {{
+            disable_tlsalpn_challenge
+        }}
+    }}
+    @profile path /{token}/profile.yaml
+    handle @profile {{
+        root * /srv/ironmao-proxy-subscription
+        rewrite * /profile.yaml
+        header Content-Type "application/yaml; charset=utf-8"
+        header Cache-Control "no-store"
+        file_server
+    }}
+    handle {{
+        respond "Not found" 404
+    }}
+}}
+'''
+old_umask = os.umask(0o077)
+try:
+    target = site_dir / 'profile.yaml'
+    target.write_bytes(client.read_bytes())
+    os.chown(target, 0, caddy_group)
+    os.chmod(target, 0o640)
+    fragment.write_text(text)
+    os.chown(fragment, 0, caddy_group)
+    os.chmod(fragment, 0o640)
+    line = 'import /etc/ironmao-proxy-caddy/subscription.caddy'
+    current = main.read_text()
+    if line not in [v.strip() for v in current.splitlines()]:
+        main.write_text(current.rstrip() + '\n\n' + line + '\n')
+    state_file.write_text(json.dumps(state, indent=2) + '\n')
+    os.chmod(state_file, 0o600)
+finally:
+    os.umask(old_umask)
+print('已写订阅与配置片段，保留原 Caddyfile，未打印令牌。')
+print('私密链接保存在：', state_file)
+PY_SUBSCRIPTION</code></pre></div>
+<p>通过公开 TCP 80 的 HTTP-01 申请证书；关闭 TLS-ALPN 验证，避免证书流程占用代理 443。8443 是正常可信 HTTPS，不用 tls internal 或跳过证书验证。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 先验证完整配置</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-validate">sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile</code></pre></div><p>仅在配置有效、正常退出后运行下一块；语法检查不等于公网签证书。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 验证通过后</span><button class="copy" type="button">复制命令</button></div><pre><code id="caddy-activate">bash &lt;&lt;'SH_ACTIVATE'
+set -eu
+sudo systemctl enable caddy
+if sudo systemctl is-active --quiet caddy; then
+  sudo systemctl reload caddy
+else
+  sudo systemctl start caddy
+fi
+sudo systemctl is-active caddy
+sudo ss -lntp 'sport = :8443'
+sudo journalctl -u caddy --no-pager -n 60
+SH_ACTIVATE</code></pre></div><div class="note">随机路径是订阅访问凭据；持有链接就能下载节点。不要分享 URL、带令牌日志或截图。YAML 不含服务端 Reality 私钥，但含可用的客户端凭据。</div>
+<p>x-ui 停止后检查旧 2096：<code>sudo ss -lntp 'sport = :2096'</code> 和 <code>sudo ufw status numbered</code>。旧记录曾显示其公网监听，当前以现场为准。<strong>仅确认旧服务停止且专用允许规则存在</strong>时，删除 UFW 规则；云防火墙也只移除对应规则。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS · 仅当专用 2096 ALLOW 规则存在</span><button class="copy" type="button">复制命令</button></div><pre><code id="close-old-subscription-rule">sudo ufw delete allow 2096/tcp
+sudo ufw status verbose</code></pre></div><p class="success"><strong>成功条件：</strong>新节点仍可联网，旧 x-ui 停止，Caddy 监听 8443，原网站配置保留，无签证书错误；第 11 步再验证实际下载。</p></section>
+
+<section class="step" id="step-11"><div class="step-top"><span class="step-number">11</span><div><p class="step-subtitle">VPS 私密查看 URL · Mac + FlClash</p><h2>导入订阅并验证更新</h2></div></div><p>在自己的 VPS 终端读取私密 URL，存进密码管理工具，不写进页面，不保存到浏览器 localStorage。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 私密查看，不分享输出</span><button class="copy" type="button">复制命令</button></div><pre><code id="subscription-private-url">sudo python3 - &lt;&lt;'PY_URL'
+import json
+print(json.load(open('/var/lib/ironmao-proxy/subscription.json'))['url'])
+PY_URL</code></pre></div><p>窗口 B 粘贴到下方隐藏输入提示，不作为命令进入 shell 历史。先直连验证公开证书与 YAML；<strong>不要加 -k</strong>。</p>
+<div class="command"><div class="command-head"><span>窗口 B · Mac 本地终端 · 可信 HTTPS 下载验收</span><button class="copy" type="button">复制命令</button></div><pre><code id="mac-subscription-download">bash &lt;&lt;'SH_FETCH'
+set -eu
+umask 077
+read -r -s -p '粘贴私密订阅 URL 后回车：' subscription_url &lt;/dev/tty
+printf '\n'
+curl -q --noproxy '*' --connect-timeout 10 --max-time 40 --fail --silent --show-error \
+  --dump-header "$HOME/Downloads/ironmao-subscription-headers.txt" \
+  --output "$HOME/Downloads/ironmao-vps-subscription.yaml" "$subscription_url"
+unset subscription_url
+head -n 6 "$HOME/Downloads/ironmao-vps-subscription.yaml"
+cat "$HOME/Downloads/ironmao-subscription-headers.txt"
+SH_FETCH</code></pre></div><p>期望 HTTP 200、Content-Type YAML、Cache-Control no-store，文件包含 mixed-port / proxies / proxy-groups / rules。前六行不含节点凭据，完整 YAML 不要分享。直连不可达但新节点可用时，可把 <code>--noproxy '*'</code> 改成 <code>--noproxy '' --proxy http://127.0.0.1:7890</code> 重试，并记录路径差异。</p>
+<ol class="actions"><li>先关闭系统代理与 TUN，保持 Rule 模式。URL 下载受当前内核代理路径影响：直连 HTTPS 已通过时先停止内核；需要代理下载时保持已验证的新节点运行，不依赖失效节点。</li><li>进入 <strong>配置 → 添加 → URL</strong>，粘贴私密 HTTPS 链接，命名“IRONMAO HTTPS 订阅”。</li><li>下载成功后停止内核，核对系统代理与 TUN 均关闭、Rule 和实际端口，再激活订阅配置并启动；选中 PROXY 的新节点。</li><li>重跑第 8 步三项验收；点击一次<strong>更新订阅</strong>确认仍可下载，然后恢复系统代理。</li></ol><div class="note">URL 导入失败时先导入下载的完整 YAML 文件继续使用。文件路线没有自动更新，之后需重新下载与导入。日常订阅不使用 SSH 回环隧道 URL；单个 vless:// 链接不等于完整 Mihomo 配置。</div><p class="success"><strong>成功条件：</strong>不跳过证书验证的 curl 下载成功；URL 导入与更新成功；节点联网验收仍通过。</p></section>
+
+<section class="step" id="step-12"><div class="step-top"><span class="step-number">12</span><div><p class="step-subtitle">VPS 日常操作 · Mac 重测</p><h2>日常维护、回退与网站边界</h2></div></div><p>配置变更先检查，成功后才重启。保留节点文件与 URL，不重复运行第 5 步生成器。备份须包含 /etc/sing-box、/etc/caddy、/etc/ironmao-proxy-caddy、/var/lib/ironmao-proxy 和客户端文件，放在只有 root 可读的目录。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 日常状态与检查</span><button class="copy" type="button">复制命令</button></div><pre><code id="proxy-daily-status">sudo systemctl status sing-box --no-pager
+sudo systemctl status caddy --no-pager
+sudo journalctl -u sing-box --no-pager -n 60
+sudo journalctl -u caddy --no-pager -n 60
+sudo -u sing-box /usr/bin/sing-box check -C /etc/sing-box</code></pre></div>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 配置检查通过后</span><button class="copy" type="button">复制命令</button></div><pre><code id="proxy-restart">sudo systemctl restart sing-box
+sudo systemctl is-active sing-box</code></pre></div><p>客户端改规则时保留 UUID / 公钥 / 短 ID / IP，先备份再编辑 /home/deployer/ironmao-vps.yaml，保持 deployer:deployer 600。文件路线 SCP 下载、重新导入；订阅路线检查内容后发布：</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 原子发布客户端文件</span><button class="copy" type="button">复制命令</button></div><pre><code id="subscription-update-file">sudo python3 - &lt;&lt;'PY_UPDATE'
+import datetime, os, pathlib, shutil
+source = pathlib.Path('/home/deployer/ironmao-vps.yaml')
+target = pathlib.Path('/srv/ironmao-proxy-subscription/profile.yaml')
+if not source.is_file() or not target.is_file():
+    raise SystemExit('停止：缺少完整客户端文件或已发布订阅。')
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+backup = pathlib.Path('/var/backups/ironmao-proxy') / ('subscription-profile-' + stamp + '.yaml')
+shutil.copy2(target, backup)
+os.chmod(backup, 0o600)
+owner = target.stat()
+temporary = target.with_name('.profile.yaml.new')
+old_umask = os.umask(0o077)
+try:
+    temporary.write_bytes(source.read_bytes())
+    os.chown(temporary, owner.st_uid, owner.st_gid)
+    os.chmod(temporary, 0o640)
+    os.replace(temporary, target)
+finally:
+    os.umask(old_umask)
+print('已备份并更新订阅文件，链接保持不变。')
+PY_UPDATE</code></pre></div><p>文件更新无需重启 Caddy；FlClash 更新后重新验收。轮换节点凭据需同时改两端；订阅令牌泄露需另做 URL 轮换与旧路径失效检查。</p>
+<h3>回退顺序</h3><p>先在 FlClash 停止新配置的内核。下面停止 / 禁用 sing-box，只移除本教程的订阅 import 并 reload Caddy；确认 8443 释放后，按初始记录恢复 x-ui 的 active / enabled 状态。旧数据库未被修改，不自动恢复旧副本；一致备份保留。</p>
+<div class="command"><div class="command-head"><span>窗口 A · VPS 终端 · 回退新路线，保留其他网站</span><button class="copy" type="button">复制命令</button></div><pre><code id="proxy-rollback">sudo python3 - &lt;&lt;'PY_ROLLBACK'
+import datetime, json, pathlib, shutil, subprocess
+state_path = pathlib.Path('/var/lib/ironmao-proxy/migration.json')
+if not state_path.exists():
+    raise SystemExit('停止：没有初始迁移记录，需手动核对原服务状态。')
+state = json.loads(state_path.read_text())
+subprocess.run(['systemctl', 'disable', '--now', 'sing-box'], check=True)
+subscription = pathlib.Path('/var/lib/ironmao-proxy/subscription.json')
+if subscription.exists():
+    fragment = pathlib.Path('/etc/ironmao-proxy-caddy/subscription.caddy')
+    main = pathlib.Path('/etc/caddy/Caddyfile')
+    line = 'import /etc/ironmao-proxy-caddy/subscription.caddy'
+    original = main.read_text()
+    lines = original.splitlines(keepends=True)
+    if not any(v.strip() == line for v in lines):
+        raise SystemExit('停止：import 已改变，先手动移除订阅站块并验证，再恢复旧 8443。')
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    backup = pathlib.Path('/var/backups/ironmao-proxy') / ('Caddyfile-before-rollback-' + stamp)
+    shutil.copy2(main, backup)
+    main.write_text(''.join(v for v in lines if v.strip() != line))
+    checked = subprocess.run(['caddy', 'validate', '--config', str(main), '--adapter', 'caddyfile'])
+    if checked.returncode:
+        main.write_text(original)
+        raise SystemExit('停止：验证失败，已恢复原主配置，尚未启动旧服务。')
+    if subprocess.run(['systemctl', 'is-active', '--quiet', 'caddy']).returncode == 0:
+        reloaded = subprocess.run(['systemctl', 'reload', 'caddy'])
+        if reloaded.returncode:
+            main.write_text(original)
+            raise SystemExit('停止：reload 失败，已恢复磁盘配置；尚未启动旧服务。')
+    if fragment.exists():
+        fragment.unlink()
+listeners = subprocess.run(['ss', '-H', '-lnt', 'sport = :8443'], text=True,
+                           stdout=subprocess.PIPE, check=True).stdout.strip()
+if listeners:
+    raise SystemExit('停止：8443 仍占用，先查监听进程，尚未恢复旧服务。')
+old = state['services']['x-ui']
+exists = subprocess.run(['systemctl', 'cat', 'x-ui'], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL).returncode == 0
+if exists:
+    if old['enabled'] == 'enabled':
+        subprocess.run(['systemctl', 'enable', 'x-ui'], check=True)
+    elif old['enabled'] == 'enabled-runtime':
+        subprocess.run(['systemctl', 'enable', '--runtime', 'x-ui'], check=True)
+    else:
+        subprocess.run(['systemctl', 'disable', 'x-ui'], check=True)
+    if old['active'] == 'active':
+        subprocess.run(['systemctl', 'start', 'x-ui'], check=True)
+    else:
+        subprocess.run(['systemctl', 'stop', 'x-ui'], check=True)
+print('已恢复旧 x-ui 状态；保留备份、节点文件和其他 Caddy 网站。')
+PY_ROLLBACK</code></pre></div><p>在 FlClash 切回保留的旧配置并验收；旧配置自身若受新 Xray 兼容问题影响，回退服务不等于恢复连通。回退过程中若出现停止提示，先核对日志；需要继续使用新节点时，在确认 443 空闲后执行 <code>sudo systemctl enable --now sing-box</code>，再切回新配置。新系统原无 x-ui 时不会新启动它。已关闭的 2096 规则仅在确需旧订阅并核对原记录后补回。</p>
+<h3>网站部署边界</h3><div class="note warn"><strong>目前 TCP 443 由 Reality 独占。</strong>普通 HTTPS 网站也需要 443，Caddy 和 sing-box 不能绑定同一地址与端口；Caddy 普通 reverse_proxy 不是原生 TCP Reality 的共存方案。此次先完成代理和 8443 订阅，网站阶段暂缓；以后选额外 IP / 服务器，或独立设计并实测协议复用。不要继续套用旧教程的网站 443 配置。</div><p>重启后验证 SSH、sing-box / Caddy active，再重跑第 8 和 11 步。系统升级不会自动升级已 hold 的 sing-box；解除 hold 或升级前先做候选版本的独立内核握手验证。</p><p class="success"><strong>成功条件：</strong>知道配置位置、更新方法、回退顺序，以及 443 与未来网站的端口边界。</p></section>
+
+<section class="step" id="troubleshooting"><div class="step-top"><span class="step-number">?</span><div><p class="step-subtitle">按失败位置检查</p><h2>遇到问题时</h2></div></div><div class="table-wrap"><table><thead><tr><th>现象</th><th>先检查</th></tr></thead><tbody><tr><td>SSH 失败</td><td>Mac 私钥路径、deployer、当前 IP、云 TCP 22；保留已有可用会话。</td></tr><tr><td>443 占用</td><td>ss 确认进程与现有网站，停止路线，不杀进程、覆盖 Caddyfile。</td></tr><tr><td>包 / 哈希失败</td><td>固定 URL 与哈希、VPS GitHub 出口，不改未验证镜像。</td></tr><tr><td>Permission denied</td><td>root:sing-box 640、目录 750；实际服务用户 check。</td></tr><tr><td>无法连接本地 7890</td><td>FlClash 内核、当前配置、实际 Mixed 端口、lsof。</td></tr><tr><td>延迟有数字，HTTPS 失败</td><td>新节点选中、UUID / 公钥 / 短 ID / SNI 配对、两端时钟和同一时段日志。</td></tr><tr><td>TLS / EOF / timeout</td><td>固定版本、MLKEM=false、云防火墙 443、目标 TLS；不能用配置导入代替握手。</td></tr><tr><td>出口不是 VPS</td><td>当前配置、PROXY 选择、MATCH,PROXY、是否真实 NAT；不退回 DIRECT。</td></tr><tr><td>只见 CONNECT 200</td><td>最终 HTTPS HTTP 状态和 curl 退出码，CONNECT 成功不等于内容成功。</td></tr><tr><td>订阅证书错误</td><td>A / AAAA、灰云、公网 80、Caddy ACME 日志；不加 -k。</td></tr><tr><td>订阅 404</td><td>私密 URL 整段、令牌与 import；根路径与错误路径本来就是 404。</td></tr><tr><td>curl 下载成功，URL 导入失败</td><td>停止内核直连或用已验证节点；先导入完整文件，再查应用下载路径。</td></tr><tr><td>回退 x-ui 启动失败</td><td>Caddy 8443 是否已释放、原服务状态；不能让两个服务抢端口。</td></tr></tbody></table></div><p>记录版本、退出码、最终 HTTP 状态与去除凭据的错误行；不分享完整 YAML、服务端配置、私钥、URL 或带令牌日志。</p></section>
+<footer class="foot" id="sources"><h2>官方参考资料</h2><p>核对时间 2026-10-09。固定版本和当前网页文档可能分属不同时间，升级后需重测。</p><ul><li><a href="https://github.com/SagerNet/sing-box/releases/tag/v1.14.2">sing-box 1.14.2 发布</a> · <a href="https://sing-box.sagernet.org/configuration/inbound/vless/">VLESS 入站</a> · <a href="https://sing-box.sagernet.org/configuration/shared/tls/#reality-fields">Reality TLS</a></li><li><a href="https://github.com/chen08209/FlClash/releases/tag/v0.8.94">FlClash 0.8.94 发布</a></li><li><a href="https://wiki.metacubex.one/config/proxies/tls/#reality-opts">Mihomo Reality 兼容提示</a> · <a href="https://wiki.metacubex.one/config/proxies/vless/">VLESS</a> · <a href="https://wiki.metacubex.one/config/dns/">DNS</a></li><li><a href="https://github.com/XTLS/Xray-core/releases/tag/v26.3.27">Xray 26.3.27 非 443 Reality 警告</a>：本教程使用 443，但使用 443 本身不保证永不封锁或失败。</li><li><a href="https://caddyserver.com/docs/install#debian-ubuntu-raspbian">Caddy 官方安装</a> · <a href="https://caddyserver.com/docs/caddyfile/directives/tls#issuers">ACME issuer</a> · <a href="https://caddyserver.com/docs/caddyfile/directives/handle">handle</a> · <a href="https://caddyserver.com/docs/caddyfile/directives/import">import</a></li></ul></footer>
+</main></div><div class="toast" id="toast" role="status" hidden></div><script>
+(() => {
+  'use strict';
+  const toast = document.getElementById('toast');
+  let timer;
+  function notify(message) {
+    toast.textContent = message; toast.hidden = false;
+    clearTimeout(timer); timer = setTimeout(() => { toast.hidden = true; }, 2500);
+  }
+  document.getElementById('print-guide').addEventListener('click', () => window.print());
+  document.querySelectorAll('.copy').forEach(button => button.addEventListener('click', async () => {
+    const text = button.closest('.command').querySelector('pre code').textContent;
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else {
+        const field = document.createElement('textarea'); field.value = text;
+        field.style.position = 'fixed'; field.style.opacity = '0';
+        document.body.appendChild(field); field.select();
+        const copied = document.execCommand('copy'); field.remove();
+        if (!copied) throw new Error('copy failed');
+      }
+      notify('已复制，粘贴前核对执行地点');
+    } catch (_) { notify('复制受浏览器限制，请手动选中命令复制'); }
+  }));
+})();
+</script></body></html>
