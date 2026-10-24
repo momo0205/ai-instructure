@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" rx="28" fill="#FAFAF8"/>
+  <text x="70" y="78" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#18212F">一次分析请求，经过六个可检查的环节</text>
+  <text x="70" y="116" font-family="Arial,sans-serif" font-size="19" fill="#667085">以静态分析为例：先固定目标，再产生材料，最后按问题读取</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="70" y="170" width="320" height="86" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="95" y="204" font-size="19" font-weight="700" fill="#1849A9">01 入口：CLI / MCP</text>
+    <text x="95" y="232" font-size="15" fill="#344054">明确操作、输入与本次效果</text>
+    <rect x="430" y="170" width="320" height="86" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="455" y="204" font-size="19" font-weight="700" fill="#1849A9">02 契约与参数校验</text>
+    <text x="455" y="232" font-size="15" fill="#344054">在干活之前先检查请求边界</text>
+    <rect x="790" y="170" width="340" height="86" rx="16" fill="#EAF2FF" stroke="#84ADFF" stroke-width="2"/>
+    <text x="815" y="204" font-size="19" font-weight="700" fill="#1849A9">03 工作流组织分析</text>
+    <text x="815" y="232" font-size="15" fill="#344054">处理取消、资源限制与部分失败</text>
+    <rect x="70" y="310" width="320" height="86" rx="16" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="95" y="344" font-size="19" font-weight="700" fill="#067647">04 解析器真正读字节</text>
+    <text x="95" y="372" font-size="15" fill="#344054">语法树、静态事实，不是模型猜</text>
+    <rect x="430" y="310" width="320" height="86" rx="16" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="455" y="344" font-size="19" font-weight="700" fill="#067647">05 关系图 + 证据封装</text>
+    <text x="455" y="372" font-size="15" fill="#344054">绑定目标哈希、覆盖范围与未知</text>
+    <rect x="790" y="310" width="340" height="86" rx="16" fill="#ECFDF3" stroke="#75E0A7" stroke-width="2"/>
+    <text x="815" y="344" font-size="19" font-weight="700" fill="#067647">06 摘要视图交付</text>
+    <text x="815" y="372" font-size="15" fill="#344054">按问题读取，完整证据可追溯</text>
+  </g>
+  <path d="M390 213h40M750 213h40M230 256v54M390 353h40M750 353h40" stroke="#98A2B3" stroke-width="4"/>
+  <path d="M420 203l14 10-14 10M780 203l14 10-14 10M220 298l10 14 10-14M420 343l14 10-14 10M780 343l14 10-14 10" fill="#98A2B3"/>
+  <g font-family="Arial,sans-serif">
+    <rect x="130" y="455" width="940" height="70" rx="16" fill="#FEF3F2" stroke="#FDA29B" stroke-width="2"/>
+    <text x="165" y="485" font-size="19" font-weight="700" fill="#B42318">失败也是结果的一部分</text>
+    <text x="165" y="510" font-size="16" fill="#667085">部分观察不能包装成完整分析；“读完所有摘要页”也不等于覆盖了完整目标</text>
+    <rect x="130" y="545" width="940" height="70" rx="16" fill="#F2F4F7"/>
+    <text x="165" y="575" font-size="19" font-weight="700" fill="#18212F">这张图里没有一个环节是大模型</text>
+    <text x="165" y="600" font-size="16" fill="#667085">建立关系、校验目标、计算哈希的流程在模型缺席时照常完成；模型在图外读结果、选下一步</text>
+  </g>
+</svg>
