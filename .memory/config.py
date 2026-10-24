@@ -45,7 +45,8 @@ CONFIG = {
             "model": "deepseek-flash",
             "openai_base_url": "https://api.deepseek.com/v1",
             "temperature": 0.1,
-            "max_tokens": 1000,
+            # 记忆条目较长时 1000 会把抽取结果的 JSON 截断，导致解析失败
+            "max_tokens": 2048,
         },
     },
     "embedder": {
