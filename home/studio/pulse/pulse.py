@@ -54,13 +54,13 @@ def main() -> int:
         last_date, subject, dirty = "", "", 0
         if exists and (path / ".git").exists():
             # 子模块 / 独立仓库：看自己的历史
-            raw = git(path, "log", "-1", "--format=%cs|%s")
+            raw = git(path, "log", "-1", "--format=%cs|%s", "--", ".", ":(exclude)*.md")
             if "|" in raw:
                 last_date, subject = raw.split("|", 1)
             dirty = len(git(path, "status", "--porcelain").splitlines())
         elif exists:
             # 直接跟踪在父仓里的项目：看父仓中触及该路径的最近一次提交
-            raw = git(ROOT, "log", "-1", "--format=%cs|%s", "--", p["path"])
+            raw = git(ROOT, "log", "-1", "--format=%cs|%s", "--", p["path"], ":(exclude)*.md")
             if "|" in raw:
                 last_date, subject = raw.split("|", 1)
             dirty = len(git(ROOT, "status", "--porcelain", "--", p["path"]).splitlines())
@@ -79,7 +79,7 @@ def main() -> int:
     rows.sort(key=lambda r: (r["exists"], -(r["age"] if r["age"] is not None else 99999)))
 
     print(f"\n工作区脉搏 · {today} · {len(rows)} 个项目\n")
-    print(f"{'项目':<26}{'类型':<11}{'状态':<12}{'最后提交':<12}{'未提交':>6}")
+    print(f"{'项目':<26}{'类型':<11}{'状态':<12}{'最后代码提交':<12}{'未提交':>6}")
     print("-" * 74)
 
     shown = 0
