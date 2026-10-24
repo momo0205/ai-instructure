@@ -35,9 +35,12 @@ try:
     from config import CONFIG
     from mem0 import Memory
     MEM0_AVAILABLE = True
-except ImportError as e:
+except Exception as e:
+    # 既可能是依赖没装（ImportError），也可能是没配 DEEPSEEK_API_KEY（RuntimeError）。
+    # 两种情况都退化为"只用账本"，不能让 CLI 直接崩掉。
     MEM0_AVAILABLE = False
     IMPORT_ERROR = str(e)
+    CONFIG = None
 
 _memory = None
 
@@ -124,16 +127,19 @@ def _english_query(text: str) -> str:
 
 def _check_deps():
     if not MEM0_AVAILABLE:
-        print(f"依赖未安装: {IMPORT_ERROR}")
-        print("\n请运行:")
-        print("  pip3 install mem0ai sentence-transformers qdrant-client")
-        print("\n并确保 DEEPSEEK_API_KEY 已设置（echo DEEPSEEK_API_KEY=sk-xxxx > .env）")
+        print(f"记忆索引不可用: {IMPORT_ERROR}")
+        print("\n可能原因：")
+        print("  1. 依赖未安装: pip3 install mem0ai sentence-transformers qdrant-client")
+        print("  2. 未配置 DEEPSEEK_API_KEY: cp .env.example .env 后填入")
+        print("\n只想读账本时，list / search 仍可用。")
         sys.exit(1)
 
 
 def _get_memory():
     global _memory
     if _memory is None:
+        if not MEM0_AVAILABLE:
+            raise RuntimeError(f"记忆索引不可用: {IMPORT_ERROR}")
         _memory = Memory.from_config(CONFIG)
     return _memory
 
@@ -185,6 +191,8 @@ def search(query: str, limit: int = 10):
                 return
         except Exception as e:
             print(f"（索引检索失败，降级为账本检索：{e}）")
+    else:
+        print("（索引未启用，使用账本关键词检索）")
     hits = _keyword_hits(query, limit)
     if not hits:
         print("无匹配记忆")
