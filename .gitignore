@@ -71,3 +71,9 @@ coverage/
 .tools/
 backups/
 .rewrite/
+
+# Agent worktree（create_worktree 生成）
+.agents/
+
+# A/B 回测产物（可重跑，不进库）
+home/studio/experiments/breadth/ab/

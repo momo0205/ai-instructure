@@ -16,3 +16,6 @@ data/foundation_*/
 data/.foundation_*/
 
 data/.coverage_*/
+
+# 别把 worktree 里指向主仓数据的软链提交进来
+data/real
